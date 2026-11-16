@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "command(*)",
+      "read_file(*)",
+      "write_file(*)",
+      "read_url(*)",
+      "unsandboxed(*)",
+      "mcp(*)"
+    ]
+  }
+}

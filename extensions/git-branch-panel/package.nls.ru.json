@@ -1,0 +1,10 @@
+{
+  "githubPanel.refresh": "Обновить панель GitHub",
+  "npmScripts.view": "npm-скрипты",
+  "npmScripts.empty": "В открытых папках нет скриптов package.json.\n[Обновить](command:workstationNpmScripts.refresh)",
+  "npmScripts.refresh": "Обновить npm-скрипты",
+  "npmScripts.run": "Запустить в терминале",
+  "npmScripts.stop": "Остановить (Ctrl+C)",
+  "npmScripts.restart": "Перезапустить",
+  "npmScripts.openUrl": "Открыть в браузере"
+}

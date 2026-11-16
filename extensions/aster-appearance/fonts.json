@@ -1,0 +1,1188 @@
+[
+  {
+    "id": "jetbrainsmono",
+    "family": "JetBrains Mono",
+    "version": "2.211",
+    "localNames": [
+      "JetBrains Mono Italic",
+      "JetBrainsMono-Italic",
+      "JetBrains Mono Regular",
+      "JetBrainsMono-Regular"
+    ],
+    "minWeight": 100,
+    "maxWeight": 800,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "e7db6ca603fd4862010383ff17ffd6cc4ffac1c0",
+    "source": "https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/jetbrainsmono",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "&&",
+      "||"
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/jetbrainsmono/JetBrainsMono-Italic[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/jetbrainsmono/JetBrainsMono-Italic%5Bwght%5D.ttf",
+        "sha256": "85ae2a5cd3f56baf1ce1c21a851322c58e3d8fbe8e8ad4a4d090a820dd7fe558",
+        "bytes": 191556,
+        "localNames": [
+          "JetBrains Mono Italic",
+          "JetBrainsMono-Italic"
+        ],
+        "families": [
+          "JetBrains Mono"
+        ],
+        "weight": [
+          100,
+          800
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 2.211"
+      },
+      {
+        "file": "fonts/jetbrainsmono/JetBrainsMono[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf",
+        "sha256": "48715a42ec242c21e9f02692891e147d022299a52e48d5e413e1a942193ffeda",
+        "bytes": 187208,
+        "localNames": [
+          "JetBrains Mono Regular",
+          "JetBrainsMono-Regular"
+        ],
+        "families": [
+          "JetBrains Mono"
+        ],
+        "weight": [
+          100,
+          800
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 2.211"
+      },
+      {
+        "file": "fonts/jetbrainsmono/OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/jetbrainsmono/OFL.txt",
+        "sha256": "b2fe5e8987594e9ffd1d2ca52a2f5d73eb8335243893c5d6254b5ad69269591d",
+        "bytes": 4399
+      },
+      {
+        "file": "fonts/jetbrainsmono/METADATA.pb",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/jetbrainsmono/METADATA.pb",
+        "sha256": "220f22dd4d2a3d9c77183fbbcb250779267725d90d9be673b403dc6bcfada0af",
+        "bytes": 3203
+      }
+    ]
+  },
+  {
+    "id": "firacode",
+    "family": "Fira Code",
+    "version": "5.002",
+    "localNames": [
+      "Fira Code Light",
+      "FiraCode-Light"
+    ],
+    "minWeight": 300,
+    "maxWeight": 700,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "e7db6ca603fd4862010383ff17ffd6cc4ffac1c0",
+    "source": "https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/firacode",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "&&",
+      "||"
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/firacode/FiraCode[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/firacode/FiraCode%5Bwght%5D.ttf",
+        "sha256": "9335b082b3c7850d98a64b584f3417f65355f3471278bb5eeb8c6c0e8657aeeb",
+        "bytes": 260364,
+        "localNames": [
+          "Fira Code Light",
+          "FiraCode-Light"
+        ],
+        "families": [
+          "Fira Code",
+          "Fira Code Light"
+        ],
+        "weight": [
+          300,
+          700
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 5.002"
+      },
+      {
+        "file": "fonts/firacode/OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/firacode/OFL.txt",
+        "sha256": "926041dac670e6922505e35ac1661a4e8d20f1ffeabbbcb5edb5544370702369",
+        "bytes": 4391
+      },
+      {
+        "file": "fonts/firacode/METADATA.pb",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/firacode/METADATA.pb",
+        "sha256": "815580aeae2482e87f5f033f8a43b3c61c3e81761b79db5d783612430133a366",
+        "bytes": 750
+      }
+    ]
+  },
+  {
+    "id": "cascadiacode",
+    "family": "Cascadia Code",
+    "version": "2407.024",
+    "localNames": [
+      "Cascadia Code Italic",
+      "CascadiaCode-Italic",
+      "Cascadia Code Regular",
+      "CascadiaCode-Regular"
+    ],
+    "minWeight": 200,
+    "maxWeight": 700,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "e7db6ca603fd4862010383ff17ffd6cc4ffac1c0",
+    "source": "https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/cascadiacode",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "&&",
+      "||"
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/cascadiacode/CascadiaCode-Italic[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/cascadiacode/CascadiaCode-Italic%5Bwght%5D.ttf",
+        "sha256": "33559b4beb60523b824e25a416b5de2779a9bc7c7ce32ce128490b42acbf4681",
+        "bytes": 530444,
+        "localNames": [
+          "Cascadia Code Italic",
+          "CascadiaCode-Italic"
+        ],
+        "families": [
+          "Cascadia Code"
+        ],
+        "weight": [
+          200,
+          700
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 2407.024"
+      },
+      {
+        "file": "fonts/cascadiacode/CascadiaCode[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/cascadiacode/CascadiaCode%5Bwght%5D.ttf",
+        "sha256": "30f2e14a5c389b346b1fce110c4ddcf0dc5ce8265faf5eca2ab7323f49dba590",
+        "bytes": 727940,
+        "localNames": [
+          "Cascadia Code Regular",
+          "CascadiaCode-Regular"
+        ],
+        "families": [
+          "Cascadia Code"
+        ],
+        "weight": [
+          200,
+          700
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 2407.024"
+      },
+      {
+        "file": "fonts/cascadiacode/OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/cascadiacode/OFL.txt",
+        "sha256": "82c05d6c53dfa0c9025985c19e371810020b74ed2c61d51d370f2a8ab2506d52",
+        "bytes": 4395
+      },
+      {
+        "file": "fonts/cascadiacode/METADATA.pb",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/cascadiacode/METADATA.pb",
+        "sha256": "0e6818de984c2267817989e29f9750b65169e71c8b03f4c80407956296b47b6c",
+        "bytes": 1071
+      }
+    ]
+  },
+  {
+    "id": "victormono",
+    "family": "Victor Mono",
+    "version": "1.561",
+    "localNames": [
+      "Victor Mono Thin Italic",
+      "VictorMono-ThinItalic",
+      "Victor Mono Thin",
+      "VictorMono-Thin"
+    ],
+    "minWeight": 100,
+    "maxWeight": 700,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "e7db6ca603fd4862010383ff17ffd6cc4ffac1c0",
+    "source": "https://github.com/google/fonts/tree/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/victormono",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "&&"
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/victormono/VictorMono-Italic[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/victormono/VictorMono-Italic%5Bwght%5D.ttf",
+        "sha256": "e393afee873d56e052c10bdfcbf67053c429895bd73a4f8e59100a09ffb9d8ec",
+        "bytes": 242872,
+        "localNames": [
+          "Victor Mono Thin Italic",
+          "VictorMono-ThinItalic"
+        ],
+        "families": [
+          "Victor Mono",
+          "Victor Mono Thin"
+        ],
+        "weight": [
+          100,
+          700
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&"
+        ],
+        "cyrillic": true,
+        "version": "Version 1.561;gftools[0.9.30]"
+      },
+      {
+        "file": "fonts/victormono/VictorMono[wght].ttf",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/victormono/VictorMono%5Bwght%5D.ttf",
+        "sha256": "6fab3abe37b456f56d180987e04a3a0c326bace2cb825bc638b6be1eb03edf8f",
+        "bytes": 194312,
+        "localNames": [
+          "Victor Mono Thin",
+          "VictorMono-Thin"
+        ],
+        "families": [
+          "Victor Mono",
+          "Victor Mono Thin"
+        ],
+        "weight": [
+          100,
+          700
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&"
+        ],
+        "cyrillic": true,
+        "version": "Version 1.561;gftools[0.9.30]"
+      },
+      {
+        "file": "fonts/victormono/OFL.txt",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/victormono/OFL.txt",
+        "sha256": "493589852331b4ea83f1d6b0cbdc157b002ffdb995cf2429acf0c9863bc8f3df",
+        "bytes": 4395
+      },
+      {
+        "file": "fonts/victormono/METADATA.pb",
+        "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/victormono/METADATA.pb",
+        "sha256": "9e43a4bcbc5009e86cc18acbb34a2a3d9124f9793cb4c71439d6b2aeb4a77e74",
+        "bytes": 1685
+      }
+    ]
+  },
+  {
+    "id": "monaspacekrypton",
+    "family": "Monaspace Krypton Var",
+    "version": "1.400",
+    "localNames": [
+      "Monaspace Krypton Var ExtraLight",
+      "MonaspaceKryptonVar-ExtraLight"
+    ],
+    "minWeight": 200,
+    "maxWeight": 800,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "f31794b6e9e65698a062262e2f826f679dcb7070",
+    "source": "https://github.com/githubnext/monaspace/tree/f31794b6e9e65698a062262e2f826f679dcb7070/fonts/Variable%20Fonts/Monaspace%20Krypton",
+    "fontFeatures": "'calt', 'liga', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09', 'ss10'",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "&&",
+      "||"
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/monaspacekrypton/Monaspace Krypton Var.ttf",
+        "url": "https://raw.githubusercontent.com/githubnext/monaspace/f31794b6e9e65698a062262e2f826f679dcb7070/fonts/Variable%20Fonts/Monaspace%20Krypton/Monaspace%20Krypton%20Var.ttf",
+        "sha256": "6462cae55b336ae6ffb7c8f1932177960510a4207e65803f527b276d42c8a240",
+        "bytes": 1363340,
+        "localNames": [
+          "Monaspace Krypton Var ExtraLight",
+          "MonaspaceKryptonVar-ExtraLight"
+        ],
+        "families": [
+          "Monaspace Krypton Var",
+          "Monaspace Krypton Var ExLight"
+        ],
+        "weight": [
+          200,
+          800
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 1.400 (Monaspace Krypton Var)"
+      },
+      {
+        "file": "fonts/monaspacekrypton/OFL.txt",
+        "url": "https://raw.githubusercontent.com/githubnext/monaspace/f31794b6e9e65698a062262e2f826f679dcb7070/LICENSE",
+        "sha256": "0e84e5f7dd6f05e74a00f2fb828ca43e489d954f5509ff0fa439ea18c0d35fe9",
+        "bytes": 4479
+      }
+    ]
+  },
+  {
+    "id": "iosevka",
+    "family": "Iosevka",
+    "version": "34.9.1",
+    "localNames": [
+      "Iosevka",
+      "Iosevka Italic",
+      "Iosevka-Italic"
+    ],
+    "minWeight": 400,
+    "maxWeight": 400,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "v34.9.1",
+    "source": "https://github.com/be5invis/Iosevka/releases/tag/v34.9.1",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "||"
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/iosevka/Iosevka-Regular.ttf",
+        "url": "https://github.com/be5invis/Iosevka/releases/download/v34.9.1/PkgTTF-Unhinted-Iosevka-34.9.1.zip",
+        "member": "Iosevka-Regular.ttf",
+        "sha256": "3ccca953d92779ff58df76f84c0be343d9e6a59fd2f4be0a4560d47fa16b0099",
+        "bytes": 8414000,
+        "localNames": [
+          "Iosevka"
+        ],
+        "families": [
+          "Iosevka"
+        ],
+        "weight": [
+          400,
+          400
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 34.9.1"
+      },
+      {
+        "file": "fonts/iosevka/Iosevka-Italic.ttf",
+        "url": "https://github.com/be5invis/Iosevka/releases/download/v34.9.1/PkgTTF-Unhinted-Iosevka-34.9.1.zip",
+        "member": "Iosevka-Italic.ttf",
+        "sha256": "0585b2ed3b0e659d97864cf9f5d69e5dc5597ec72c77546dd5df2875b0d995b8",
+        "bytes": 8936612,
+        "localNames": [
+          "Iosevka Italic",
+          "Iosevka-Italic"
+        ],
+        "families": [
+          "Iosevka"
+        ],
+        "weight": [
+          400,
+          400
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 34.9.1"
+      },
+      {
+        "file": "fonts/iosevka/OFL.txt",
+        "url": "https://raw.githubusercontent.com/be5invis/Iosevka/v34.9.1/LICENSE.md",
+        "sha256": "4ba53c7c1cb39279aae5f8d7d22054c485c71169920e5a36ed098b115e2e3c5d",
+        "bytes": 4493
+      }
+    ]
+  },
+  {
+    "id": "ibmplexmono",
+    "family": "IBM Plex Mono",
+    "version": "2.005",
+    "localNames": [
+      "IBM Plex Mono Light",
+      "IBMPlexMono-Light",
+      "IBM Plex Mono Light Italic",
+      "IBMPlexMono-LightItalic",
+      "IBM Plex Mono",
+      "IBMPlexMono",
+      "IBM Plex Mono Italic",
+      "IBMPlexMono-Italic",
+      "IBM Plex Mono Medm",
+      "IBMPlexMono-Medm",
+      "IBM Plex Mono Medm Italic",
+      "IBMPlexMono-MedmItalic",
+      "IBM Plex Mono SmBld",
+      "IBMPlexMono-SmBld",
+      "IBM Plex Mono SmBld Italic",
+      "IBMPlexMono-SmBldItalic",
+      "IBM Plex Mono Bold",
+      "IBMPlexMono-Bold",
+      "IBM Plex Mono Bold Italic",
+      "IBMPlexMono-BoldItalic"
+    ],
+    "minWeight": 300,
+    "maxWeight": 700,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "@ibm/plex-mono@2.5.0",
+    "source": "https://github.com/IBM/plex/releases/tag/%40ibm%2Fplex-mono%402.5.0",
+    "ligatures": [],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-Light.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-Light.ttf",
+        "sha256": "feca3787130b6e71a0edb1cfc17c2ae7780443888554207a8981de43ef755d36",
+        "bytes": 172560,
+        "localNames": [
+          "IBM Plex Mono Light",
+          "IBMPlexMono-Light"
+        ],
+        "families": [
+          "IBM Plex Mono",
+          "IBM Plex Mono Light"
+        ],
+        "weight": [
+          300,
+          300
+        ],
+        "italic": false,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-LightItalic.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-LightItalic.ttf",
+        "sha256": "eaf46dcb971a93849643c9f1249bbaf9abf92d712227ff6ce68ef48dc3df69e6",
+        "bytes": 179152,
+        "localNames": [
+          "IBM Plex Mono Light Italic",
+          "IBMPlexMono-LightItalic"
+        ],
+        "families": [
+          "IBM Plex Mono",
+          "IBM Plex Mono Light"
+        ],
+        "weight": [
+          300,
+          300
+        ],
+        "italic": true,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-Regular.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-Regular.ttf",
+        "sha256": "7c6fbddca4b700be918f5f6183d9bd4464fa427fe435f0b480d77fe2bb8c5a43",
+        "bytes": 173052,
+        "localNames": [
+          "IBM Plex Mono",
+          "IBMPlexMono"
+        ],
+        "families": [
+          "IBM Plex Mono"
+        ],
+        "weight": [
+          400,
+          400
+        ],
+        "italic": false,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-Italic.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-Italic.ttf",
+        "sha256": "a55368deb953f594ac18336a1029009ed820e2d9abbb57ad601f61e22bec072b",
+        "bytes": 179756,
+        "localNames": [
+          "IBM Plex Mono Italic",
+          "IBMPlexMono-Italic"
+        ],
+        "families": [
+          "IBM Plex Mono"
+        ],
+        "weight": [
+          400,
+          400
+        ],
+        "italic": true,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-Medium.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-Medium.ttf",
+        "sha256": "98fbd727aae340b236955879dabed4d991aac9e8e90b3b2a67ce4a59221cc97c",
+        "bytes": 174008,
+        "localNames": [
+          "IBM Plex Mono Medm",
+          "IBMPlexMono-Medm"
+        ],
+        "families": [
+          "IBM Plex Mono",
+          "IBM Plex Mono Medm"
+        ],
+        "weight": [
+          500,
+          500
+        ],
+        "italic": false,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-MediumItalic.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-MediumItalic.ttf",
+        "sha256": "100852349a441076bb03aca3a3c7786eaf5d59a91dca3e4677ee8337805817fb",
+        "bytes": 179624,
+        "localNames": [
+          "IBM Plex Mono Medm Italic",
+          "IBMPlexMono-MedmItalic"
+        ],
+        "families": [
+          "IBM Plex Mono",
+          "IBM Plex Mono Medm"
+        ],
+        "weight": [
+          500,
+          500
+        ],
+        "italic": true,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-SemiBold.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-SemiBold.ttf",
+        "sha256": "f04d7c488ddf7d1fa99f2574efc3406ea4cbe17bb1af3a1ab960f84d0c96a172",
+        "bytes": 174608,
+        "localNames": [
+          "IBM Plex Mono SmBld",
+          "IBMPlexMono-SmBld"
+        ],
+        "families": [
+          "IBM Plex Mono",
+          "IBM Plex Mono SmBld"
+        ],
+        "weight": [
+          600,
+          600
+        ],
+        "italic": false,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-SemiBoldItalic.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-SemiBoldItalic.ttf",
+        "sha256": "d2039ddfa9236d642fafae5aa46446c54eb7961b3771a1ca3e9bba960172b9bb",
+        "bytes": 179992,
+        "localNames": [
+          "IBM Plex Mono SmBld Italic",
+          "IBMPlexMono-SmBldItalic"
+        ],
+        "families": [
+          "IBM Plex Mono",
+          "IBM Plex Mono SmBld"
+        ],
+        "weight": [
+          600,
+          600
+        ],
+        "italic": true,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-Bold.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-Bold.ttf",
+        "sha256": "74e5eedcfa4596497d34e19023cabdabd3a8c852b903007a5654a59591a72ffb",
+        "bytes": 175096,
+        "localNames": [
+          "IBM Plex Mono Bold",
+          "IBMPlexMono-Bold"
+        ],
+        "families": [
+          "IBM Plex Mono"
+        ],
+        "weight": [
+          700,
+          700
+        ],
+        "italic": false,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/IBMPlexMono-BoldItalic.ttf",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/fonts/complete/ttf/IBMPlexMono-BoldItalic.ttf",
+        "sha256": "c8b00068fd2fd69bbcf62059148623f09d19e9ada8bf9e8caf1aedd01347046a",
+        "bytes": 180256,
+        "localNames": [
+          "IBM Plex Mono Bold Italic",
+          "IBMPlexMono-BoldItalic"
+        ],
+        "families": [
+          "IBM Plex Mono"
+        ],
+        "weight": [
+          700,
+          700
+        ],
+        "italic": true,
+        "ligatures": [],
+        "cyrillic": true,
+        "version": "Version 2.005"
+      },
+      {
+        "file": "fonts/ibmplexmono/OFL.txt",
+        "url": "https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-mono%402.5.0/ibm-plex-mono.zip",
+        "member": "ibm-plex-mono/LICENSE.txt",
+        "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+        "bytes": 4456
+      }
+    ]
+  },
+  {
+    "id": "geistmono",
+    "family": "Geist Mono",
+    "version": "1.700",
+    "localNames": [
+      "Geist Mono Regular",
+      "GeistMono-Regular",
+      "Geist Mono Italic",
+      "GeistMono-Italic"
+    ],
+    "minWeight": 100,
+    "maxWeight": 900,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "77f0563c03009d6c15c6342183fa53b352255b22",
+    "source": "https://github.com/vercel/geist-font/tree/77f0563c03009d6c15c6342183fa53b352255b22/fonts/GeistMono/variable",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!="
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/geistmono/GeistMono[wght].ttf",
+        "url": "https://raw.githubusercontent.com/vercel/geist-font/77f0563c03009d6c15c6342183fa53b352255b22/fonts/GeistMono/variable/GeistMono%5Bwght%5D.ttf",
+        "sha256": "87c2aff9723544a9adaea19d92e42a33705c9723624801b6e0224c2206a6af0d",
+        "bytes": 171968,
+        "localNames": [
+          "Geist Mono Regular",
+          "GeistMono-Regular"
+        ],
+        "families": [
+          "Geist Mono"
+        ],
+        "weight": [
+          100,
+          900
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!="
+        ],
+        "cyrillic": true,
+        "version": "Version 1.700"
+      },
+      {
+        "file": "fonts/geistmono/GeistMono-Italic[wght].ttf",
+        "url": "https://raw.githubusercontent.com/vercel/geist-font/77f0563c03009d6c15c6342183fa53b352255b22/fonts/GeistMono/variable/GeistMono-Italic%5Bwght%5D.ttf",
+        "sha256": "632bed258f849dec44d33b3cd2b0c8399821d530c087ed95ac7131016f7f895f",
+        "bytes": 182676,
+        "localNames": [
+          "Geist Mono Italic",
+          "GeistMono-Italic"
+        ],
+        "families": [
+          "Geist Mono"
+        ],
+        "weight": [
+          100,
+          900
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!="
+        ],
+        "cyrillic": true,
+        "version": "Version 1.700"
+      },
+      {
+        "file": "fonts/geistmono/OFL.txt",
+        "url": "https://raw.githubusercontent.com/vercel/geist-font/77f0563c03009d6c15c6342183fa53b352255b22/OFL.txt",
+        "sha256": "c683bfbcc7e087f5d37a54ef628f10387c451a83ddc459b151403a164ac46c90",
+        "bytes": 4383
+      }
+    ]
+  },
+  {
+    "id": "recmono",
+    "family": "Rec Mono Linear",
+    "version": "1.085",
+    "localNames": [
+      "Rec Mono Linear",
+      "RecMonoLinear-Regular",
+      "Rec Mono Linear Italic",
+      "RecMonoLinear-Italic",
+      "Rec Mono Linear Bold",
+      "RecMonoLinear-Bold",
+      "Rec Mono Linear Bold Italic",
+      "RecMonoLinear-BoldItalic"
+    ],
+    "minWeight": 400,
+    "maxWeight": 700,
+    "weightStep": 300,
+    "license": "OFL-1.1",
+    "revision": "v1.085",
+    "source": "https://github.com/arrowtype/recursive/releases/tag/v1.085",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "&&",
+      "||"
+    ],
+    "cyrillic": false,
+    "files": [
+      {
+        "file": "fonts/recmono/RecMonoLinear-Regular-1.085.ttf",
+        "url": "https://github.com/arrowtype/recursive/releases/download/v1.085/ArrowType-Recursive-1.085.zip",
+        "member": "ArrowType-Recursive-1.085/Recursive_Code/RecMonoLinear/RecMonoLinear-Regular-1.085.ttf",
+        "sha256": "3f2948e76bbc6665af00dd3b358cfe617d673689a5491082d08cf70b868d3713",
+        "bytes": 478020,
+        "localNames": [
+          "Rec Mono Linear",
+          "RecMonoLinear-Regular"
+        ],
+        "families": [
+          "Rec Mono Linear"
+        ],
+        "weight": [
+          400,
+          400
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": false,
+        "version": "Version 1.085; ttfautohint (v1.8.4.7-5d5b)"
+      },
+      {
+        "file": "fonts/recmono/RecMonoLinear-Italic-1.085.ttf",
+        "url": "https://github.com/arrowtype/recursive/releases/download/v1.085/ArrowType-Recursive-1.085.zip",
+        "member": "ArrowType-Recursive-1.085/Recursive_Code/RecMonoLinear/RecMonoLinear-Italic-1.085.ttf",
+        "sha256": "1c8334043bd94276e3523bc2778615bf1b82a0bf10cea7b72b23b94016bcb49e",
+        "bytes": 487024,
+        "localNames": [
+          "Rec Mono Linear Italic",
+          "RecMonoLinear-Italic"
+        ],
+        "families": [
+          "Rec Mono Linear"
+        ],
+        "weight": [
+          400,
+          400
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": false,
+        "version": "Version 1.085; ttfautohint (v1.8.4.7-5d5b)"
+      },
+      {
+        "file": "fonts/recmono/RecMonoLinear-Bold-1.085.ttf",
+        "url": "https://github.com/arrowtype/recursive/releases/download/v1.085/ArrowType-Recursive-1.085.zip",
+        "member": "ArrowType-Recursive-1.085/Recursive_Code/RecMonoLinear/RecMonoLinear-Bold-1.085.ttf",
+        "sha256": "b52f2fa50af7e8f27e2fd655628c2a515dfe4da967312befd3a5e78b935ea7ee",
+        "bytes": 484936,
+        "localNames": [
+          "Rec Mono Linear Bold",
+          "RecMonoLinear-Bold"
+        ],
+        "families": [
+          "Rec Mono Linear"
+        ],
+        "weight": [
+          700,
+          700
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": false,
+        "version": "Version 1.085; ttfautohint (v1.8.4.7-5d5b)"
+      },
+      {
+        "file": "fonts/recmono/RecMonoLinear-BoldItalic-1.085.ttf",
+        "url": "https://github.com/arrowtype/recursive/releases/download/v1.085/ArrowType-Recursive-1.085.zip",
+        "member": "ArrowType-Recursive-1.085/Recursive_Code/RecMonoLinear/RecMonoLinear-BoldItalic-1.085.ttf",
+        "sha256": "02529f67cb9939962585ee9f5f46e847ac029335edd55a22ac31bcd1a0dd785e",
+        "bytes": 487648,
+        "localNames": [
+          "Rec Mono Linear Bold Italic",
+          "RecMonoLinear-BoldItalic"
+        ],
+        "families": [
+          "Rec Mono Linear"
+        ],
+        "weight": [
+          700,
+          700
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": false,
+        "version": "Version 1.085; ttfautohint (v1.8.4.7-5d5b)"
+      },
+      {
+        "file": "fonts/recmono/OFL.txt",
+        "url": "https://github.com/arrowtype/recursive/releases/download/v1.085/ArrowType-Recursive-1.085.zip",
+        "member": "ArrowType-Recursive-1.085/LICENSE.txt",
+        "sha256": "f9f539cf7549bd417159dbdb9c400943a5b60a7366c2c6fbde9f095173d82479",
+        "bytes": 4389
+      }
+    ]
+  },
+  {
+    "id": "maplemono",
+    "family": "Maple Mono",
+    "version": "7.900",
+    "localNames": [
+      "Maple Mono Regular",
+      "MapleMono-Regular",
+      "Maple Mono Italic",
+      "MapleMono-Italic"
+    ],
+    "minWeight": 100,
+    "maxWeight": 800,
+    "weightStep": 100,
+    "license": "OFL-1.1",
+    "revision": "v7.9",
+    "source": "https://github.com/subframe7536/maple-font/releases/tag/v7.9",
+    "ligatures": [
+      "===",
+      "!==",
+      "=>",
+      "<=",
+      ">=",
+      "->",
+      "!=",
+      "&&",
+      "||"
+    ],
+    "cyrillic": true,
+    "files": [
+      {
+        "file": "fonts/maplemono/MapleMono[wght].ttf",
+        "url": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-Variable.zip",
+        "member": "MapleMono[wght].ttf",
+        "sha256": "55c21f6733c7fa93403c7acccb9d15d87c98fec20723b875e4fdd6db1619388c",
+        "bytes": 426076,
+        "localNames": [
+          "Maple Mono Regular",
+          "MapleMono-Regular"
+        ],
+        "families": [
+          "Maple Mono"
+        ],
+        "weight": [
+          100,
+          800
+        ],
+        "italic": false,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 7.900"
+      },
+      {
+        "file": "fonts/maplemono/MapleMono-Italic[wght].ttf",
+        "url": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-Variable.zip",
+        "member": "MapleMono-Italic[wght].ttf",
+        "sha256": "a95b2e4254be1057fb3838cec43c04cb2a5a2852a3e7beea122951571af07d8f",
+        "bytes": 475168,
+        "localNames": [
+          "Maple Mono Italic",
+          "MapleMono-Italic"
+        ],
+        "families": [
+          "Maple Mono"
+        ],
+        "weight": [
+          100,
+          800
+        ],
+        "italic": true,
+        "ligatures": [
+          "===",
+          "!==",
+          "=>",
+          "<=",
+          ">=",
+          "->",
+          "!=",
+          "&&",
+          "||"
+        ],
+        "cyrillic": true,
+        "version": "Version 7.900"
+      },
+      {
+        "file": "fonts/maplemono/OFL.txt",
+        "url": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-Variable.zip",
+        "member": "LICENSE.txt",
+        "sha256": "eb2d28d2e565a0757e3d64e34ebb452e75a0cad87c0ab3faf4e08ba7596de902",
+        "bytes": 4394
+      }
+    ]
+  }
+]

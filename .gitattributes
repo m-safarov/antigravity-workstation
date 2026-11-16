@@ -1,0 +1,6 @@
+* text=auto eol=lf
+/extensions/aster-appearance/fonts/** -text
+*.ttf binary
+*.vsix binary
+resources/mcp-runtime/** -text -whitespace
+/extensions/jelly-cursor/** -text

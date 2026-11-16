@@ -1,0 +1,10 @@
+{
+  "githubPanel.refresh": "Refresh GitHub Panel",
+  "npmScripts.view": "npm Scripts",
+  "npmScripts.empty": "No package.json scripts in the open folders.\n[Refresh](command:workstationNpmScripts.refresh)",
+  "npmScripts.refresh": "Refresh npm Scripts",
+  "npmScripts.run": "Run in Terminal",
+  "npmScripts.stop": "Stop (Ctrl+C)",
+  "npmScripts.restart": "Restart",
+  "npmScripts.openUrl": "Open in Browser"
+}

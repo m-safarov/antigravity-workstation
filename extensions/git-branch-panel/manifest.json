@@ -1,0 +1,32 @@
+{
+  "id": "workstation.git-branch-panel",
+  "version": "1.8.1",
+  "vsixSha256": "7926666a4a92d04bb679f171861f67df802bcbf70acc94be8a41152ae79415ff",
+  "files": {
+    "package.json": "f0b4f22ce9072d1007d759511279db9d714111d8f4bda04ecfc76986417e79c7",
+    "extension.js": "d4c452ea4a21ce618528fe4738f4106757c1b7a132032b8bcac5c73c8b4ab893",
+    "package.nls.json": "6f96cb715ecedb1dec3821c5bf486fdff1e7885c766b2798fb395e6b4b62b5b5",
+    "package.nls.ru.json": "6eab9b8a75e7bdae94c3358e7bf44ecfe344de74033130a04e206cf85bbca573",
+    "src/text.js": "9ebe57058f3d9f6318fc35ca30b5e02661ce47959bb1ad9d5e507a780c82c0b5",
+    "src/shell.js": "53039d8869b38e6e808e37e79964103a3118b1606d04d99a893a03f826a85ba6",
+    "src/git-runner.js": "406b32ae90437744b26227050250017b5288ea40202a21fd4d53de0714f08f2f",
+    "src/git-terminal.js": "a9ccbb5cd825b323f66c09e60fe5449f3d8283329fcb67bcc149ca8446beb864",
+    "src/git-errors.js": "11b737fa99319221f57744337e8da1f0c3639c5e20892ef4ef398336d5d2d7a3",
+    "src/git-state.js": "2652eee89fec6a82bab6a5f62e5630fb4efca7387feee15f423f2317b56aaa29",
+    "src/github-api.js": "aab17cae3f5789a8235ff55ba9168f40325616da0d36998bbab056d657562e82",
+    "src/identity.js": "96c868b7119570614010703e1e4413ad2f6b0be9601bd791ec60881ad10ccf8a",
+    "src/npm-scripts.js": "6db1fef0dffdd8c1c109468df72b14599a94af57d3b040d8072ffea3bc89b233",
+    "src/panel-provider.js": "f206e1fefd445505d0a536111b08959806ad71196d3205c101542f978d15f44c",
+    "src/webview-html.js": "010d33dd8b66094500bfcbbdf6b36f5e750c1ff631236ae7556de96a67a25dd6",
+    "src/webview/view.css": "139754a93f77ed2c596eb904d6d228b666ddc1c2f55bb38f185696d369d5ae39",
+    "src/webview/view.js": "70a680968663c808c23b6e55a22fb6bd7febc7cc2aee5981b0cc18fb87e67a02",
+    "src/actions/common.js": "badc391562293f5de6890a84a6c16aa494846a2f76bd81a8c61370f7188f1817",
+    "src/actions/commit-push.js": "0d00d4bb68b5e39be196a51f47d9ed1d9dfb6dfb395cd369623e71036ffd0aea",
+    "src/actions/merge.js": "74f5f57942063b1e2e81b08005cf49dbe6505b84074a771a7d2e5d5ec5c50e55",
+    "src/actions/branches.js": "e396d1a90abb406712444cd98c714100130e58ec351985940c010777b5fa0c93",
+    "src/actions/repository.js": "75bbddfb67b58b0d90d80dadc076feee43862d951d7e7f8499b3830e4fc9df2d",
+    "README.md": "2d970dbbf6559fb5412a24c190d53b06bb1cea732f160c2410bf1ab35cc8920b",
+    "icon.png": "3f735f31301f36b0c71c6e2173351d665f0c31b917372c228d01adbb70d88523",
+    "LICENSE.txt": "bfaae0aff18f1a000d36ddb068e81e3820a252b9ed5fabcd480fdfdd44012fe8"
+  }
+}
