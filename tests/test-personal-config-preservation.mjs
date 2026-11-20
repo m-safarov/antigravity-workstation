@@ -70,7 +70,7 @@ test('Real installer preserves personal configuration through update, repeat and
   assert.equal(fs.existsSync(path.join(env.geminiSkillsDir, '.DS_Store')), false);
   assert.equal(fs.existsSync(path.join(env.geminiSkillsDir, '__MACOSX')), false);
   for (const file of ['audit-configuration.cjs', 'package-git-panel.cjs',
-    'audit-powershell-syntax.ps1','audit-tracked-files.cjs','build-aster-icon.cjs','build-aster.cjs','fetch-aster-fonts.cjs','migrate-aster-profile.cjs','package-aster.cjs','run-test-coverage.cjs'])
+    'audit-powershell-syntax.ps1','audit-tracked-files.cjs','build-aster-icon.cjs','build-aster.cjs','fetch-aster-fonts.cjs','inspect-running-antigravity.ps1','migrate-aster-profile.cjs','package-aster.cjs','run-test-coverage.cjs'])
     assert.equal(fs.existsSync(path.join(env.geminiScriptsDir, file)), false, 'Source-only development tooling must not be globally deployed');
   const files = [path.join(env.geminiDir, 'antigravity/settings.json'), path.join(env.geminiConfigDir, 'config.json')];
   const originals = files.map(file => {

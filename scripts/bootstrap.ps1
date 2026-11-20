@@ -469,9 +469,26 @@ function Invoke-Bootstrap {
     [IO.Directory]::CreateDirectory($script:logs) | Out-Null
 
     $entry = Join-Path $script:source 'bin\workstation-setup.js'
+    if (-not (Test-Path -LiteralPath $entry -PathType Leaf)) { throw 'Downloaded setup is missing bin\workstation-setup.js; nothing was installed.' }
     $next = 4
     if ($CleanExtensions) {
         Write-Step 4 'Full reset: move every Antigravity setting, sign-in and chat into a backup'
+        $existingProfile = @(
+            (Join-Path $env:APPDATA 'Antigravity IDE'),
+            (Join-Path $env:APPDATA 'Antigravity'),
+            (Join-Path $env:USERPROFILE '.antigravity-ide'),
+            (Join-Path $env:USERPROFILE '.gemini\GEMINI.md')
+        ) | Where-Object { Test-Path -LiteralPath $_ }
+        if ($existingProfile.Count) {
+            Write-Box @(
+                'NOTICE: Existing Antigravity profile detected - Mode 1 performs a FULL RESET.',
+                '  - All current settings, keybindings, extensions, sign-in, chats, rules, skills,',
+                '    agents, MCP configs and hooks will move into one backup under:',
+                "    $env:USERPROFILE\.gemini\backups\full-reset-<timestamp>",
+                '  - Rebuildable IDE caches and logs will be deleted; project folders are untouched.',
+                '  - After DONE, open Antigravity IDE and sign in to your account again.'
+            ) 'Yellow'
+        }
         if (-not (Test-ReadyToRun)) { return 3 }
         $reset = Invoke-Logged 'reset' @($entry, 'full-reset', '--confirm-full-reset')
         if ($reset.Code -ne 0) { return (Complete-Failure 'reset' $reset $false) }

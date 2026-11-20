@@ -437,7 +437,8 @@ test('Published stability VSIX reproduces source bytes, its MIT license and shor
     }
     offset = start + size;
   }
-  assert.equal(names.length, 15);
+  assert.equal(names.length, 16);
+  assert.ok(names.includes('extension/inline-diff-guard.cjs'), 'the inlineDiff undo guard ships with the stability helper');
   assert.ok(names.includes('extension/workbench-ui.cjs'), 'the interface addon ships with the helper that restores it');
   assert.ok(names.includes('extension/questions.cjs'));
   assert.ok(names.includes('extension/icon.png'), 'The published extension includes its actual icon');

@@ -25,6 +25,21 @@
     "when": "editorTextFocus && !editorReadonly"
   },
   {
+    "key": "ctrl+z",
+    "command": "undo",
+    "when": "editorTextFocus && !editorReadonly && antigravity.inlineDiffCanUndo && !antigravity.hasActiveDiff && config.antigravity.enableInlineDiff == false"
+  },
+  {
+    "key": "ctrl+y",
+    "command": "redo",
+    "when": "editorTextFocus && !editorReadonly && antigravity.inlineDiffCanRedo && !antigravity.hasActiveDiff && config.antigravity.enableInlineDiff == false"
+  },
+  {
+    "key": "ctrl+shift+z",
+    "command": "redo",
+    "when": "!isMac && editorTextFocus && !editorReadonly && antigravity.inlineDiffCanRedo && !antigravity.hasActiveDiff && config.antigravity.enableInlineDiff == false"
+  },
+  {
     "key": "ctrl+m",
     "command": "-antigravity.startVoiceRecording"
   },

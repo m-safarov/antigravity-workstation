@@ -154,16 +154,19 @@ test('IDE architecture comes from the executable PE header, including an emulate
   fs.writeFileSync(executable, 'malformed'); assert.equal(installationArchitecture(f.env.ideRoot), 'unknown');
 });
 
-test('Audited 2.6.0 bundle validates correctly against the compatibility catalog and schema', () => {
+test('Locally installed audited Antigravity IDE bundle validates against the compatibility catalog and schema', () => {
   const localAppData = process.env.LOCALAPPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Local') : null);
   const localIde = localAppData ? path.join(localAppData, 'Programs', 'Antigravity IDE') : null;
   if (!localIde || !fs.existsSync(localIde)) return;
+  const catalog = loadCatalog({ repoRoot: root });
   const result = inspectNativeCompatibility({ ideRoot: localIde });
   assert.equal(result.supported, true);
   assert.equal(result.reasonCode, 'SUPPORTED');
-  assert.equal(result.reportedProductVersion, '2.6.0');
-  assert.equal(result.mainSha256, '2a0e8928e47f354324a1622ae114a77839bbc2c1e22c77ca2917df5a6c19e5c5');
-  assert.equal(result.adapterId, 'uss-int32-agent-tab-v1');
+  assert.ok(SUPPORTED_IDE_VERSIONS.includes(result.reportedProductVersion), 'Expected supported IDE version, got: ' + result.reportedProductVersion);
+  const entry = catalog.builds.find(b => b.ideVersion === result.reportedProductVersion && b.architecture === result.architecture);
+  assert.ok(entry, 'Matching catalog entry must exist for local IDE');
+  assert.equal(result.mainSha256, entry.mainSha256);
+  assert.equal(result.adapterId, entry.adapterId);
 });
 
 test('Only Antigravity IDE 2.7.0 and 2.6.0 are supported; every other version stops with an install hint', t => {

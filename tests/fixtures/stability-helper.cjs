@@ -47,6 +47,7 @@ function load(tabs = []) {
       if (name === './repair-chat.cjs') return require(path.join(extensionPath, 'repair-chat.cjs'));
       if (name === './questions.cjs') return require(path.join(extensionPath, 'questions.cjs'));
       if (name === './gallery-updates.cjs') return { watchGalleryUpdates() {} };
+      if (name === './inline-diff-guard.cjs') return { watchInlineDiffUndo() {} };
       if (name === './jelly-patch.cjs') return { scheduleJellyPatch() {} };
       if (name === 'node:child_process') return { execFile(executable, args, options, callback) {
         const child = { executable, args, options, callback, killed: false, kill() { this.killed = true; } };

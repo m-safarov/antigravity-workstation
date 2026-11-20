@@ -47,7 +47,9 @@ test('Installation persists library IntelliSense, manual formatting and autosave
         assert.equal(settings[language + '.suggest.includeCompletionsForImportStatements'], true);
         assert.equal(Object.hasOwn(settings, language + '.suggest.importStatements'), false);
     }
-    assert.equal(settings['typescript.preferences.includePackageJsonAutoImports'], 'on');
+    assert.equal(settings['typescript.preferences.includePackageJsonAutoImports'], 'auto');
+    assert.equal(Object.hasOwn(settings['files.watcherExclude'], '**/node_modules/**'), false, 'files.watcherExclude must keep native TypeScript --canUseWatchEvents enabled');
+    assert.equal(settings['oxc.lint.run'], 'onSave');
     assert.equal(settings['typescript.tsserver.maxTsServerMemory'], 1024, 'The actual 4 GiB profile keeps room for the OS and editor');
     assert.equal(settings['editor.suggest.showInlineDetails'], true);
     assert.equal(settings['editor.inlineSuggest.enabled'], false);

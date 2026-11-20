@@ -253,8 +253,8 @@ test('README has exactly two Windows PowerShell commands for IDE 2.7.0/2.6.0 and
   assert.match(readme, /Antigravity IDE 2\.7\.0/);
   assert.match(readme, /2\.6\.0/);
   assert.doesNotMatch(readme, /2\.5\.5|2\.5\.2|2\.1\.1|более новая|QuietCompletion|## 3\./);
-  const commandOne = readme.split('## 1. Полный сброс и установка с нуля')[1]?.split('## 2. Установить или обновить')[0];
-  const commandTwo = readme.split('## 2. Установить или обновить')[1]?.split('## Что происходит в окне')[0];
+  const commandOne = readme.split('## КОД 1 — чистая установка')[1]?.split('## КОД 2 — обновление')[0];
+  const commandTwo = readme.split('## КОД 2 — обновление')[1]?.split('## Что происходит в окне')[0];
   assert.ok(commandOne && commandTwo, 'Both README Windows setup commands must exist');
   assert.match(commandOne, /-File \$file -CleanExtensions\n/);
   assert.match(commandTwo, /-File \$file\n/);
@@ -278,8 +278,9 @@ test('README has exactly two Windows PowerShell commands for IDE 2.7.0/2.6.0 and
 test('README step 0 sets the GitHub identity and both AI prompts are self-contained downloads', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   const zip = 'https://github.com/safarovmurod/antigravity-workstation/archive/refs/heads/main.zip';
-  assert.ok(readme.indexOf('git config --global user.name') < readme.indexOf('## 1. Полный сброс и установка с нуля'), 'identity comes before commands 1 and 2');
+  assert.ok(readme.includes('git config --global user.name'), 'README documents git user.name');
   assert.match(readme, /git config --global user\.email/);
+  assert.ok(readme.indexOf('## КОД 1 — чистая установка') < readme.indexOf('## КОД 2 — обновление'), 'CODE 1 comes before CODE 2 at the top of README');
   assert.ok(readme.includes(zip));
   for (const name of ['WINDOWS-AI-SETUP.md', 'MAC-AI-SETUP.md']) {
     const prompt = fs.readFileSync(path.join(repoRoot, 'docs/prompts', name), 'utf8');

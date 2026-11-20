@@ -23,10 +23,14 @@ const ACCOUNT = { id: '583231', label: 'octocat' };
 const NOREPLY = '583231+octocat@users.noreply.github.com';
 const GITHUB_URL = 'https://github.com/octocat/demo.git';
 
-// The terminal shell: Git Bash on Windows (as the product picks it from the
-// terminal profile), bash elsewhere.
+// The terminal shell: Git Bash on Windows (resolved via lib/paths so bare `bash`
+// never hits a WindowsApps WSL stub), bash elsewhere.
+const { getEnvironmentPaths } = require('../lib/paths');
 const BASH = process.platform === 'win32'
-  ? execFileSync('bash', ['-c', 'cygpath -w /usr/bin/bash'], { encoding: 'utf8' }).trim() : '/bin/bash';
+  ? (getEnvironmentPaths().gitBashPath && fs.existsSync(getEnvironmentPaths().gitBashPath)
+    ? getEnvironmentPaths().gitBashPath
+    : execFileSync('bash', ['-c', 'cygpath -w /usr/bin/bash'], { encoding: 'utf8' }).trim())
+  : '/bin/bash';
 
 function git(cwd, ...args) {
   return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -149,9 +153,9 @@ test('Bash quoting keeps every argument literal, also quotes, $, backticks, ! an
   for (const sample of samples) {
     const quoted = quoteArg(sample);
     assert.doesNotMatch(quoted, /[\n\r]/, 'the command stays on one line');
-    assert.equal(execFileSync('bash', ['-c', 'printf %s ' + quoted], { encoding: 'utf8' }), sample);
+    assert.equal(execFileSync(BASH, ['-c', 'printf %s ' + quoted], { encoding: 'utf8' }), sample);
     // Interactive bash expands !! outside quotes; the quoted text stays as is.
-    const typed = execFileSync('bash', ['--norc', '--noprofile', '-i'], { input: `printf %s ${quoted}\nexit\n`, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+    const typed = execFileSync(BASH, ['--norc', '--noprofile', '-i'], { input: `printf %s ${quoted}\nexit\n`, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
     assert.equal(typed, sample, JSON.stringify(sample));
   }
   assert.equal(commandLine(['git', 'commit', '-m', 'Add form']), "git commit -m 'Add form'");

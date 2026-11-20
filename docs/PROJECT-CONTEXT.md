@@ -4,8 +4,8 @@
 сессия (человек или AI) за 5 минут понимает, что это за проект, что уже сделано,
 какие настройки зачем стоят и где лежат ограничения. Подробности — в ссылках.
 
-Последнее обновление: 16 ноября 2026, setup **3.11.1**, Aster Atelier **1.8.0**, Git Branch Panel **1.8.1**,
-Calm TypeScript **3.4.0**, Workstation Stability **1.3.29**,
+Последнее обновление: 20 ноября 2026, setup **3.12.0**, Aster Atelier **1.8.0**, Git Branch Panel **1.8.1**,
+Calm TypeScript **3.4.0**, Workstation Stability **1.3.30**,
 поддерживаемые IDE — **Antigravity IDE 2.7.0 и 2.6.0**.
 
 ## 1. Что это за проект
@@ -198,6 +198,7 @@ GitHub): скрипты из `package.json` (корень или папки пе
 | 3.10.0 / 1.7.0 | Git Branch Panel 1.7.0: автор commit — владелец репозитория из `origin` (раньше — аккаунт редактора); проект без `origin` не изменяется; строка «Автор commits» в панели; меньше запусков git (раздел 4a) |
 | 3.11.0 / 1.8.0 | Большое обновление по запросу 16.11.2026 (разделы 2–4a): Aster — 11 тем в двух разделах по яркости, 10 шрифтов, толщина отдельно (−/+), живой предпросмотр; Git Branch Panel 1.8.0 — npm-скрипты, git в терминале, «Создать репозиторий», «Подключить к GitHub»; профиль — Ctrl+Shift+F поиск, отступ 2, видимые ошибки, unicode, fileNesting, linked editing, +4 расширения; агент без вопросов; команда 1 удаляет кэш; PAUSED с Y/N; −4,4 МБ дубль JetBrains Mono; Calm TypeScript 3.4.0; Stability 1.3.29 |
 | 3.11.1 / 1.8.0 | Git Branch Panel 1.8.1: команда, прерванная сигналом (exit 130 — Ctrl+C от Git Bash) до ответа git, повторяется в фоне вместо ошибки «git switch: exit code 130» |
+| 3.12.0 / 1.8.0 | Ускорение TS/JS IntelliSense и автоимпорта (Workstation Stability 1.3.30: убран 2 с фриз Extension Host и 600+ предупреждений в `profile.cjs`; `files.watcherExclude` без `**/node_modules/**` → `--canUseWatchEvents`; `includePackageJsonAutoImports: "auto"`; `oxc.lint.run: "onSave"`), фикс `antigravity.inlineDiff.undo not found` (`inline-diff-guard.cjs` + fallback `ctrl+z`/`ctrl+y`), правила PowerShell vs Git Bash, preflight всех VSIX/шрифтов, автооткат профиля при сбое, проверка 1 активной версии расширения в Doctor, удалён `scripts/migrate-aster-profile.cjs` |
 
 Все версии проверены GitHub Actions (Setup checks, Native Windows IDE smoke,
 Aster actual Antigravity appearance, Verify Aster VSIX build).

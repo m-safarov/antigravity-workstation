@@ -13,7 +13,7 @@ function crc32(bytes) {
 }
 function payload(root = path.resolve(__dirname, '..')) {
   const source = path.join(root, 'extensions/workstation-stability');
-  return new Map(['package.json', 'extension.js', 'maintenance.cjs', 'profile.cjs', 'repair-chat.cjs', 'questions.cjs', 'gallery-updates.cjs', 'jelly-patch.cjs', 'workbench-ui.cjs', 'react-snippets.cjs', 'README.md', 'icon.png'].map(name => [name, fs.readFileSync(path.join(source, name))]));
+  return new Map(['package.json', 'extension.js', 'maintenance.cjs', 'profile.cjs', 'inline-diff-guard.cjs', 'repair-chat.cjs', 'questions.cjs', 'gallery-updates.cjs', 'jelly-patch.cjs', 'workbench-ui.cjs', 'react-snippets.cjs', 'README.md', 'icon.png'].map(name => [name, fs.readFileSync(path.join(source, name))]));
 }
 function buildVsix(root = path.resolve(__dirname, '..')) {
   const source = path.join(root, 'extensions/workstation-stability');

@@ -40,13 +40,16 @@
 - Пас аз тағйир он чиро, ки ба задача дахл дорад, воқеан санҷ: typecheck, lint, build, UI (desktop + mobile), API, reload, маршрутҳо. Чизи иҷронашударо иҷрошуда нагӯ; PASS / FAIL / NOT TESTED-ро ҷудо навис.
 - Дар охир кӯтоҳ: **Чӣ иваз шуд → Дар куҷо → Чӣ санҷида шуд → Чӣ санҷида нашуд**.
 - Настройкаҳои шахсӣ, secrets, accounts ва кори ҳифзнашударо нигоҳ дор; token ва паролро ба ягон ҷо нафирист.
-- Муҳити шеф: Windows + Git Bash. `npm i` дар папкаи худи проект.
+- Муҳити шеф: Windows (терминал дар IDE — Git Bash, аммо `run_command` ё равзанаи `PS ...>` метавонад PowerShell бошад). `npm i` дар папкаи худи проект.
 
 ## Terminal
-- Terminal — Git Bash дар Windows: роҳ `/d/react` ё `D:/react`; `cmd /c`, `cd /d` ва синтаксиси PowerShell (`Set-Location`, `;` ба ҷои `&&`) истифода набар.
+- Аввал shell-и воқеиро бин (дар prompt ё тавсифи tool):
+  - Дар **PowerShell** (`PS ...>` ё tool бо `Shell: powershell`): роҳи Windows (`C:\...`, `D:\...`) ва барои барномаи дохили папкаи фосиладор call operator `&` истифода бар — масалан `& 'C:\Program Files\PostgreSQL\18\bin\createdb.exe' --version`. Ҳеҷ гоҳ роҳи Git Bash (`/c/...`, `/d/...`) дар PowerShell нанавис ва ба шеф нафирист.
+  - Дар **Git Bash** (терминали дохили IDE): роҳи `/d/react` ё `D:/react` ва `"/c/Program Files/PostgreSQL/18/bin/createdb.exe" --version`; `cmd /c`, `cd /d` ва `Set-Location` истифода набар.
+- Агар барои шеф команда менависӣ, нишон деҳ ки барои кадом shell аст (PowerShell ё Git Bash), ё ба ҳамон shell-е мувофиқ кун, ки дар скриншот/терминал кушода аст.
 - Terminal аллакай дар папкаи проект бошад — командаро бе `cd` иҷро кун.
 - CLI-и саволдиҳандаро бо flag-и non-interactive иҷро кун: `npx shadcn@latest add dialog --yes`, `npm create vite@latest my-app -- --template react-ts`.
-- Exit code ≠ 0 → аввал матни ошибкаро хон ва сабабро ислоҳ кун; ҳамон командаро бо синтаксиси дигари shell такрор накун.
+- Exit code ≠ 0 → аввал матни ошибкаро хон ва сабабро ислоҳ кун; ҳамон командаро бе ислоҳи синтаксиси shell такрор накун.
 
 ## Модулҳо
 Дар `~/.gemini/config/skills/workstation-frontend-mentor/references/` танҳо модули ба задача лозимро хон:

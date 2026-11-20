@@ -376,7 +376,6 @@
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
-    "**/node_modules/**": true,
     "**/dist/**": true,
     "**/build/**": true,
     "**/.cache/**": true
@@ -387,7 +386,7 @@
     "**/build": true,
     "**/.git": true
   },
-  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
   "editor.suggestSelection": "first",
   "editor.minimap.enabled": false,
   "editor.smoothScrolling": true,
@@ -442,7 +441,7 @@
   "npm-intellisense.importQuotes": "\"",
   "npm-intellisense.importLinebreak": "\n",
   "oxc.enable.oxlint": true,
-  "oxc.lint.run": "onType",
+  "oxc.lint.run": "onSave",
   "css.lint.unknownAtRules": "ignore",
   "scss.lint.unknownAtRules": "ignore"
 }

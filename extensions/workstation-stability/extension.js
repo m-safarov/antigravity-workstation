@@ -50,6 +50,7 @@ function activate(context) {
   require('./questions.cjs').registerQuestions(vscode, context);
   require('./gallery-updates.cjs').watchGalleryUpdates(vscode, context, output);
   require('./profile.cjs').watchEditorProfile(vscode, context, output);
+  require('./inline-diff-guard.cjs').watchInlineDiffUndo(vscode, context, output);
   require('./jelly-patch.cjs').scheduleJellyPatch(vscode, context, output);
   const repairChat = require('./repair-chat.cjs');
   const repairDirectory = path.join(os.homedir(), '.gemini/config/workstation-setup/repair-chat');
@@ -182,12 +183,12 @@ function activate(context) {
     }
   }
 
-  function schedule(reason) {
+  function schedule(reason, delay = 700) {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       timer = undefined;
       void scan(true, reason).catch(() => { if (alive) output.appendLine('Maintenance check failed.'); });
-    }, 700);
+    }, delay);
   }
 
   context.subscriptions.push(vscode.commands.registerCommand('workstationStability.status', async () => {
@@ -221,7 +222,7 @@ function activate(context) {
     if (child) child.kill();
     releaseLock();
   } });
-  schedule('startup');
+  schedule('startup', 5000);
 }
 
 module.exports = { activate, resumePendingSetup };

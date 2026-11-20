@@ -14,7 +14,7 @@ test('Update retires only unchanged owned development scripts, preserves persona
   const base=fs.mkdtempSync(path.join(os.tmpdir(),'workstation-runtime-only-'));t.after(()=>fs.rmSync(base,{recursive:true,force:true}));
   const env=getEnvironmentPaths({userProfile:path.join(base,'User'),gitBashPath:'fixture-bash'}),source=path.join(base,'source');
   for(const name of ['rules','skills','scripts'])fs.mkdirSync(path.join(source,name),{recursive:true});
-  const names=['build-aster.cjs','build-aster-icon.cjs','package-aster.cjs','fetch-aster-fonts.cjs','migrate-aster-profile.cjs','audit-tracked-files.cjs','audit-powershell-syntax.ps1'];
+  const names=['build-aster.cjs','build-aster-icon.cjs','package-aster.cjs','fetch-aster-fonts.cjs','inspect-running-antigravity.ps1','audit-tracked-files.cjs','audit-powershell-syntax.ps1'];
   const files=names.map(name=>{const bytes=fs.readFileSync(path.resolve(import.meta.dirname,'../scripts',name));put(path.join(source,'scripts',name),bytes);put(path.join(env.geminiScriptsDir,name),bytes);return{key:'scripts/'+name,hash:digest(bytes)};});
   put(path.join(source,'scripts/practice-engine.mjs'),'export const runtime = true;\n');
   put(path.join(env.geminiScriptsDir,names[0]),'personal version preserved');put(path.join(env.geminiScriptsDir,'personal.mjs'),'personal script');

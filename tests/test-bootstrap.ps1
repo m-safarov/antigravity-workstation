@@ -202,7 +202,7 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
         Assert-True ($run.Calls[2].args -contains $flag) "Command 1 must forward $flag" $run
     }
     Assert-True ($run.Calls[2].args -notcontains '--apply-profile') 'Command 1 starts from an empty profile and needs no apply-profile' $run
-    Assert-True ($run.Result.resetBackup -eq (Join-Path $appData 'fixture-full-reset-backup') -and $run.Output -match 'sign in again' -and $run.Output -match '\[1/6\]' -and $run.Output -match '\[6/6\]') 'Command 1 must report the reset backup, the sign-in and six steps' $run
+    Assert-True ($run.Result.resetBackup -eq (Join-Path $appData 'fixture-full-reset-backup') -and $run.Output -match 'sign in again' -and $run.Output -match 'NOTICE: Existing Antigravity profile detected' -and $run.Output -match '\[1/6\]' -and $run.Output -match '\[6/6\]') 'Command 1 must report the reset notice, reset backup, the sign-in and six steps' $run
     Assert-True (Test-Path -LiteralPath (Join-Path $appData 'Antigravity IDE\User\globalStorage\state.vscdb')) 'Command 1 must leave a new native profile for the AI-off step' $run
 
     $freshAppData = Join-Path $testRoot 'AppData new computer'

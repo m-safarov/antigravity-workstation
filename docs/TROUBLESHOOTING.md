@@ -18,5 +18,8 @@
 | Форматирование отличается | Проверь `.prettierrc`, `prettier.config.*` и `.editorconfig` своего проекта. |
 | GitHub push не работает | Проверь `origin`, авторизацию Git и права на репозиторий. Вход в аккаунт IDE не всегда авторизует Git. |
 | MCP не подключается | Проверь настройки, доступность и авторизацию конкретного сервиса; выбери Reconnect MCP. |
+| `command 'antigravity.inlineDiff.undo' not found` | Возникает в Antigravity 2.7.0 после переключения на Side-by-Side (`antigravity.enableInlineDiff: false`), когда IDE удаляет команду, но не сбрасывает контекст `antigravity.inlineDiffCanUndo`. Обнови профиль командой 2 (`Workstation Stability` 1.3.30+ и резервные `ctrl+z`/`ctrl+y` в `keybindings.json` автоматически возвращают обычный Undo/Redo). |
+| PostgreSQL `28P01` и текст ошибки `` | Это две отдельные причины: (1) `28P01` — неверный пароль/параметры подключения (например `DATABASE_URL` в `.env` проекта, спецсимволы без URL-кодирования); не ослабляй `scram-sha-256` в `pg_hba.conf` и не печатай пароли. (2) Символы `` — сервер PostgreSQL в Windows отправляет ошибки в CP1251 (`lc_messages = 'Russian_Russia.1251'` в `postgresql.conf`), а `node-postgres` (`pg`) читает их как UTF-8; задай `lc_messages = 'C'` в `postgresql.conf` и перезапусти службу `postgresql-x64-18`. |
+| PowerShell `ParserError` на пути `"/c/..."` | Путь `/c/...` работает только в Git Bash. В Windows PowerShell (`PS ...>`) используй оператор `&` и Windows-путь: `& 'C:\Program Files\PostgreSQL\18\bin\createdb.exe' --version`; в Git Bash — `"/c/Program Files/PostgreSQL/18/bin/createdb.exe" --version`. |
 
 Backup: `%USERPROFILE%\.gemini\backups`. Личные токены, базы и аккаунты не переносить между компьютерами.
