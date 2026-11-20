@@ -50,6 +50,16 @@ test('Preflight source integrity catches missing or corrupted bundled VSIX and f
   const calmVersion = require('../extensions/calm-typescript/package.json').version;
   const jellyVersion = require('../extensions/jelly-cursor/package.json').version;
   const fontManifest = require('../config/font.json');
+  const asterFonts = require('../extensions/aster-appearance/fonts.json');
+  const secondaryAsterFont = asterFonts.find(family => family.id !== 'jetbrainsmono')?.files?.[0]?.file;
+  assert.ok(secondaryAsterFont, 'Expected a bundled non-JetBrains Aster font entry');
+
+  assert.doesNotThrow(
+    () => verifySourceIntegrity(repoRoot, env, require('../config/extensions.json'), {
+      skipExtensions: false, skipFont: false, isolated: true, verifyFonts: true,
+    }),
+    'Clean repository must pass full preflight integrity including bundled VSIX and Aster font checks',
+  );
 
   const cases = [
     ['corrupted calm-typescript VSIX', src => fs.appendFileSync(path.join(src, `extensions/calm-typescript/calm-typescript-${calmVersion}.vsix`), 'corrupt'), /Calm TypeScript VSIX hash mismatch/],
@@ -57,6 +67,7 @@ test('Preflight source integrity catches missing or corrupted bundled VSIX and f
     ['corrupted jelly-cursor VSIX', src => fs.appendFileSync(path.join(src, `extensions/jelly-cursor/jelly-cursor-${jellyVersion}.vsix`), 'corrupt'), /Jelly Cursor VSIX checksum mismatch/, false],
     ['corrupted JetBrains Mono TTF (with extensions)', src => fs.appendFileSync(path.join(src, fontManifest.source, fontManifest.files[0].source), 'corrupt'), /source differs from the packaged VSIX|font checksum mismatch/i, false],
     ['corrupted JetBrains Mono TTF (skipExtensions)', src => fs.appendFileSync(path.join(src, fontManifest.source, fontManifest.files[0].source), 'corrupt'), /font checksum mismatch/i, true],
+    ['corrupted Aster font TTF', src => fs.appendFileSync(path.join(src, 'extensions/aster-appearance', secondaryAsterFont), 'corrupt'), /source differs from the packaged VSIX|Aster font checksum mismatch/i, false],
   ];
 
   for (const [label, corrupt, pattern, skipExtensions = false] of cases) {
