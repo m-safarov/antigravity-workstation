@@ -267,7 +267,7 @@ function main() {
     }
     case 'doctor': {
       const docRes = runDoctor(opts.extensionProfile ? { extensionProfile: opts.extensionProfile } : {});
-      process.exit(docRes.ok ? 0 : 1);
+      process.exitCode = docRes.ok ? 0 : 1;
       break;
     }
 

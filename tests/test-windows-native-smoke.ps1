@@ -218,8 +218,15 @@ if ($env:GITHUB_EVENT_NAME -cne 'pull_request') {
         if (-not $commits.Count -or @($commits | Where-Object { $_.Groups[1].Value -cne $env:GITHUB_SHA }).Count) {
             throw "$label did not execute the workflow commit"
         }
-        $doctor = & node (Join-Path $repoRoot 'bin/workstation-setup.js') doctor 2>&1
-        $doctorExit = $LASTEXITCODE
+        $doctorOut = Join-Path $directory ($label + '-doctor.out.log'); $doctorErr = Join-Path $directory ($label + '-doctor.err.log')
+        $doctorProc = Start-Process -FilePath 'node' -ArgumentList @(('"' + (Join-Path $repoRoot 'bin/workstation-setup.js') + '"'), 'doctor') -RedirectStandardOutput $doctorOut -RedirectStandardError $doctorErr -NoNewWindow -PassThru
+        $null = $doctorProc.Handle
+        if (-not $doctorProc.WaitForExit(120000)) {
+            & taskkill.exe /T /F /PID $doctorProc.Id 2>&1 | Out-Null
+            throw "$label standalone Doctor did not finish within 2 minutes"
+        }
+        $doctorExit = $doctorProc.ExitCode
+        $doctor = @(Get-Content -LiteralPath $doctorOut -ErrorAction SilentlyContinue) + @(Get-Content -LiteralPath $doctorErr -ErrorAction SilentlyContinue)
         $doctor | Set-Content -LiteralPath (Join-Path $ArtifactDirectory ($label + '-doctor.log'))
         if ($doctorExit -ne 0 -or ($doctor -join "`n") -notmatch 'Doctor Summary:.*\b0 Failures\.') { throw "$label Doctor failed" }
         # Setup adds the interface addon while the IDE is closed, so the interface font works from the first start.
