@@ -23,13 +23,14 @@ async function refresh(vscode) {
   function ready() {
     const link = fs.lstatSync(file);
     if (link.isSymbolicLink() || link.size > 4 * 1024 * 1024) throw new Error('Unsafe React snippet cache');
-    if (readyCache && readyCache.file === file && readyCache.mtimeMs === link.mtimeMs && readyCache.size === link.size) {
+    const raw = fs.readFileSync(file, 'utf8');
+    if (readyCache && readyCache.file === file && readyCache.raw === raw) {
       return readyCache.value;
     }
-    const snippets = Object.values(JSON.parse(fs.readFileSync(file, 'utf8')));
+    const snippets = Object.values(JSON.parse(raw));
     const value = ['rfc', 'rafce'].every(prefix => snippets.some(item => item.prefix === prefix && Array.isArray(item.body)
       && !/import\s+(?:\*\s+as\s+)?React\b[^\n]*from\s*["']react["']/.test(item.body.join('\n'))));
-    readyCache = { file, mtimeMs: link.mtimeMs, size: link.size, value };
+    readyCache = { file, raw, value };
     return value;
   }
   if (ready()) return { status: 'current', reloadWindowMayBeRequired: needsReload };

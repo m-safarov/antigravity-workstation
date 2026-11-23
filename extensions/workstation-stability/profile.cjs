@@ -344,13 +344,14 @@ function readProfile(file) {
   try { stat = fs.lstatSync(file); }
   catch (error) { if (error.code === 'ENOENT') return; throw error; }
   if (stat.isSymbolicLink()) throw new Error('Linked editor profile is unsupported');
-  if (profileCache && profileCache.file === file && profileCache.mtimeMs === stat.mtimeMs && profileCache.size === stat.size) {
+  const raw = fs.readFileSync(file, 'utf8');
+  if (profileCache && profileCache.file === file && profileCache.raw === raw) {
     return profileCache.plan;
   }
-  const plan = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const plan = JSON.parse(raw);
   if (plan.schema !== 1 || typeof plan.requestId !== 'string' || !/^[a-f0-9-]{36}$/.test(plan.requestId)
     || typeof plan.locale !== 'string' || !/^[a-zA-Z0-9-]{1,35}$/.test(plan.locale) || !plan.settings || Array.isArray(plan.settings) || typeof plan.settings !== 'object') throw new Error('Invalid managed editor profile');
-  profileCache = { file, mtimeMs: stat.mtimeMs, size: stat.size, plan };
+  profileCache = { file, raw, plan };
   return plan;
 }
 
