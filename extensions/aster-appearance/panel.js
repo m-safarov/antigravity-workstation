@@ -214,7 +214,7 @@ window.addEventListener('message',async({data})=>{
   if(data.type==='probe'){api.postMessage({type:'probe-result',id:data.id,loaded:await localFont(data.family,data.localNames)});return;}
   if(data.type==='init'){
     view=data;remember({pendingTheme:null});buildGallery();await applyState(data.state);
-    window.scrollTo(0,saved.scrollY||0);return;
+    if(saved.scrollY&&window.scrollY===0)window.scrollTo(0,saved.scrollY);return;
   }
   if(!view)return;
   if(data.type==='state')await applyState(data);

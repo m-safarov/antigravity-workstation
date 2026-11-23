@@ -128,6 +128,16 @@ test('the page restores its scroll position after the IDE rebuilds a hidden stud
   assert.ok(Array.isArray(states));
 });
 
+test('init does not reset scroll position to 0 when user already scrolled during initial load', async () => {
+  const panel = fakePanel();
+  panel.node('style').replaceChildren(...FONT_STYLES.map(style => ({ value: style.value })));
+  panel.context.window.scrollY = 516;
+  await panel.handlers.message({
+    data: { type: 'init', themes: gallery(), sections: swatches.SECTIONS, fonts: fontOptions, styles: FONT_STYLES, anyWeights: ANY_WEIGHTS, state: applied() },
+  });
+  assert.equal(panel.context.window.scrollY, 516, 'init with no saved scrollY must not snap user back to 0');
+});
+
 test('the code preview shows the selected theme and follows the sliders live with the editor colours; Apply is still needed', async () => {
   const { node, handlers, posted, colour, card } = await opened();
   const dracula = themes.find('One Dark Pro'), editor = level => themes.blocks(dracula, {}, level).semantic.rules;
