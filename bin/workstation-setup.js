@@ -193,8 +193,8 @@ function main() {
         for (const kept of result.keptCaches || []) console.log('  Cache kept in the backup (could not be deleted): ' + kept);
         if (!result.items.length) console.log('  Antigravity had no settings on this Windows account.');
         console.log('Full reset backup: ' + result.backup);
-        process.exit(0);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = 0;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'extensions-restore': {
@@ -202,8 +202,8 @@ function main() {
         if (!opts.backupDir) throw new Error('extensions-restore requires an explicit extension-reset backup directory');
         const result = require('../lib/extension-reset').restoreExtensionReset(envPaths, opts.backupDir, { dryRun: opts.dryRun });
         console.log(JSON.stringify(result, null, 2));
-        process.exit(result.restored || result.dryRun ? 0 : 1);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = result.restored || result.dryRun ? 0 : 1;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'status': {
@@ -211,16 +211,16 @@ function main() {
         const result = require('../lib/setup-status').getSetupStatus(envPaths);
         if (opts.json) console.log(JSON.stringify(result, null, 2));
         else console.log(require('../lib/setup-status').formatSetupStatus(result));
-        process.exit(result.state === 'failed' ? 1 : 0);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = result.state === 'failed' ? 1 : 0;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'resume': {
       try {
         const result = require('../lib/setup-status').recoverPending(envPaths, { dryRun: opts.dryRun });
         console.log(JSON.stringify(result, null, 2));
-        process.exit(result.state === 'invalid' || result.state === 'failed' ? 1 : 0);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = result.state === 'invalid' || result.state === 'failed' ? 1 : 0;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'quiet-completion': {
@@ -228,16 +228,16 @@ function main() {
         const result = require('../lib/quiet-completion').applyQuietCompletion(envPaths, { dryRun: opts.dryRun });
         console.log(JSON.stringify(result, null, 2));
         if (!result.success) console.error('Quiet completion incomplete: ' + (result.native?.reason || 'Native completion settings were not applied or queued'));
-        process.exit(result.success ? 0 : 1);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = result.success ? 0 : 1;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'automation': {
       try {
         const result = require('../lib/agent-automation').queueAutomation(envPaths, { dryRun: opts.dryRun });
         console.log(JSON.stringify(result, null, 2));
-        process.exit(result.applied || result.queued || result.dryRun ? 0 : 1);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = result.applied || result.queued || result.dryRun ? 0 : 1;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'automation-restore': {
@@ -245,24 +245,24 @@ function main() {
         if (opts.dryRun) throw new Error('automation-restore requires a closed IDE and an explicit backup directory');
         const result = require('../lib/agent-automation').restoreAutomation(envPaths, opts.backupDir);
         console.log(JSON.stringify(result, null, 2));
-        process.exit(result.applied ? 0 : 1);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = result.applied ? 0 : 1;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'permissions-restore': {
       try {
         if (opts.dryRun) throw new Error('Use permissions --dry-run for preview; restore requires an explicit backup directory');
         const result = require('../lib/mcp-permissions').restoreMcpPermissions(envPaths, opts.backupDir);
-        console.log(JSON.stringify(result, null, 2)); process.exit(0);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        console.log(JSON.stringify(result, null, 2)); process.exitCode = 0;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'permissions': {
       try {
         const result = require('../lib/mcp-permissions').applyMcpPermissions(envPaths, { dryRun: opts.dryRun });
         console.log(JSON.stringify(result, null, 2));
-        process.exit(result.applied || result.dryRun ? 0 : 1);
-      } catch (error) { console.error(error.message); process.exit(1); }
+        process.exitCode = result.applied || result.dryRun ? 0 : 1;
+      } catch (error) { console.error(error.message); process.exitCode = 1; }
       break;
     }
     case 'doctor': {
@@ -274,13 +274,14 @@ function main() {
     case 'backup': {
       if (opts.dryRun) {
         console.log(`[DRY-RUN] Would create a manual setup backup under ${envPaths.backupsDir}; no files written.`);
-        process.exit(0);
+        process.exitCode = 0;
+        return;
       }
       console.log('Creating manual backup of Antigravity settings...');
       const bRes = createBackup(envPaths, 'manual');
       console.log(`✓ Backup saved to: ${bRes.backupDir}`);
       console.log(`  Files included: ${bRes.backedUp.join(', ')}`);
-      process.exit(0);
+      process.exitCode = 0;
       break;
     }
 
@@ -293,7 +294,8 @@ function main() {
           console.error(all.length
             ? 'No restorable backups found in ' + envPaths.backupsDir + ' (' + all.length + ' incomplete manifest-less copies skipped)'
             : 'No previous backups found in ' + envPaths.backupsDir);
-          process.exit(1);
+          process.exitCode = 1;
+          return;
         }
         targetBackup = backups[0].path;
         console.log(`Restoring most recent restorable backup: ${backups[0].name}`);
@@ -302,10 +304,10 @@ function main() {
         const rRes = require('../lib/rollback').restoreSetup(targetBackup, envPaths, { dryRun: opts.dryRun });
         console.log(JSON.stringify(rRes, null, 2));
         if (rRes.success && !opts.dryRun) console.log('Save work and fully reopen Antigravity to load restored settings.');
-        process.exit(rRes.success ? 0 : 1);
+        process.exitCode = rRes.success ? 0 : 1;
       } catch (err) {
         console.error(`Restore failed: ${err.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
       break;
     }
@@ -330,16 +332,16 @@ function main() {
           log: opts.rulesOnly ? console.error : console.log,
         });
         if (opts.rulesOnly) console.log(JSON.stringify(res, null, 2));
-        process.exit(res.success ? 0 : 1);
+        process.exitCode = res.success ? 0 : 1;
       } catch (err) {
         console.error(`\nInstallation failed: ${err.message}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
       break;
     }
     default:
       console.error('Unknown command: ' + opts.command);
-      process.exit(1);
+      process.exitCode = 1;
   }
 }
 
