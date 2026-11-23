@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawn, execFileSync } = require('node:child_process');
+const { spawn } = require('node:child_process');
 const repo = path.resolve(__dirname, '../..');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -147,11 +147,13 @@ async function main(ideRoot, executable, directory, output) {
     'editor.fontSize': 20, 'editor.minimap.enabled': false, 'editor.inlineSuggest.enabled': true, 'files.autoSave': 'off',
     'security.workspace.trust.enabled': false, 'calmTypeScript.quietMode': false, 'calmTypeScript.autoSaveAfterTyping': false,
     'errorLens.followCursor': 'allLines', 'errorLens.delay': 300, 'window.zoomLevel': 0, 'window.dialogStyle': 'custom' });
+  const { downloadGalleryWithRetry, installArtifactWithRetry } = require('../windows-native-smoke/controller.cjs');
   const errorLens = path.join(directory, 'errorlens.vsix');
-  await require(path.join(repo, 'scripts/install-gallery-extension.cjs')).downloadExtension('usernamehw.errorlens', 'latest', errorLens,
-    fetch, require(path.join(repo, 'lib/extensions')).galleryTarget({ ideRoot }));
-  execFileSync(executable, [path.join(ideRoot, 'resources/app/out/cli.js'), '--user-data-dir', path.dirname(env.userSettingsDir), '--extensions-dir', env.extensionsDir, '--install-extension', errorLens, '--force'],
-    { windowsHide: true, timeout: 120000, stdio: 'pipe', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } });
+  const errorLensPackage = await downloadGalleryWithRetry('usernamehw.errorlens', errorLens,
+    require(path.join(repo, 'lib/extensions')).galleryTarget({ ideRoot }), { log: console.log });
+  installArtifactWithRetry(executable,
+    [path.join(ideRoot, 'resources/app/out/cli.js'), '--user-data-dir', path.dirname(env.userSettingsDir), '--extensions-dir', env.extensionsDir],
+    errorLens, { id: 'usernamehw.errorlens', version: errorLensPackage.version }, { log: console.log });
   const calmRoot = path.join(repo, 'extensions/calm-typescript');
   const calmFiles = new Map(['package.json', 'README.md', 'icon.png'].map(file => [file, fs.readFileSync(path.join(calmRoot, file))]));
   calmFiles.set('dist/extension.cjs', fs.readFileSync(path.join(calmRoot, 'extension.cjs')));
