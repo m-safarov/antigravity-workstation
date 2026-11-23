@@ -170,7 +170,7 @@ test('Repeating installation verifies the same payload without another full back
 
 test('A changed source instruction is backed up once, replaced in place and then repeats without another snapshot', t => {
   const f = fixture(t), repoRoot = path.resolve(import.meta.dirname, '..'), source = path.join(f.root, 'source');
-  for (const name of ['config', 'rules', 'resources', 'skills', 'scripts', 'agents', 'package.json']) {
+  for (const name of ['config', 'rules', 'resources', 'skills', 'scripts', 'package.json']) {
     fs.cpSync(path.join(repoRoot, name), path.join(source, name), { recursive: true,
       filter: file => !file.split(path.sep).includes('node_modules') });
   }

@@ -4,9 +4,9 @@
 сессия (человек или AI) за 5 минут понимает, что это за проект, что уже сделано,
 какие настройки зачем стоят и где лежат ограничения. Подробности — в ссылках.
 
-Последнее обновление: 20 ноября 2026, setup **3.12.0**, Aster Atelier **1.8.0**, Git Branch Panel **1.8.1**,
-Calm TypeScript **3.4.0**, Workstation Stability **1.3.30**,
-поддерживаемые IDE — **Antigravity IDE 2.7.0 и 2.6.0**.
+Последнее обновление: 23 ноября 2026, setup **3.13.0**, Aster Atelier **1.8.1**, Git Branch Panel **1.8.2**,
+Calm TypeScript **3.4.1**, Workstation Stability **1.3.31**,
+поддерживаемые IDE — **Antigravity IDE 2.8.0, 2.7.0 и 2.6.0**.
 
 ## 1. Что это за проект
 
@@ -19,8 +19,8 @@ Windows PowerShell скачивает свежий `main` с GitHub и став�
   расширения из `extensions/`: **Aster Atelier** (темы и шрифты), **Workstation
   Stability Helper** (применяет профиль внутри IDE), **Calm TypeScript**,
   **Git Branch Panel**;
-- правила, навыки и агентов для чата Antigravity (`rules/`, `skills/`, `agents/`),
-  MCP-серверы (`config/mcp/`), хуки;
+- правила и навыки для чата Antigravity (`rules/`, `skills/`),
+  MCP-сервер `chrome-devtools-mcp` (`config/mcp/`), хуки (устаревшие `agents/workstation-verifier.md`, `skills/workstation-workflow`, `skills/project-coding-rules` и setup-owned `sequential-thinking` выведены из эксплуатации в 3.13.0 — Antigravity 2.8.0 делает планирование, Thinking и subagents нативно);
 - шрифты с лигатурами (через расширение Aster; системный JetBrains Mono ставится из файлов Aster).
 
 AI-подсказки (серый ghost text) выключаются, обычный IntelliSense остаётся.
@@ -53,7 +53,7 @@ AI-подсказки (серый ghost text) выключаются, обычн
   через 15 с принудительно) и продолжение; N или неинтерактивный ввод — прежний
   PAUSED с кодом 3.
 - **`PAUSED: this is the terminal of an editor`** — команда запущена из терминала IDE.
-- **`STOPPED: this setup supports only Antigravity IDE 2.7.0 or 2.6.0`** — стоит
+- **`STOPPED: this setup supports only Antigravity IDE 2.8.0 or 2.7.0 or 2.6.0`** — стоит
   другая версия IDE. См. раздел 7.
 
 ### Где установщик ищет IDE (диск C или D)
@@ -199,6 +199,7 @@ GitHub): скрипты из `package.json` (корень или папки пе
 | 3.11.0 / 1.8.0 | Большое обновление по запросу 16.11.2026 (разделы 2–4a): Aster — 11 тем в двух разделах по яркости, 10 шрифтов, толщина отдельно (−/+), живой предпросмотр; Git Branch Panel 1.8.0 — npm-скрипты, git в терминале, «Создать репозиторий», «Подключить к GitHub»; профиль — Ctrl+Shift+F поиск, отступ 2, видимые ошибки, unicode, fileNesting, linked editing, +4 расширения; агент без вопросов; команда 1 удаляет кэш; PAUSED с Y/N; −4,4 МБ дубль JetBrains Mono; Calm TypeScript 3.4.0; Stability 1.3.29 |
 | 3.11.1 / 1.8.0 | Git Branch Panel 1.8.1: команда, прерванная сигналом (exit 130 — Ctrl+C от Git Bash) до ответа git, повторяется в фоне вместо ошибки «git switch: exit code 130» |
 | 3.12.0 / 1.8.0 | Ускорение TS/JS IntelliSense и автоимпорта (Workstation Stability 1.3.30: убран 2 с фриз Extension Host и 600+ предупреждений в `profile.cjs`; `files.watcherExclude` без `**/node_modules/**` → `--canUseWatchEvents`; `includePackageJsonAutoImports: "auto"`; `oxc.lint.run: "onSave"`), фикс `antigravity.inlineDiff.undo not found` (`inline-diff-guard.cjs` + fallback `ctrl+z`/`ctrl+y`), правила PowerShell vs Git Bash, preflight всех VSIX/шрифтов, автооткат профиля при сбое, проверка 1 активной версии расширения в Doctor, удалён `scripts/migrate-aster-profile.cjs` |
+| 3.13.0 / 1.8.1 | Поддержка **Antigravity IDE 2.8.0** (`2.8.0-6733682917113856`, x64 и ARM64) вместе с 2.7.0 и 2.6.0 при 100% сохранении `config/settings.json` (284 ключа) и стилей; выведены устаревшие дубликаты, которые 2.8.0 делает сам (`workstation-workflow`, `project-coding-rules`, `agents/workstation-verifier.md`, `history-and-verification.md`, `mikestead.dotenv`, setup-owned MCP `sequential-thinking`); оптимизация скорости в Workstation Stability **1.3.31** (`profile.cjs`, `workbench-ui.cjs`, `jelly-patch.cjs`, `repair-chat.cjs`, `react-snippets.cjs`), Calm TypeScript **3.4.1** и Git Branch Panel **1.8.2**; `oxlint` доведён до 0 ошибок и 0 предупреждений (было 48) |
 
 Все версии проверены GitHub Actions (Setup checks, Native Windows IDE smoke,
 Aster actual Antigravity appearance, Verify Aster VSIX build).
@@ -206,7 +207,7 @@ Aster actual Antigravity appearance, Verify Aster VSIX build).
 ## 6. Тесты и проверка
 
 - `npm test` — основной набор (`node:test`). Node 24 в облачной сессии —
-  `/opt/node24/bin` (по умолчанию стоит 22). С 3.11.0 `lib/paths.js` на
+  `/opt/nvm/versions/node/v24.22.3/bin` (по умолчанию стоит 22). С 3.11.0 `lib/paths.js` на
   не-Windows использует обычные пути, поэтому в Linux падает только **~16
   тестов**, которым нужен Windows (`powershell.exe`, `tar.exe`, реестр).
   Правильная проверка — сравнить список падений до и после правок. Настоящая
@@ -247,15 +248,16 @@ Aster actual Antigravity appearance, Verify Aster VSIX build).
 pipe нет, поэтому такого зависания у него не было; в худшем случае разрешения
 агента применялись после следующего закрытия IDE.
 
-## 7. Версии IDE: 2.7.0 и 2.6.0 (и как добавить следующую)
+## 7. Версии IDE: 2.8.0, 2.7.0 и 2.6.0 (и как добавить следующую)
 
-С setup **3.9.0** поддерживаются **две** проверенные версии: **2.7.0**
-(рекомендуемая, её ссылку даёт bootstrap) и **2.6.0**. Обновлять 2.6.0 не
-обязательно: обе команды README работают с любой из них, IDE может стоять на
-любом диске.
+С setup **3.13.0** поддерживаются **три** проверенные версии: **2.8.0**
+(рекомендуемая, её ссылку даёт bootstrap), **2.7.0** и **2.6.0**. Обновлять
+2.7.0 или 2.6.0 не обязательно: обе команды README работают с любой из них, IDE
+может стоять на любом диске.
 
-Что проверено для 2.7.0 (build `2.7.0-4507555968450560`, commit
-`71bedb45923debaf49871bdcb7c7d3a47918e247`):
+Что проверено для 2.8.0 (build `2.8.0-6733682917113856`, commit
+`8dc5315afe097a21a6cb38dda76edc0835dfabfa`, Electron `39.2.3`, Chromium
+`142.0.7444.175`, Node `22.21.1`):
 
 - движок VS Code тот же — **1.107.0**, поэтому реестр настроек и цветов не
   менялся; `product.json`: те же `nameShort` «Antigravity IDE» и папка
@@ -264,51 +266,52 @@ pipe нет, поэтому такого зависания у него не б�
   (SHA-256 `b70f135c…`), значения enum (EAGER=3, TURBO=2, tabEnabled=1,
   tabToJump=2) и ключи `state.vscdb` (`agentPreferences`, `tabPreferences`,
   `browserPreferences`, `overrideStore`) не изменились — адаптер
-  `uss-int32-agent-tab-v1` подходит без правок;
-- `out/main.js` у x64 и ARM64 одинаковый (как и в 2.6.0), его хеш получен
-  установкой официального установщика на GitHub-раннере Windows
-  (Native Windows IDE smoke).
-- Новшества 2.7.0 (пилюли терминала в чате, меню быстрого доступа,
-  переименованные команды diff, правки diff/Auto Save/входа) настроек профиля
-  не задевают.
+  `uss-int32-agent-tab-v1` подходит без правок и проверен реальным декодером
+  `@bufbuild/protobuf@2.9.0` по извлечённому `out/main.js`;
+- `out/main.js` у x64 и ARM64 одинаковый (SHA-256 `187c3f56…`).
 
-Изменения кода для двух версий:
+Что проверено для 2.7.0 (build `2.7.0-4507555968450560`, commit
+`71bedb45923debaf49871bdcb7c7d3a47918e247`):
 
-- `scripts/bootstrap.ps1`: `$IdeVersions = @('2.7.0', '2.6.0')`, первая —
+- движок VS Code **1.107.0**, схема `unified_state_sync.proto` та же,
+  `out/main.js` одинаковый у x64 и ARM64 (`4a88efbc…`).
+
+Изменения кода для поддержки нескольких версий:
+
+- `scripts/bootstrap.ps1`: `$IdeVersions = @('2.8.0', '2.7.0', '2.6.0')`, первая —
   ссылка для скачивания; `Find-Ide` и `Test-Ide` принимают любую из списка.
 - `lib/native-compatibility.js`: `SUPPORTED_IDE_VERSIONS` (первая —
   рекомендуемая, `SUPPORTED_IDE_VERSION`). Проверка схемы больше не зависит
   от имени функции минификатора (`=Uo`, `=Ra`, `=va` …): ищутся все
   встроенные дескрипторы с этим именем файла; хотя бы один должен быть, и все
   должны совпадать с проверенным хешем.
-- `config/native-compatibility.json`: 4 сборки (2.7.0 и 2.6.0 × x64/arm64).
+- `config/native-compatibility.json`: 6 сборок (2.8.0, 2.7.0 и 2.6.0 × x64/arm64).
 - `scripts/macos-setup.cjs`: `IDE_VERSIONS`.
-- Smoke-тест Windows идёт по матрице 2.6.0 и 2.7.0.
+- Smoke-тест Windows идёт по матрице 2.6.0, 2.7.0 и 2.8.0.
 
 Как добавить следующую версию: скачать официальные установщики
 (`dl.google.com/edgedl/release2/j0qc3/antigravity/stable/<версия>-<build>/windows-<arch>/Antigravity%20IDE.exe`),
 посчитать SHA-256, сравнить схему protobuf (удобно по Linux-архиву той же
-версии, но хеш `main.js` у Linux **другой** — Windows-хеш берётся с
-Windows: smoke-тест при несовпадении печатает настоящий хеш), добавить версию
+версии, но хеш `main.js` у Linux **другой** — Windows-хеш берётся из
+распакованного Windows-установщика или с раннера Windows: smoke-тест при
+несовпадении печатает настоящий хеш), добавить версию
 в начало `$IdeVersions`, `SUPPORTED_IDE_VERSIONS`, `IDE_VERSIONS`, сборки в
 каталог, строку в матрицу smoke, ссылки в README, раздел source-evidence в
 `docs/AGENT-AUTOMATION.md` и тесты. Если схема изменилась — нужен новый
-адаптер, иначе можно повредить данные агента. Инструмент `innoextract` 1.9
-не читает установщики Inno Setup 6.4 (2.7.0).
+адаптер, иначе можно повредить данные агента.
 
 ## 8. Известные слабые места (не исправлены)
 
-Исправлены в 3.11.0: PAUSED показывает процесс и спрашивает Y/N; Stability
-Helper 1.3.29 восстанавливает управляемое значение, вернувшееся к default
-(один раз на запрос, `editorProfileRestored`). Статус «Workstation: N» —
-число управляемых настроек, чьё действующее значение отличается от профиля.
+Исправлены в 3.11.0–3.13.0: PAUSED показывает процесс и спрашивает Y/N; Stability
+Helper 1.3.29+ восстанавливает управляемое значение, вернувшееся к default
+(один раз на запрос, `editorProfileRestored`); с 3.13.0 `updateMcpConfig`
+безопасно удаляет setup-owned `sequential-thinking` (сохраняя личный сервер
+пользователя с другим launcher).
 
 Остаются:
 - **Не проверено в живой IDE на Windows:** shell integration Git Bash
   (`--login -i`) для терминалов `GitHub` и `npm: …` — при её отсутствии
   работают запасные пути (фоновый git, `sendText`) без поиска адреса.
-- **Удалённый из шаблона MCP-сервер** остаётся у пользователя: установщик не
-  помнит, какими серверами владеет.
 - **Подсветка unicode:** слово только из «похожих» кириллических букв (`с`,
   `бо`) в JSX-тексте будет подсвечено.
 

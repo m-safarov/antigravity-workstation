@@ -12,7 +12,7 @@ function enqueue(action) { const result = queue.then(action); queue=result.catch
 const read = key => vscode.workspace.getConfiguration(undefined,null).get(key);
 // Colour customizations start from the user's own global value, so a
 // workspace value is never copied into it; other settings are read as in effect.
-const OBJECTS = new Set([...Object.values(themes.KEYS)]);
+const OBJECTS = new Set(Object.values(themes.KEYS));
 const reader = settings => key => OBJECTS.has(key) ? settings.global(key) : settings.get(key);
 // A change computed on top of another one that is not written yet.
 const overlay = (settings, changes) => ({ get: key => key in changes ? changes[key] : settings.get(key),

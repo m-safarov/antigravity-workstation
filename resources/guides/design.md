@@ -26,7 +26,6 @@ Render through the real application's dev server using an available authorized b
 - HTML email: use email-client constraints only for an email deliverable; do not impose them on a React app. Verify the requested client/format and preserve real links/assets.
 - 3D object/animated video: use supported tools and requested motion/scene constraints. Keep static frontend work free of automatic animation/3D dependencies. Verify actual render/output when accessible.
 - Maps/geography and web research: use verified geographic data, current primary sources and suitable available tools. Cite factual claims and preserve coordinate/projection/source constraints when applicable. Do not invent locations or research attribution.
-- Claude API in prototypes and handoff to a coding agent: real available API, authentication and server boundary are prerequisites. Provider-only tools, source SDKs, canvas editors, artifact APIs, source paths and handoff commands remain reference material unless actually supported and authorized in the target environment.
 
 ## Source boundaries
 Raw tools, schemas, platform identity, hidden conversation tags and environment paths are not transferable global commands. Preserve their original text in the archive and map the useful goal to a real supported capability; explicitly record unsupported portions. Read contextual helpers on demand, never preload every design skill on every chat turn.

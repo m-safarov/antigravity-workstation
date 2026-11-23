@@ -115,7 +115,7 @@ class RepositoryIdentities {
   }
 
   async remember(root, owner, identity) {
-    const saved = { ...(this.memory?.get(MEMORY_KEY, {}) || {}) };
+    const saved = { ...this.memory?.get(MEMORY_KEY, {}) };
     const entry = saved[root];
     if (entry?.login === identity.login && entry?.id === identity.id && entry?.owner === owner) return;
     saved[root] = { login: identity.login, id: identity.id, owner };

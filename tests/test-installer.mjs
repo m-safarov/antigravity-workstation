@@ -102,8 +102,8 @@ test('Full install accepts empty optional profile JSON and backs up the exact or
     assert.ok(readJson(target), 'Installer must replace the empty config with valid JSON: ' + target);
   }
   assert.deepEqual(readJson(env.settingsJson), expectedSettings(env, repoRoot));
-  assert.ok(readJson(path.join(env.geminiConfigDir, 'mcp_config.json')).mcpServers['sequential-thinking']);
-  assert.ok(readJson(path.join(env.geminiDir, 'antigravity/mcp_config.json')).mcpServers['sequential-thinking']);
+  assert.ok(readJson(path.join(env.geminiConfigDir, 'mcp_config.json')).mcpServers['chrome-devtools-mcp']);
+  assert.deepEqual(readJson(path.join(env.geminiDir, 'antigravity/mcp_config.json')).mcpServers, {});
   assert.ok(readJson(path.join(env.extensionsDir, 'extensions.json')).some(item => item.identifier?.id === 'workstation.calm-typescript'));
   assert.ok(fs.existsSync(path.join(env.extensionsDir, 'workstation.stability-helper-' + require('../extensions/workstation-stability/package.json').version, 'maintenance.cjs')));
   assert.ok(fs.existsSync(path.join(env.extensionsDir, 'workstation.git-branch-panel-' + require('../extensions/git-branch-panel/package.json').version, 'extension.js')));
@@ -182,10 +182,11 @@ test('Repository declares the exact current settings, rules, guides and four loc
   ]);
   assert.deepEqual(fs.readdirSync(path.join(repoRoot, 'resources/guides')).sort(), ['design.md', 'full-stack.md']);
   const extensions = readJson(path.join(repoRoot, 'config/extensions.json'));
-  assert.equal(extensions.length, 26);
+  assert.equal(extensions.length, 25);
   assert.equal(new Set(extensions.map(item => item.id.toLowerCase())).size, extensions.length);
-  assert.equal(extensions.filter(item => item.source === 'gallery').length, 21);
-  assert.ok(!extensions.some(item => /turbo-console-log|auto-rename-tag/i.test(item.id)), 'Turbo Console Log and Auto Rename Tag are removed');
+  assert.equal(extensions.filter(item => item.source === 'gallery').length, 20);
+  assert.ok(!extensions.some(item => /turbo-console-log|auto-rename-tag|mikestead\.dotenv/i.test(item.id)), 'Turbo Console Log, Auto Rename Tag and redundant DotENV are removed');
+  assert.equal(require('../lib/extensions').RETIRED_EXTENSIONS['mikestead.dotenv'], true, 'mikestead.dotenv is retired in favor of built-in dotenv');
   for (const id of ['yoavbls.pretty-ts-errors', 'dbaeumer.vscode-eslint', 'ms-vscode.live-server', 'vitest.explorer']) {
     assert.ok(extensions.some(item => item.id === id && item.source === 'gallery' && item.trackLatest === true && item.category && item.description), id);
   }
@@ -196,7 +197,7 @@ test('Repository declares the exact current settings, rules, guides and four loc
   const tsRoot = path.join(repoRoot, 'extensions/calm-typescript');
   const manifest = readJson(path.join(tsRoot, 'manifest.json'));
   assert.equal(manifest.id, 'workstation.calm-typescript');
-  assert.equal(manifest.version, '3.4.0');
+  assert.equal(manifest.version, '3.4.1');
   assert.ok(fs.readdirSync(tsRoot).includes('calm-typescript-' + manifest.version + '.vsix'));
   assert.equal(sha256(path.join(tsRoot, 'calm-typescript-' + manifest.version + '.vsix')), manifest.vsixSha256);
   assert.equal(extensions.find(item => item.id === manifest.id).version, manifest.version);
@@ -281,21 +282,21 @@ test('One isolated full install applies managed settings, keeps personal keys an
   const bundledSkills = readJson(path.join(repoRoot, 'config/skill-inventory.json')).skills;
   assert.deepEqual(readJson(path.join(env.geminiConfigDir, 'skill-inventory.json')).skills, bundledSkills);
   for (const skill of bundledSkills) assert.ok(fs.existsSync(path.join(env.geminiSkillsDir, skill, 'SKILL.md')), skill);
-  assert.equal(collectPayload(repoRoot, 'Шеф').some(item => /^(global-skills|antigravity-runtime|gsd-core|hooks)\//.test(item.key)), false, 'GSD runtime is retired');
-  assert.ok(fs.readFileSync(path.join(env.geminiConfigDir, 'agents/workstation-verifier.md')).equals(fs.readFileSync(path.join(repoRoot, 'agents/workstation-verifier.md'))));
+  assert.equal(collectPayload(repoRoot, 'Шеф').some(item => /^(global-skills|antigravity-runtime|gsd-core|hooks|agents)\//.test(item.key)), false, 'GSD runtime and legacy verifier agent are retired');
   for (const name of ['package.json', 'package-lock.json']) {
     assert.ok(fs.readFileSync(path.join(env.geminiConfigDir, 'mcp-runtime', name)).equals(fs.readFileSync(path.join(repoRoot, 'resources/mcp-runtime', name))), name);
   }
   const mcpConfig = readJson(path.join(env.geminiConfigDir, 'mcp_config.json'));
   assert.equal(Object.hasOwn(mcpConfig.mcpServers, 'gsd'), false);
-  for (const name of ['chrome-devtools-mcp', 'sequential-thinking']) {
+  assert.equal(Object.hasOwn(mcpConfig.mcpServers, 'sequential-thinking'), false);
+  for (const name of ['chrome-devtools-mcp']) {
     assert.equal(mcpConfig.mcpServers[name].command, process.execPath.replace(/\\/g, '/'));
     assert.ok(mcpConfig.mcpServers[name].args[0].startsWith(env.userProfile.replace(/\\/g, '/') + '/.gemini/config/mcp-runtime/'));
     assert.doesNotMatch(JSON.stringify(mcpConfig.mcpServers[name]), /\$\{(?:USER_HOME|NODE_EXE)\}/);
   }
 
   const index = readJson(path.join(env.extensionsDir, 'extensions.json'));
-  const tsEntry = index.find(item => item.identifier?.id === 'workstation.calm-typescript' && item.version === '3.4.0');
+  const tsEntry = index.find(item => item.identifier?.id === 'workstation.calm-typescript' && item.version === '3.4.1');
   assert.ok(tsEntry, 'Calm TypeScript must be registered in isolated extension index');
   const tsBundle = path.join(env.extensionsDir, tsEntry.relativeLocation, 'dist/extension.cjs');
   assert.ok(fs.existsSync(tsBundle));

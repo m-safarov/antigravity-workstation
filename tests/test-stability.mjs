@@ -455,12 +455,12 @@ for (const [name, file, count] of [
   });
 }
 
-test('The skill inventory is exactly the frontend skills plus the workflow skill', () => {
+test('The skill inventory contains only the active workstation skills', () => {
   const inventory = require('../config/skill-inventory.json');
   const actual = fs.readdirSync(path.join(root, 'skills')).filter(name => fs.existsSync(path.join(root, 'skills', name, 'SKILL.md'))).sort();
   assert.deepEqual(inventory.skills, actual);
-  assert.deepEqual(actual, ['agent-browser', 'in-chat-screenshot-to-code', 'project-coding-rules',
-    'workstation-frontend-mentor', 'workstation-practice', 'workstation-workflow']);
+  assert.deepEqual(actual, ['agent-browser', 'in-chat-screenshot-to-code',
+    'workstation-frontend-mentor', 'workstation-practice']);
 });
 
 test('Helper upgrade backup keeps subdirectory files and never aborts the upgrade', t => {

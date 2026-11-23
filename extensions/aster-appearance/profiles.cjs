@@ -13,7 +13,7 @@ async function ensureAllProfiles(vscode,context){
   if(scope()===true)return{status:'application-scoped'};
   if(scope()!==false)return{status:'not-verified',reason:'IDE не сообщает, общее ли расширение для всех профилей. Включите это в меню расширения: «Применить расширение ко всем профилям».'};
   const command='workbench.extensions.action.toggleApplyToAllProfiles';
-  if(!/^1\.107\./.test(vscode.version)||!(await vscode.commands.getCommands(true)).includes(command))return{status:'not-verified',reason:'Для этой версии IDE общий для всех профилей режим не проверен. Включите его в меню расширения.'};
+  if(!vscode.version.startsWith('1.107.')||!(await vscode.commands.getCommands(true)).includes(command))return{status:'not-verified',reason:'Для этой версии IDE общий для всех профилей режим не проверен. Включите его в меню расширения.'};
   const key=crypto.createHash('sha256').update(context.extensionPath).digest('hex').slice(0,24),lock=path.join(os.tmpdir(),'aster-application-scope-'+key+'.lock');
   let descriptor;
   try {descriptor=fs.openSync(lock,'wx',0o600);}catch(error){if(error.code==='EEXIST')return{status:'busy',reason:'Другое окно IDE уже включает расширение для всех профилей.'};throw error;}

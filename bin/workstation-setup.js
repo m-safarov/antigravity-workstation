@@ -3,7 +3,7 @@
 
 const { runInstaller } = require('../lib/installer');
 const { runDoctor } = require('../lib/doctor');
-const { createBackup, restoreBackup, listBackups } = require('../lib/backup');
+const { createBackup, listBackups } = require('../lib/backup');
 const { getEnvironmentPaths } = require('../lib/paths');
 
 function parseArgs(args) {
@@ -266,7 +266,7 @@ function main() {
       break;
     }
     case 'doctor': {
-      const docRes = runDoctor({ ...(opts.extensionProfile ? { extensionProfile: opts.extensionProfile } : {}) });
+      const docRes = runDoctor(opts.extensionProfile ? { extensionProfile: opts.extensionProfile } : {});
       process.exit(docRes.ok ? 0 : 1);
       break;
     }

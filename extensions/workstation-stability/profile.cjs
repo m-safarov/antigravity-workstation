@@ -2,11 +2,30 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function same(a, b) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (!same(a[i], b[i])) return false;
+    return true;
+  }
+  if (Array.isArray(b)) return false;
+  let aCount = 0, bCount = 0;
+  for (const key in a) {
+    if (!Object.hasOwn(a, key) || a[key] === undefined) continue;
+    aCount++;
+    if (!Object.hasOwn(b, key) || !same(a[key], b[key])) return false;
+  }
+  for (const key in b) {
+    if (Object.hasOwn(b, key) && b[key] !== undefined) bCount++;
+  }
+  return aCount === bCount;
+}
 function contains(actual, expected, key) {
   if (key === 'textMateRules' && Array.isArray(expected)) return Array.isArray(actual) && expected.every(rule => actual.some(item => same(item, rule)));
   if (!expected || typeof expected !== 'object' || Array.isArray(expected)) return same(actual, expected);
-  return !!actual && Object.entries(expected).every(([key, value]) => contains(actual[key], value, key));
+  return !!actual && Object.entries(expected).every(([subKey, value]) => contains(actual[subKey], value, subKey));
 }
 
 const MERGED_SETTINGS = new Set(['workbench.colorCustomizations', 'files.associations',
@@ -44,26 +63,10 @@ function mergeManagedValue(key, previous, managed) {
     }
     if (!desired || typeof desired !== 'object' || Array.isArray(desired)) return desired;
     const next = current && typeof current === 'object' && !Array.isArray(current) ? { ...current } : {};
-    for (const [name, value] of Object.entries(desired)) next[name] = merge(next[name], value, name);
+    for (const [subName, value] of Object.entries(desired)) next[subName] = merge(next[subName], value, subName);
     return next;
   }
   return merge(previous, managed);
-}
-
-function vendorCompletionSettings(extensions) {
-  const settings = {};
-  for (const extension of extensions) {
-    const contributions = extension.packageJSON?.contributes?.configuration;
-    for (const section of Array.isArray(contributions) ? contributions : [contributions]) {
-      for (const [key, definition] of Object.entries(section?.properties || {})) {
-        if (!/^(antigravity|codeium)\./i.test(key) || definition.type !== 'boolean') continue;
-        if (!/(auto.?complet|super.?complet|inline.?suggest|tab.?complet|(?:^|\.)tab\.|(?:enable|disable)Tab$)/i.test(key)) continue;
-        if (/(?:^|\.)(?:disable\w*|\w*Disabled)$/i.test(key)) settings[key] = true;
-        else if (/(?:^|\.)(?:enable\w*|\w*Enabled)$/i.test(key)) settings[key] = false;
-      }
-    }
-  }
-  return settings;
 }
 
 const WINDOW_SCOPED_SETTINGS = new Set([
@@ -77,10 +80,20 @@ const NON_LANGUAGE_RESOURCE_SETTINGS = new Set([
   'git.enableSmartCommit', 'git.autofetch', 'diffEditor.codeLens', 'diffEditor.renderSideBySide',
 ]);
 
-function indexExtensionConfigs(extensions) {
+let extensionCache = null;
+function analyzeExtensions(extensions) {
+  const list = extensions || [];
+  const count = list.length;
+  const first = count ? list[0] : null;
+  const last = count ? list[count - 1] : null;
+  if (extensionCache && extensionCache.list === list && extensionCache.count === count
+    && extensionCache.first === first && extensionCache.last === last) {
+    return extensionCache.result;
+  }
   const registered = new Set();
   const windowScoped = new Set(WINDOW_SCOPED_SETTINGS);
-  for (const extension of extensions || []) {
+  const vendorCompletion = {};
+  for (const extension of list) {
     const configuration = extension.packageJSON?.contributes?.configuration;
     for (const section of Array.isArray(configuration) ? configuration : [configuration]) {
       for (const [key, definition] of Object.entries(section?.properties || {})) {
@@ -88,15 +101,32 @@ function indexExtensionConfigs(extensions) {
         if (!definition.scope || ['window', 'application', 'machine', 'machine-overridable'].includes(definition.scope)) {
           windowScoped.add(key);
         }
+        if (/^(antigravity|codeium)\./i.test(key) && definition.type === 'boolean'
+          && /(auto.?complet|super.?complet|inline.?suggest|tab.?complet|(?:^|\.)tab\.|(?:enable|disable)Tab$)/i.test(key)) {
+          if (/(?:^|\.)(?:disable\w*|\w*Disabled)$/i.test(key)) vendorCompletion[key] = true;
+          else if (/(?:^|\.)(?:enable\w*|\w*Enabled)$/i.test(key)) vendorCompletion[key] = false;
+        }
       }
     }
   }
+  const result = { registered, windowScoped, vendorCompletion };
+  extensionCache = { list, count, first, last, result };
+  return result;
+}
+
+function vendorCompletionSettings(extensions) {
+  return { ...analyzeExtensions(extensions).vendorCompletion };
+}
+
+function indexExtensionConfigs(extensions) {
+  const { registered, windowScoped } = analyzeExtensions(extensions);
   return { registered, windowScoped };
 }
 
-function isRegisteredSetting(vscode, key, registeredSet) {
+function isRegisteredSetting(vscode, key, registeredSet, inspected) {
   if (/^\[.+\]$/.test(key)) return true;
-  if (vscode.workspace.getConfiguration().inspect(key)?.defaultValue !== undefined) return true;
+  const info = inspected !== undefined ? inspected : vscode.workspace.getConfiguration().inspect(key);
+  if (info?.defaultValue !== undefined) return true;
   if (registeredSet) return registeredSet.has(key);
   return vscode.extensions.all.some(extension => {
     const configuration = extension.packageJSON?.contributes?.configuration;
@@ -105,7 +135,7 @@ function isRegisteredSetting(vscode, key, registeredSet) {
 }
 
 function selectorLanguages(key) {
-  return /^(?:\[[^\[\]]+\])+$/.test(key) ? [...key.matchAll(/\[([^\]]+)\]/g)].map(match => match[1]) : [];
+  return /^(?:\[[^[\]]+\])+$/.test(key) ? [...key.matchAll(/\[([^\]]+)\]/g)].map(match => match[1]) : [];
 }
 
 function managedLanguageSettings(current, managed) {
@@ -208,7 +238,8 @@ async function inspectProjectConflicts(vscode, desired, options = {}) {
     } else keys.add(key);
   }
   for (const key of keys) {
-    for (const id of root.inspect(key)?.languageIds || []) {
+    const inspected = options.inspectedByKey?.has(key) ? options.inspectedByKey.get(key) : root.inspect(key);
+    for (const id of inspected?.languageIds || []) {
       languages.add(id);
       relevantLanguages.add(id);
     }
@@ -231,7 +262,8 @@ async function inspectProjectConflicts(vscode, desired, options = {}) {
   if (active?.uri && !folders.length) contexts.push({ uri: active.uri, folder: undefined });
   const conflicts = [], seen = new Set();
   const keyList = [...keys];
-  const languageCandidateKeys = keyList.filter(key => !isWindowSetting(key) && !NON_LANGUAGE_RESOURCE_SETTINGS.has(key));
+  const windowKeySet = new Set(keyList.filter(isWindowSetting));
+  const languageCandidateKeys = keyList.filter(key => !windowKeySet.has(key) && !NON_LANGUAGE_RESOURCE_SETTINGS.has(key));
   const globalLangRegex = /^(editor\.|files\.|prettier\.|oxc\.|antigravity\.|codeium\.)/;
   const globalLanguageKeys = languageCandidateKeys.filter(key => globalLangRegex.test(key));
   function expected(key, languageId) {
@@ -262,14 +294,15 @@ async function inspectProjectConflicts(vscode, desired, options = {}) {
       const langMap = languageId ? desiredByLanguage.get(languageId) : undefined;
       const keysToCheck = !languageId
         ? keyList
-        : langMap ? [...new Set([...globalLanguageKeys, ...langMap.keys()])].filter(k => !isWindowSetting(k) && !NON_LANGUAGE_RESOURCE_SETTINGS.has(k)) : globalLanguageKeys;
+        : langMap ? [...new Set([...globalLanguageKeys, ...langMap.keys()])].filter(k => !windowKeySet.has(k) && !NON_LANGUAGE_RESOURCE_SETTINGS.has(k)) : globalLanguageKeys;
       for (const key of keysToCheck) {
         const want = expected(key, languageId);
         if (want === undefined) continue;
-        const scoped = isWindowSetting(key) ? root : config;
-        const inspected = scoped.inspect(key), actual = scoped.get(key);
-        if (!inspected) continue;
+        const scoped = windowKeySet.has(key) ? root : config;
+        const actual = scoped.get(key);
         if (contains(actual, want)) continue;
+        const inspected = scoped.inspect(key);
+        if (!inspected) continue;
         let winning;
         for (const [field, scope] of levels) if (inspected?.[field] !== undefined) winning = { field, scope, value: inspected[field] };
         const managedLanguage = !!(langMap && langMap.has(key));
@@ -295,7 +328,7 @@ async function inspectProjectConflicts(vscode, desired, options = {}) {
         if (want === undefined || contains(actual, want)) continue;
         for (const context of contexts.filter(context => !item.folder || context.folder === item.folder)) {
           const config = languageId ? workspace.getConfiguration(undefined, { uri: context.uri, languageId }) : context.uri ? workspace.getConfiguration(undefined, context.uri) : root;
-          const effective = (isWindowSetting(key) ? root : config).get(key);
+          const effective = (windowKeySet.has(key) ? root : config).get(key);
           add({ key, languageId: languageId || null, scope: item.scope, source: item.source, selector: ids.length ? selector : null,
             folder: context.folder || null, expected: want, actual, effective, active: !contains(effective, want) && same(effective, actual) });
         }
@@ -305,12 +338,19 @@ async function inspectProjectConflicts(vscode, desired, options = {}) {
   return { conflicts, checkedLanguages: [...languages].sort(), checkedFolders: folders.map(folder => uriLabel(folder.uri)), readErrors };
 }
 
+let profileCache = null;
 function readProfile(file) {
-  if (!fs.existsSync(file)) return;
-  if (fs.lstatSync(file).isSymbolicLink()) throw new Error('Linked editor profile is unsupported');
+  let stat;
+  try { stat = fs.lstatSync(file); }
+  catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  if (stat.isSymbolicLink()) throw new Error('Linked editor profile is unsupported');
+  if (profileCache && profileCache.file === file && profileCache.mtimeMs === stat.mtimeMs && profileCache.size === stat.size) {
+    return profileCache.plan;
+  }
   const plan = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (plan.schema !== 1 || typeof plan.requestId !== 'string' || !/^[a-f0-9-]{36}$/.test(plan.requestId)
     || typeof plan.locale !== 'string' || !/^[a-zA-Z0-9-]{1,35}$/.test(plan.locale) || !plan.settings || Array.isArray(plan.settings) || typeof plan.settings !== 'object') throw new Error('Invalid managed editor profile');
+  profileCache = { file, mtimeMs: stat.mtimeMs, size: stat.size, plan };
   return plan;
 }
 
@@ -318,13 +358,15 @@ async function inspectEditorRuntime(vscode, context, options = {}) {
   const file = options.file || path.join(os.homedir(), '.gemini/config/workstation-setup/editor-profile.json');
   const plan = readProfile(file);
   if (!plan) return { skipped: 'no setup profile' };
-  const desired = { ...plan.settings, ...(plan.settings['editor.inlineSuggest.enabled'] === false ? vendorCompletionSettings(vscode.extensions.all) : {}) };
-  for (const key of PERSONAL_EXCLUSIONS) if (Object.hasOwn(desired, key)) desired[key] = mergeManagedValue(key, vscode.workspace.getConfiguration(undefined, null).inspect(key)?.globalValue, desired[key]);
-  const selectedTheme = vscode.workspace.getConfiguration(undefined, null).get('workbench.colorTheme');
+  const extInfo = analyzeExtensions(vscode.extensions.all);
+  const config = vscode.workspace.getConfiguration(undefined, null);
+  const desired = { ...plan.settings, ...(plan.settings['editor.inlineSuggest.enabled'] === false ? extInfo.vendorCompletion : {}) };
+  for (const key of PERSONAL_EXCLUSIONS) if (Object.hasOwn(desired, key)) desired[key] = mergeManagedValue(key, config.inspect(key)?.globalValue, desired[key]);
+  const selectedTheme = config.get('workbench.colorTheme');
   if (typeof selectedTheme === 'string' && selectedTheme.trim()) desired['workbench.colorTheme'] = selectedTheme;
-  const palette = vscode.workspace.getConfiguration(undefined, null).get('asterAppearance.theme');
+  const palette = config.get('asterAppearance.theme');
   if (typeof palette === 'string') desired['asterAppearance.theme'] = palette;
-  const diagnostics = await inspectProjectConflicts(vscode, desired);
+  const diagnostics = await inspectProjectConflicts(vscode, desired, { windowScoped: extInfo.windowScoped });
   return { setupVersion: plan.setupVersion, language: vscode.env.language, ...diagnostics,
     reactSnippets: require('./react-snippets.cjs').getReactSnippetsReloadState(),
     status: diagnostics.readErrors.length || diagnostics.conflicts.some(item => item.active) ? 'needs-attention' : 'checked', runtimeSettingsRead: true };
@@ -336,13 +378,16 @@ async function applyEditorProfile(vscode, context, options = {}) {
   if (!plan) return { skipped: 'no setup profile' };
   const alreadyApplied = !options.force && context.globalState.get('editorProfileRequest') === plan.requestId;
   const config = vscode.workspace.getConfiguration(undefined, null);
-  const desired = { ...plan.settings, ...(plan.settings['editor.inlineSuggest.enabled'] === false ? vendorCompletionSettings(vscode.extensions.all) : {}) };
+  const { registered: registeredKeys, windowScoped, vendorCompletion } = analyzeExtensions(vscode.extensions.all);
+  const desired = { ...plan.settings, ...(plan.settings['editor.inlineSuggest.enabled'] === false ? vendorCompletion : {}) };
   for (const key of PERSONAL_EXCLUSIONS) if (Object.hasOwn(desired, key)) desired[key] = mergeManagedValue(key, config.inspect(key)?.globalValue, desired[key]);
-  if (!options.force && typeof config.inspect('workbench.colorTheme')?.globalValue === 'string') {
-    desired['workbench.colorTheme'] = config.inspect('workbench.colorTheme').globalValue;
-  }
-  for (const key of ['editor.fontFamily', 'editor.fontSize', 'editor.fontWeight', 'asterAppearance.theme']) {
-    if (!options.force && config.inspect(key)?.globalValue !== undefined) desired[key] = config.inspect(key).globalValue;
+  if (!options.force) {
+    const colorTheme = config.inspect('workbench.colorTheme')?.globalValue;
+    if (typeof colorTheme === 'string') desired['workbench.colorTheme'] = colorTheme;
+    for (const key of ['editor.fontFamily', 'editor.fontSize', 'editor.fontWeight', 'asterAppearance.theme']) {
+      const val = config.inspect(key)?.globalValue;
+      if (val !== undefined) desired[key] = val;
+    }
   }
   Object.assign(desired, managedLanguageSettings(config, desired));
   if (context.globalState.get('editorProfilePreviousSettings')?.requestId !== plan.requestId) {
@@ -354,16 +399,17 @@ async function applyEditorProfile(vscode, context, options = {}) {
   // reset settings file is repaired without fighting a later deliberate reset.
   const restored = context.globalState.get('editorProfileRestored');
   const restoredKeys = new Set(restored?.requestId === plan.requestId ? restored.keys : []);
-  const { registered: registeredKeys, windowScoped } = indexExtensionConfigs(vscode.extensions.all);
   const failed = [], overrides = [], applied = [], unavailable = [], preservedExisting = [];
   let configSnapshot = config;
+  const inspectedByKey = new Map();
   for (const [key, value] of Object.entries(desired)) {
     try {
       const inspected = configSnapshot.inspect(key);
-      if (!isRegisteredSetting(vscode, key, registeredKeys)) {
+      if (!isRegisteredSetting(vscode, key, registeredKeys, inspected)) {
         unavailable.push(key);
         continue;
       }
+      inspectedByKey.set(key, inspected);
       const previous = inspected?.globalValue;
       if (plan.preserveExisting === true && previous !== undefined) {
         preservedExisting.push(key);
@@ -378,6 +424,7 @@ async function applyEditorProfile(vscode, context, options = {}) {
         applied.push(key);
         if (restore) restoredKeys.add(key);
         configSnapshot = vscode.workspace.getConfiguration(undefined, null);
+        inspectedByKey.clear();
       }
       if (!contains(configSnapshot.get(key), value)) overrides.push(key);
     } catch { failed.push(key); }
@@ -387,9 +434,10 @@ async function applyEditorProfile(vscode, context, options = {}) {
     try { reactSnippets = await require('./react-snippets.cjs').refreshReactSnippets(vscode); }
     catch (error) { reactSnippets = { status: 'reload-required', reason: error.message }; }
   }
+  const unavailableSet = new Set(unavailable);
   const diagnostics = await inspectProjectConflicts(vscode,
-    Object.fromEntries(Object.entries(desired).filter(([key]) => !unavailable.includes(key))),
-    { activeOnly: true, windowScoped });
+    unavailableSet.size ? Object.fromEntries(Object.entries(desired).filter(([key]) => !unavailableSet.has(key))) : desired,
+    { activeOnly: true, windowScoped, inspectedByKey: applied.length ? undefined : inspectedByKey });
   for (const conflict of diagnostics.conflicts) if (conflict.active) {
     const key = conflict.languageId ? '[' + conflict.languageId + '].' + conflict.key : conflict.key;
     if (!overrides.includes(key)) overrides.push(key);
@@ -398,7 +446,7 @@ async function applyEditorProfile(vscode, context, options = {}) {
   const restartRequired = actualLanguage !== requestedLanguage && !actualLanguage.startsWith(requestedLanguage + '-');
   const result = { setupVersion: plan.setupVersion, settingsApplied: applied.length, settingsChecked: Object.keys(desired).length - unavailable.length,
     failed, overrides, unavailable, preservedExisting, ...diagnostics, language: vscode.env.language, requestedLanguage: plan.locale, restartRequired,
-    vendorCompletionSwitches: Object.keys(vendorCompletionSettings(vscode.extensions.all)).filter(key => Object.hasOwn(desired, key)), reactSnippets,
+    vendorCompletionSwitches: Object.keys(vendorCompletion).filter(key => Object.hasOwn(desired, key)), reactSnippets,
     status: failed.length || overrides.length || diagnostics.readErrors.length ? 'needs-attention' : restartRequired ? 'restart-required' : 'applied' };
   if (alreadyApplied) {
     result.skipped = applied.length ? 'already applied in this IDE profile; restored ' + applied.length + ' managed values found at defaults'
@@ -439,6 +487,21 @@ function watchEditorProfile(vscode, context, output, options = {}) {
   const directory = path.dirname(file);
   let disposed = false, timer, running, rerun = false, pendingForce = false;
   const seenLanguages = new Set();
+  let managedKeys = null;
+  function refreshManagedKeys() {
+    try {
+      const plan = readProfile(file);
+      if (!plan) { managedKeys = null; return; }
+      const keys = new Set(['antigravity', 'codeium']);
+      for (const [key, value] of Object.entries(plan.settings)) {
+        keys.add(key);
+        if (selectorLanguages(key).length && value && typeof value === 'object') {
+          for (const subKey of Object.keys(value)) keys.add(subKey);
+        }
+      }
+      managedKeys = [...keys];
+    } catch { managedKeys = null; }
+  }
   const indicator = vscode.window.createStatusBarItem?.(vscode.StatusBarAlignment?.Right, 20);
   if (indicator) {
     indicator.command = 'workstationStability.inspectConflicts';
@@ -457,6 +520,7 @@ function watchEditorProfile(vscode, context, output, options = {}) {
   async function apply(force = false) {
     if (disposed) return;
     if (running) { rerun = true; pendingForce = pendingForce || force; return running; }
+    refreshManagedKeys();
     running = applyEditorProfile(vscode, context, { force, file });
     try {
       const result = await running;
@@ -498,7 +562,14 @@ function watchEditorProfile(vscode, context, output, options = {}) {
       output.appendLine(JSON.stringify(result)); output.show?.(true); return result;
     }
   }));
-  if (vscode.workspace.onDidChangeConfiguration) context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(schedule));
+  if (vscode.workspace.onDidChangeConfiguration) {
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
+      if (event && typeof event.affectsConfiguration === 'function' && managedKeys && managedKeys.length) {
+        if (!managedKeys.some(key => event.affectsConfiguration(key))) return;
+      }
+      schedule();
+    }));
+  }
   if (vscode.workspace.onDidChangeWorkspaceFolders) context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => { seenLanguages.clear(); schedule(); }));
   if (vscode.window.onDidChangeActiveTextEditor) {
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editor => {
@@ -510,7 +581,7 @@ function watchEditorProfile(vscode, context, output, options = {}) {
     }));
   }
   if (fs.existsSync(directory)) {
-    const watcher = fs.watch(directory, (_event, filename) => { if (!filename || filename === path.basename(file)) schedule(); });
+    const watcher = fs.watch(directory, (_event, filename) => { if (!filename || filename === path.basename(file)) { managedKeys = null; schedule(); } });
     watcher.on('error', () => { if (!disposed) output.appendLine('Profile watcher unavailable; settings will be checked at next startup.'); });
     context.subscriptions.push({ dispose() { watcher.close(); } });
   }

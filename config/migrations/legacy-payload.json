@@ -406,7 +406,9 @@
       "4ab87d918c2c523c621e710c722c5675a671135411c5d7bef8662d2fdc41c28a",
       "657a8b4aa700f80fea951ba5778835a3cc1085df2ea757042275b13736611219",
       "89c9042d9c9aef6a757b0a45b2d7f3ecb1686234fb1526a1040e9bb5d96d5d6c",
-      "4b1833c7bd58cedc3cfb89754846dad9dbaef35cecb7c391ba4aff3248eeca1c"
+      "4b1833c7bd58cedc3cfb89754846dad9dbaef35cecb7c391ba4aff3248eeca1c",
+      "c8ffd70abb3756b8b8007ce5454243c1bc7b6deed3ce68227d59503486a8f914",
+      "22583ef04f8fe44d10c53bea69eea1bb313fc9ea3e836735d6fe3544a4a118dd"
     ],
     "skills/vercel-react-best-practices/AGENTS.md": [
       "fc93e7421177bbf869cce892bc60a6c83a4517d974bc3bf65c4e2c1e58a6ccf6",
@@ -4367,11 +4369,35 @@
     ],
     "mcp-runtime/package-lock.json": [
       "3af4bd6eff5305b3d35253a443d09c3300e910340ee3da0061013993b46a6e2d",
-      "6f5726b1873865b046c68c5d6f3ad7efd3f32579b6b87122abc63727c96864ff"
+      "6f5726b1873865b046c68c5d6f3ad7efd3f32579b6b87122abc63727c96864ff",
+      "6ab36b09d67c62d3cd05ad0edf1777ebd83ac7cf66a083ff7dedde393d5bbad2",
+      "91806ae3ac99c7991d705334aab443b341d3389a42adfe3b95411b72df4fe73a"
     ],
     "mcp-runtime/package.json": [
       "2c5fc53e4ebf55a3f1a535d2ceab7158219ec6ef093d7a10643c99eb1e0e5216",
-      "364c5608904a6b40cd6e84ab24146bffd075767778d28bf17d358e13e6f22db4"
+      "364c5608904a6b40cd6e84ab24146bffd075767778d28bf17d358e13e6f22db4",
+      "f71590af525618d348e8e2ac020550a20e48e1dfb8ee7cd9c3bfa6429c9fda42",
+      "a619984352540b615b1c76a334a76246f9345ea010a0d9b3cc05150d2924944e"
+    ],
+    "skills/workstation-workflow/SKILL.md": [
+      "6f2e51519078424aa26ec3861bc4a39b0cb36c2b8aa09021a0686d08488a717b",
+      "a081d99c2d142104c01b16a7031dd3941c971185eb1558c9952c9425d1fd840e"
+    ],
+    "agents/workstation-verifier.md": [
+      "f08325ab9df4cb22c7df85386607c93d288129cae29b7ddebfcc0ae056afb6fc",
+      "5faf30ce2ae8f097e8eccff0ea1d1999841c63a2ca5524af70efd9f65f7ce16a"
+    ],
+    "skills/workstation-frontend-mentor/references/history-and-verification.md": [
+      "7f7c5f125652aff06a88d0163f8d573c038c8ee073ecaac6785459f2b417b467",
+      "acb18c802d1d532203a9e8cf78a296a54133b16b5558241f7a35bfea3acff68c"
+    ],
+    "skills/workstation-frontend-mentor/references/questions.md": [
+      "15d926ae3e80d504bd126ae3871c937661785ddee26eae9e405d81c310eee342",
+      "599c8a2c3f07a1b36908a8c1fb95e1ba7896aa5fbd5b5e95067b6abf96e80e87"
+    ],
+    "guides/design.md": [
+      "a36de2cc652711591e1897d2bcf09891b29b410bcab962e9d7b40c09a66cbfd0",
+      "e33ff9562fd2851734229818fd54f4de9ed2d16a91a15cf9de92682ddcb9c331"
     ]
   },
   "templates": {

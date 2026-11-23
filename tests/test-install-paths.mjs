@@ -50,7 +50,7 @@ for (const drive of ['C', 'D']) {
       assert.equal(settings['jellyCursor.workbenchHtmlPath'], root.replace(/\\/g, '/') + '/resources/app/out/vs/code/electron-browser/workbench/workbench.html');
       assert.equal(settings['terminal.integrated.profiles.windows']['Git Bash'].path, gitBash);
       const mcp = JSON.parse(homeTemplate({ ...env, nodeExe: 'D:\\Node Runtime\\node.exe' }, 'config/mcp/active.template.json'));
-      assert.equal(mcp.mcpServers['sequential-thinking'].command, 'D:/Node Runtime/node.exe');
+      assert.equal(mcp.mcpServers['chrome-devtools-mcp'].command, 'D:/Node Runtime/node.exe');
     });
   }
 }
@@ -242,7 +242,7 @@ test('GitHub Panel installation receives the resolved D: CLI and C: extension di
   assert.equal(result.success, true);
 });
 
-test('README has exactly two Windows PowerShell commands for IDE 2.7.0/2.6.0 and both turn AI suggestions off', () => {
+test('README has exactly two Windows PowerShell commands for IDE 2.8.0/2.7.0/2.6.0 and both turn AI suggestions off', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   const entry = fs.readFileSync(path.join(repoRoot, 'bin/workstation-setup.js'), 'utf8');
   const bootstrap = fs.readFileSync(path.join(repoRoot, 'scripts/bootstrap.ps1'), 'utf8');
@@ -250,7 +250,8 @@ test('README has exactly two Windows PowerShell commands for IDE 2.7.0/2.6.0 and
   assert.match(entry, /quietCompletion:\s*false/);
   assert.equal([...readme.matchAll(/^```powershell$/gm)].length, 2, 'README offers exactly commands 1 and 2');
   assert.match(readme, /Windows PowerShell/);
-  assert.match(readme, /Antigravity IDE 2\.7\.0/);
+  assert.match(readme, /Antigravity IDE 2\.8\.0/);
+  assert.match(readme, /2\.7\.0/);
   assert.match(readme, /2\.6\.0/);
   assert.doesNotMatch(readme, /2\.5\.5|2\.5\.2|2\.1\.1|более новая|QuietCompletion|## 3\./);
   const commandOne = readme.split('## КОД 1 — чистая установка')[1]?.split('## КОД 2 — обновление')[0];
@@ -361,15 +362,15 @@ test('A running Antigravity is named with its PID and path, and only an interact
   assert.match(host.slice(0, host.indexOf('\n}\n')), /\[Console\]::IsInputRedirected[\s\S]*'\^-noni'/);
 });
 
-test('Bootstrap, README and the native catalog name the same IDE 2.7.0 and 2.6.0 official installers', () => {
+test('Bootstrap, README and the native catalog name the same IDE 2.8.0, 2.7.0 and 2.6.0 official installers', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   const bootstrap = fs.readFileSync(path.join(repoRoot, 'scripts/bootstrap.ps1'), 'utf8');
   const catalog = JSON.parse(fs.readFileSync(path.join(repoRoot, 'config/native-compatibility.json'), 'utf8'));
-  assert.match(bootstrap, /\$IdeVersions = @\('2\.7\.0', '2\.6\.0'\)/);
+  assert.match(bootstrap, /\$IdeVersions = @\('2\.8\.0', '2\.7\.0', '2\.6\.0'\)/);
   const template = bootstrap.match(/\$IdeDownload = '([^']+)'/)[1];
-  assert.deepEqual([...new Set(catalog.builds.map(build => build.ideVersion))].sort(), ['2.6.0', '2.7.0']);
+  assert.deepEqual([...new Set(catalog.builds.map(build => build.ideVersion))].sort(), ['2.6.0', '2.7.0', '2.8.0']);
   for (const build of catalog.builds) {
-    if (build.ideVersion === '2.7.0') assert.equal(template.replace('{0}', build.architecture), build.source.installerUrl, 'Bootstrap recommends the newest audited installer');
+    if (build.ideVersion === '2.8.0') assert.equal(template.replace('{0}', build.architecture), build.source.installerUrl, 'Bootstrap recommends the newest audited installer');
     assert.ok(readme.includes(build.source.installerUrl), 'README links the official ' + build.architecture + ' installer');
   }
   assert.equal(/[^\x00-\x7f]/.test(bootstrap), false, 'Windows PowerShell 5.1 needs an ASCII-only bootstrap');

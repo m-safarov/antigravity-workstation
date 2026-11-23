@@ -31,10 +31,13 @@ function fixture(t, version = '2.6.0') {
   put(path.join(home, '.gemini', 'config', 'mcp_config.json'), JSON.stringify({ mcpServers: {
     mine: { command: 'mine', env: { TOKEN: 'keep' } },
     gsd: { command: 'node', args: [home + '/.gemini/config/mcp-runtime/node_modules/@opengsd/gsd-core/bin/mcp.js'] },
+    'sequential-thinking': { command: 'node', args: [home + '/.gemini/config/mcp-runtime/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js'] },
   } }));
   put(path.join(home, '.gemini', 'antigravity', 'conversations', 'chat.pb'), 'chat');
   put(path.join(home, '.gemini', 'antigravity', 'brain', 'memory.md'), 'memory');
-  put(path.join(home, '.gemini', 'antigravity', 'mcp_config.json'), '{"mcpServers":{}}');
+  put(path.join(home, '.gemini', 'antigravity', 'mcp_config.json'), JSON.stringify({ mcpServers: {
+    'sequential-thinking': { command: 'node', args: [home + '/.gemini/config/mcp-runtime/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js'] },
+  } }));
   put(path.join(home, '.gemini', 'antigravity', 'settings.json'), '{"permissions":{"allow":["command(ls)"]}}');
   // applicationName is "antigravity" in this bundle, so its native hooks live in ~/.gemini/antigravity/hooks.json.
   put(path.join(home, '.gemini', 'antigravity', 'hooks.json'), '{"gsd-antigravity":{"enabled":true},"mine":{"enabled":false}}');
@@ -72,17 +75,17 @@ test('macOS mode 2 writes the Windows profile by the same merge rules and keeps 
     assert.ok(fs.existsSync(path.join(home, '.gemini', 'config', 'skills', skill, 'SKILL.md')), skill);
   }
   assert.ok(fs.existsSync(path.join(home, '.gemini', 'config', 'skills', 'my-skill', 'SKILL.md')), 'a personal skill stays');
-  assert.ok(fs.existsSync(path.join(home, '.gemini', 'config', 'agents', 'workstation-verifier.md')));
+  assert.equal(fs.existsSync(path.join(home, '.gemini', 'config', 'agents', 'workstation-verifier.md')), false, 'retired verifier agent is not installed');
   assert.ok(fs.existsSync(path.join(home, '.gemini', 'config', 'rules', 'workstation-unified-design.md')));
   assert.ok(fs.existsSync(path.join(home, '.gemini', 'config', 'workstation-unified', 'guides', 'design.md')));
   assert.ok(fs.existsSync(path.join(home, '.gemini', 'config', 'mcp-runtime', 'package-lock.json')));
   assert.equal(fs.existsSync(path.join(home, '.gemini', 'scripts', 'macos-setup.cjs')), false, 'the macOS script is not part of the payload');
   const mcp = read(path.join(home, '.gemini', 'config', 'mcp_config.json'));
-  assert.deepEqual(Object.keys(mcp.mcpServers).sort(), ['chrome-devtools-mcp', 'mine', 'sequential-thinking']);
+  assert.deepEqual(Object.keys(mcp.mcpServers).sort(), ['chrome-devtools-mcp', 'mine']);
   assert.equal(mcp.mcpServers.mine.env.TOKEN, 'keep');
-  assert.equal(mcp.mcpServers['sequential-thinking'].command, '/opt/homebrew/bin/node');
-  assert.equal(mcp.mcpServers['sequential-thinking'].args[0], home.replace(/\\/g, '/') + '/.gemini/config/mcp-runtime/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js');
-  assert.ok(read(path.join(home, '.gemini', 'antigravity', 'mcp_config.json')).mcpServers['sequential-thinking']);
+  assert.equal(mcp.mcpServers['chrome-devtools-mcp'].command, '/opt/homebrew/bin/node');
+  assert.equal(mcp.mcpServers['chrome-devtools-mcp'].args[0], home.replace(/\\/g, '/') + '/.gemini/config/mcp-runtime/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js');
+  assert.deepEqual(read(path.join(home, '.gemini', 'antigravity', 'mcp_config.json')).mcpServers, {});
   const hooks = read(path.join(home, '.gemini', 'antigravity', 'hooks.json'));
   assert.equal(Object.hasOwn(hooks, 'gsd-antigravity'), false, 'the retired GSD hook plugin goes');
   assert.deepEqual(hooks.mine, { enabled: false }, 'personal hook plugins stay');
@@ -114,7 +117,7 @@ test('macOS mode 1 moves everything Antigravity keeps into one backup and instal
   assert.equal(fs.existsSync(path.join(user, 'snippets')), false, 'snippets go to the backup');
   assert.equal(fs.existsSync(path.join(home, '.gemini', 'config', 'skills', 'my-skill')), false, 'personal skills go to the backup');
   assert.equal(fs.existsSync(path.join(home, '.gemini', 'antigravity', 'conversations')), false, 'chats go to the backup');
-  assert.deepEqual(Object.keys(read(path.join(home, '.gemini', 'config', 'mcp_config.json')).mcpServers).sort(), ['chrome-devtools-mcp', 'sequential-thinking']);
+  assert.deepEqual(Object.keys(read(path.join(home, '.gemini', 'config', 'mcp_config.json')).mcpServers).sort(), ['chrome-devtools-mcp']);
   assert.equal(fs.readFileSync(path.join(result.resetBackup, 'gemini', 'config', 'skills', 'my-skill', 'SKILL.md'), 'utf8'), 'personal skill');
   assert.equal(fs.readFileSync(path.join(result.resetBackup, 'gemini', 'antigravity', 'conversations', 'chat.pb'), 'utf8'), 'chat');
   assert.ok(fs.existsSync(path.join(result.resetBackup, 'appdata', 'Antigravity', 'User', 'snippets', 'mine.code-snippets')));
@@ -123,15 +126,17 @@ test('macOS mode 1 moves everything Antigravity keeps into one backup and instal
 });
 
 test('macOS setup refuses another IDE version unless the user allowed it, before any change', t => {
-  const { home, app, user } = fixture(t, '2.8.0');
+  const { home, app, user } = fixture(t, '2.9.0');
   const before = fs.readFileSync(path.join(user, 'settings.json'), 'utf8');
-  assert.throws(() => run(options(home, app, '1')), /Antigravity 2\.7\.0 or 2\.6\.0 is required; this app is 2\.8\.0\. Nothing was changed/);
+  assert.throws(() => run(options(home, app, '1')), /Antigravity 2\.8\.0 or 2\.7\.0 or 2\.6\.0 is required; this app is 2\.9\.0\. Nothing was changed/);
   assert.equal(fs.readFileSync(path.join(user, 'settings.json'), 'utf8'), before);
   assert.ok(fs.existsSync(path.join(home, '.gemini', 'antigravity', 'conversations', 'chat.pb')));
-  assert.equal(run({ ...options(home, app, '2'), allowOtherVersion: true }).ideVersion, '2.8.0');
+  assert.equal(run({ ...options(home, app, '2'), allowOtherVersion: true }).ideVersion, '2.9.0');
 });
 
-test('macOS setup accepts Antigravity IDE 2.7.0 like 2.6.0', t => {
-  const { home, app } = fixture(t, '2.7.0');
-  assert.equal(run(options(home, app, '2')).ideVersion, '2.7.0');
+test('macOS setup accepts Antigravity IDE 2.8.0 and 2.7.0 like 2.6.0', t => {
+  for (const version of ['2.8.0', '2.7.0']) {
+    const { home, app } = fixture(t, version);
+    assert.equal(run(options(home, app, '2')).ideVersion, version);
+  }
 });

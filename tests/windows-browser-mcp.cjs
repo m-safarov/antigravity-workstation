@@ -34,7 +34,7 @@ function main() {
     assert.ifError(result.error);
     assert.equal(result.status, 0, 'Real MCP tool calls failed: ' + result.stdout + result.stderr);
     report = { passed: true, architecture: process.arch, browser: verified,
-      repeatVerified: true, mcp: 'Three real stdio servers and tool calls, including an isolated Chromium page and DOM read', personalProfileChanged: false };
+      repeatVerified: true, mcp: 'chrome-devtools-mcp real stdio server and tool calls, including an isolated Chromium page and DOM read', personalProfileChanged: false };
   } catch (error) {
     report = { passed: false, architecture: process.arch, error: error.stack };
     throw error;

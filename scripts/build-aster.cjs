@@ -185,25 +185,25 @@ function roleColors(p) {
 
 // Each base-theme scope gets the role whose meaning it carries.
 function baseRole(scope) {
-  if (/^comment/.test(scope)) return 'comment';
+  if (scope.startsWith('comment')) return 'comment';
   if (/^(invalid|markup\.deleted)/.test(scope)) return 'invalid';
-  if (/^markup\.changed/.test(scope)) return 'constant';
-  if (/^markup\.inserted/.test(scope)) return 'string';
+  if (scope.startsWith('markup.changed')) return 'constant';
+  if (scope.startsWith('markup.inserted')) return 'string';
   if (/^(markup\.(heading|bold)|header|strong|meta\.diff\.header|punctuation\.definition\.(list|quote))/.test(scope)) return 'functionDeclaration';
   if (/string\.regexp|constant\.character\.escape|constant\.regexp/.test(scope)) return 'regex';
   if (/keyword\.operator\.(plus|minus)\.exponent|^keyword\.other\.unit|^constant|^support\.constant|enummember|preprocessor\.numeric/.test(scope)) return 'constant';
   if (/^keyword\.operator\.(new|expression|cast|sizeof|alignof|typeid|alignas|instanceof|wordlike|noexcept|logical\.python)/.test(scope)) return 'keyword';
-  if (/^keyword\.operator/.test(scope)) return 'operator';
-  if (/^punctuation\.definition\.template-expression/.test(scope)) return 'template';
-  if (/^punctuation/.test(scope)) return 'punctuation';
+  if (scope.startsWith('keyword.operator')) return 'operator';
+  if (scope.startsWith('punctuation.definition.template-expression')) return 'template';
+  if (scope.startsWith('punctuation')) return 'punctuation';
   if (/^(entity\.name\.(tag|selector))/.test(scope)) return 'component';
   if (/^(storage\.modifier|storage\.type|storage)$|^storage\.modifier\./.test(scope)) return 'storage';
   if (/^(keyword|variable\.language|meta\.preprocessor$)/.test(scope)) return 'keyword';
-  if (/^entity\.other\.attribute-name/.test(scope)) return 'attribute';
+  if (scope.startsWith('entity.other.attribute-name')) return 'attribute';
   if (/^(source\.css(\.less)? entity|support\.type\.(vendored\.)?property-name|meta\.structure\.dictionary\.key)/.test(scope)) return 'property';
   if (/^(support\.function|entity\.name\.function)/.test(scope)) return 'functionCall';
   if (/^(support\.(type|class)|entity\.name\.(type|class))/.test(scope)) return 'type';
-  if (/^variable/.test(scope) || /^source\.css variable/.test(scope)) return 'variable';
+  if (scope.startsWith('variable') || scope.startsWith('source.css variable')) return 'variable';
   if (/^(string|markup\.inline\.raw|meta\.preprocessor\.string)/.test(scope)) return 'string';
   return 'text';
 }

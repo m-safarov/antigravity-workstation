@@ -57,8 +57,27 @@ const CALM_LENS = {
 };
 const STORE_PREFIX = 'calmTypeScript.v31.managed.';
 
+const LANGUAGE_SET = new Set(LANGUAGES);
+
 function equal(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b);
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (!equal(a[i], b[i])) return false;
+    return true;
+  }
+  if (Array.isArray(b)) return false;
+  let aCount = 0, bCount = 0;
+  for (const key in a) {
+    if (!Object.hasOwn(a, key) || a[key] === undefined) continue;
+    aCount++;
+    if (!Object.hasOwn(b, key) || !equal(a[key], b[key])) return false;
+  }
+  for (const key in b) {
+    if (Object.hasOwn(b, key) && b[key] !== undefined) bCount++;
+  }
+  return aCount === bCount;
 }
 
 function createExtension(vscode, context) {
@@ -92,11 +111,20 @@ function createExtension(vscode, context) {
     return workspace.getConfiguration('calmTypeScript');
   }
 
+  let typingPulseEnabled = settings().get('typingPulse', true);
+  let savePulseEnabled = settings().get('savePulse', true);
+  function refreshPulseFlags() {
+    const cfg = settings();
+    typingPulseEnabled = cfg.get('typingPulse', true);
+    savePulseEnabled = cfg.get('savePulse', true);
+  }
+
   function clearPulse(editor) {
-    const pending = pulseTimers.get(editor);
-    if (pending) pending.forEach(clearTimeout);
+    const entry = pulseTimers.get(editor);
+    if (!entry) return;
+    entry.timers.forEach(clearTimeout);
     pulseTimers.delete(editor);
-    for (const style of pulses) editor.setDecorations(style, []);
+    if (entry.active >= 0) editor.setDecorations(pulses[entry.active], []);
   }
 
   function clearAllPulses() {
@@ -104,9 +132,9 @@ function createExtension(vscode, context) {
   }
 
   function pulseOnType(event) {
-    clearAllPulses();
-    if (!settings().get('typingPulse', true)) return;
-    if (event.reason !== undefined || !LANGUAGES.includes(event.document.languageId)) return;
+    if (pulseTimers.size) clearAllPulses();
+    if (!typingPulseEnabled) return;
+    if (event.reason !== undefined || !LANGUAGE_SET.has(event.document.languageId)) return;
     if (event.contentChanges.length !== 1) return;
     const change = event.contentChanges[0];
     if (!change.text || change.text.length > 2 || /[\r\n]/.test(change.text)) return;
@@ -117,19 +145,26 @@ function createExtension(vscode, context) {
     if (start.line !== end.line) return;
     const range = new vscode.Range(start, end);
     editor.setDecorations(pulses[0], [range]);
-    const sequence = pulseFrames.map((_, index) => setTimeout(() => {
+    const entry = { active: 0, timers: [] };
+    entry.timers = pulseFrames.map((_, index) => setTimeout(() => {
       editor.setDecorations(pulses[index], []);
-      if (index + 1 < pulses.length) editor.setDecorations(pulses[index + 1], [range]);
-      else pulseTimers.delete(editor);
+      if (index + 1 < pulses.length) {
+        entry.active = index + 1;
+        editor.setDecorations(pulses[index + 1], [range]);
+      } else {
+        entry.active = -1;
+        pulseTimers.delete(editor);
+      }
     }, (index + 1) * 40));
-    pulseTimers.set(editor, sequence);
+    pulseTimers.set(editor, entry);
   }
 
   function clearSavePulse(editor) {
-    const pending = saveTimers.get(editor);
-    if (pending) pending.forEach(clearTimeout);
+    const entry = saveTimers.get(editor);
+    if (!entry) return;
+    entry.timers.forEach(clearTimeout);
     saveTimers.delete(editor);
-    for (const style of savePulses) editor.setDecorations(style, []);
+    if (entry.active >= 0) editor.setDecorations(savePulses[entry.active], []);
   }
 
   function clearAllSavePulses() {
@@ -137,18 +172,24 @@ function createExtension(vscode, context) {
   }
 
   function pulseOnSave(document) {
-    if (!manualSaves.delete(document) || !settings().get('savePulse', true)) return;
+    if (!manualSaves.delete(document) || !savePulseEnabled) return;
     const editor = window.activeTextEditor;
     if (!editor || editor.document !== document || !editor.selections?.length) return;
     clearSavePulse(editor);
     const ranges = editor.selections.map(selection => new vscode.Range(selection.active, selection.active));
     editor.setDecorations(savePulses[0], ranges);
-    const sequence = saveFrames.map((_, index) => setTimeout(() => {
+    const entry = { active: 0, timers: [] };
+    entry.timers = saveFrames.map((_, index) => setTimeout(() => {
       editor.setDecorations(savePulses[index], []);
-      if (index + 1 < savePulses.length) editor.setDecorations(savePulses[index + 1], ranges);
-      else saveTimers.delete(editor);
+      if (index + 1 < savePulses.length) {
+        entry.active = index + 1;
+        editor.setDecorations(savePulses[index + 1], ranges);
+      } else {
+        entry.active = -1;
+        saveTimers.delete(editor);
+      }
     }, (index + 1) * 60));
-    saveTimers.set(editor, sequence);
+    saveTimers.set(editor, entry);
   }
 
   async function applyFlat(group, changes, enabled) {
@@ -187,7 +228,7 @@ function createExtension(vscode, context) {
     const config = workspace.getConfiguration();
     for (const language of LANGUAGES) {
       const name = `[${language}]`;
-      const current = { ...(config.inspect(name)?.globalValue || {}) };
+      const current = { ...config.inspect(name)?.globalValue };
       const previous = original[name]?.value || {};
       for (const [setting, quietValue] of Object.entries({ ...LEGACY_OVERRIDE, 'editor.renderValidationDecorations': 'off' })) {
         if (!equal(current[setting], quietValue)) continue;
@@ -223,20 +264,36 @@ function createExtension(vscode, context) {
     const config = workspace.getConfiguration();
     const original = context.globalState.get(key);
     const current = config.inspect(COLOR_CONTAINER)?.globalValue;
-    const base = (current && typeof current === 'object' && !Array.isArray(current)) ? { ...current } : {};
+    const isObj = current && typeof current === 'object' && !Array.isArray(current);
     if (enabled) {
-      {
+      let backupMissing = !original;
+      if (!backupMissing) {
+        for (const color of Object.keys(QUIET_COLORS)) {
+          if (!Object.hasOwn(original, color)) { backupMissing = true; break; }
+        }
+      }
+      if (backupMissing) {
         const backup = { ...original };
         for (const color of Object.keys(QUIET_COLORS)) {
-          if (!Object.hasOwn(backup, color)) backup[color] = { hasValue: Object.hasOwn(base, color), value: base[color] };
+          if (!Object.hasOwn(backup, color)) {
+            backup[color] = { hasValue: isObj && Object.hasOwn(current, color), value: isObj ? current[color] : undefined };
+          }
         }
-        if (!equal(backup, original)) await context.globalState.update(key, backup);
+        await context.globalState.update(key, backup);
       }
-      const next = { ...base, ...QUIET_COLORS };
-      if (!equal(base, next)) await config.update(COLOR_CONTAINER, next, vscode.ConfigurationTarget.Global);
+      let needsUpdate = !isObj;
+      if (isObj) {
+        for (const [color, value] of Object.entries(QUIET_COLORS)) {
+          if (current[color] !== value) { needsUpdate = true; break; }
+        }
+      }
+      if (needsUpdate) {
+        await config.update(COLOR_CONTAINER, { ...(isObj ? current : {}), ...QUIET_COLORS }, vscode.ConfigurationTarget.Global);
+      }
       return;
     }
     if (!original) return;
+    const base = isObj ? { ...current } : {};
     let changed = false;
     for (const [color, value] of Object.entries(QUIET_COLORS)) {
       if (!equal(base[color], value) && !LEGACY_QUIET.has(base[color])) continue;
@@ -260,11 +317,15 @@ function createExtension(vscode, context) {
 
   let updating = Promise.resolve();
   function syncSettings() {
+    refreshPulseFlags();
     updating = updating.then(async () => {
-      await applyQuiet(settings().get('quietMode', true));
-      await applyFlat('smooth', SMOOTH_KEYS, settings().get('smoothTyping', true));
-      if (!settings().get('typingPulse', true)) clearAllPulses();
-      if (!settings().get('savePulse', true)) clearAllSavePulses();
+      const cfg = settings();
+      await applyQuiet(cfg.get('quietMode', true));
+      await applyFlat('smooth', SMOOTH_KEYS, cfg.get('smoothTyping', true));
+      typingPulseEnabled = cfg.get('typingPulse', true);
+      savePulseEnabled = cfg.get('savePulse', true);
+      if (!typingPulseEnabled) clearAllPulses();
+      if (!savePulseEnabled) clearAllSavePulses();
     }).catch(error => console.error('Calm TypeScript: Unable to sync settings:', error));
     return updating;
   }

@@ -96,14 +96,6 @@
     "trackLatest": true
   },
   {
-    "id": "mikestead.dotenv",
-    "name": "DotENV",
-    "description": "Syntax highlighting for .env files.",
-    "category": "Programming Languages",
-    "source": "gallery",
-    "trackLatest": true
-  },
-  {
     "id": "ms-ceintl.vscode-language-pack-ru",
     "name": "Russian Language Pack for Visual Studio Code",
     "description": "Language pack extension for Russian",
@@ -178,7 +170,7 @@
   {
     "id": "workstation.calm-typescript",
     "name": "Calm TypeScript",
-    "version": "3.4.0",
+    "version": "3.4.1",
     "description": "Calm diagnostic presentation with visible but soft squiggles (errors ~70%, warnings ~55%), visible unused hints and Error Lens, a soft typing pulse and a short line highlight after Ctrl+S; validation stays enabled and Auto Save is left to the IDE.",
     "category": "Programming Languages",
     "source": "local-vsix"
@@ -186,7 +178,7 @@
   {
     "id": "workstation.git-branch-panel",
     "name": "Git Branch Panel",
-    "version": "1.8.1",
+    "version": "1.8.2",
     "description": "GitHub panel: create a repository and connect it to GitHub, commit selected files, push and pull the current branch as the repository owner under the GitHub noreply identity with every git command visible in the Git Bash terminal, get changes, and switch, create or delete branches; npm scripts view below it runs npm run dev and other package.json scripts in the terminal and links the dev server address",
     "category": "Other",
     "source": "local-vsix"
@@ -194,7 +186,7 @@
   {
     "id": "workstation.stability-helper",
     "name": "Workstation Stability",
-    "version": "1.3.30",
+    "version": "1.3.31",
     "description": "Applies and verifies managed settings in the active IDE profile and restores audited extension fixes.",
     "category": "Other",
     "source": "local-vsix"
@@ -202,7 +194,7 @@
   {
     "id": "workstation.aster-appearance",
     "name": "Aster Atelier",
-    "version": "1.8.0",
+    "version": "1.8.1",
     "description": "Eleven palettes in a dark and a light section with clearly coloured green comments, ten bundled programming fonts (nine with verified coding ligatures) and seven font styles; works offline.",
     "category": "Other",
     "source": "local-vsix"

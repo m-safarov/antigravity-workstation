@@ -28,8 +28,9 @@ function save(file, value) {
   try { fs.writeFileSync(temporary, JSON.stringify(value, null, 2), { flag: 'wx', mode: 0o600 }); fs.renameSync(temporary, file); }
   finally { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); }
 }
+const ANSI_ESCAPE = new RegExp(String.fromCharCode(27) + '\\[[0-?]*[ -/]*[@-~]', 'g');
 function redact(text, maximum = 16384) {
-  return String(text).replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '')
+  return String(text).replace(ANSI_ESCAPE, '')
     .replace(/(https?:\/\/)[^/\s@]+@/gi, '$1[REDACTED]@')
     .replace(/(https?:\/\/[^\s?#]+)\?[^\s]+/gi, '$1?[REDACTED]')
     .replace(/(\b(?:Bearer|Basic)\s+)[A-Za-z0-9_.~+/-]+=*/gi, '$1[REDACTED]')
@@ -75,7 +76,7 @@ function setStatus(directory, request, state, extra = {}) {
   const desired = { schema: 1, id: request.id, state, repairVerified: state === 'verified', ...extra };
   const previous = statusFor(directory, request);
   if (previous) {
-    const { updatedAt, ...values } = previous;
+    const { updatedAt: _updatedAt, ...values } = previous;
     if (isDeepStrictEqual(values, desired)) return previous;
   }
   const result = { ...desired, updatedAt: new Date().toISOString() };
@@ -246,9 +247,37 @@ function retryRepair(directory) {
 function watchRepairChat(vscode, context, output, options = {}) {
   const directory = options.directory || path.join(require('node:os').homedir(), '.gemini/config/workstation-setup/repair-chat');
   const file = files(directory).request;
-  let alive = true, running = false, lastNotice;
+  const intervalMs = options.intervalMs || 5000;
+  let alive = true, running = false, lastNotice, timer = null, debounce = null, watcher = null;
+  function stopPolling() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function startPolling() {
+    if (!alive || timer) return;
+    timer = setInterval(() => { void check(); }, intervalMs);
+    timer.unref?.();
+  }
+  function scheduleCheck() {
+    if (!alive) return;
+    if (debounce) clearTimeout(debounce);
+    debounce = setTimeout(() => { debounce = null; void check(); }, 250);
+    debounce.unref?.();
+  }
+  function attachWatcher() {
+    if (!alive || watcher) return;
+    const watchTarget = fs.existsSync(directory) ? directory : fs.existsSync(path.dirname(directory)) ? path.dirname(directory) : null;
+    if (!watchTarget) return;
+    try {
+      watcher = fs.watch(watchTarget, (_event, filename) => {
+        if (!filename || filename === path.basename(file) || filename === path.basename(directory)) scheduleCheck();
+      });
+      watcher.unref?.();
+      watcher.on('error', () => { try { watcher?.close(); } catch {} watcher = null; });
+    } catch { watcher = null; }
+  }
   async function check() {
     if (!alive || running) return;
+    if (!fs.existsSync(file)) { stopPolling(); attachWatcher(); return; }
     running = true;
     try {
       const result = await dispatchRepair(vscode, directory, options);
@@ -258,11 +287,23 @@ function watchRepairChat(vscode, context, output, options = {}) {
         if (result.state === 'dispatched') void Promise.resolve(vscode.window.showInformationMessage('Workstation: задача исправления передана в текущий чат. Модель сохранена; установка ожидает проверки Doctor.')).catch(() => {});
         if (result.state === 'uncertain') void Promise.resolve(vscode.window.showWarningMessage('Workstation: отправка задачи не подтверждена. Повтор автоматически не отправлен; проверь текущий чат и Output.')).catch(() => {});
       }
-    } catch (error) { if (alive && lastNotice !== error.message) { lastNotice = error.message; output.appendLine('Setup repair chat: ' + redact(error.message, 1024)); } }
-    finally { running = false; }
+      if (result.state === 'idle' || TERMINAL.has(result.state)) stopPolling();
+      else startPolling();
+    } catch (error) {
+      if (alive && lastNotice !== error.message) { lastNotice = error.message; output.appendLine('Setup repair chat: ' + redact(error.message, 1024)); }
+      stopPolling();
+    } finally { running = false; }
   }
-  const timer = setInterval(check, options.intervalMs || 5000);
-  timer.unref?.(); void check();
-  context.subscriptions.push({ dispose() { alive = false; clearInterval(timer); } });
+  attachWatcher();
+  void check();
+  context.subscriptions.push({
+    dispose() {
+      alive = false;
+      stopPolling();
+      if (debounce) clearTimeout(debounce);
+      try { watcher?.close(); } catch {}
+      watcher = null;
+    },
+  });
 }
 module.exports = { COMMAND, queueRepair, dispatchRepair, verifyRepair, retryRepair, retireAfterDoctor, watchRepairChat, redact, read, files };

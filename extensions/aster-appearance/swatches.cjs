@@ -66,9 +66,9 @@ function readTheme(file, depth = 0) {
   const json = parseJsonc(fs.readFileSync(file, 'utf8'));
   const base = typeof json.include === 'string' && depth < 5
     ? readTheme(path.resolve(path.dirname(file), json.include), depth + 1) : { colors: {}, tokenColors: [], semanticTokenColors: {} };
-  return { colors: { ...base.colors, ...(json.colors || {}) },
+  return { colors: { ...base.colors, ...json.colors },
     tokenColors: [...base.tokenColors, ...(Array.isArray(json.tokenColors) ? json.tokenColors : [])],
-    semanticTokenColors: { ...base.semanticTokenColors, ...(json.semanticTokenColors || {}) } };
+    semanticTokenColors: { ...base.semanticTokenColors, ...json.semanticTokenColors } };
 }
 
 const SCOPES = {

@@ -56,17 +56,29 @@ async function readOriginUrl(cwd) {
 }
 
 async function readRefs(cwd) {
-  const [output, originHead] = await Promise.all([
-    runGit(['for-each-ref', '--format=%(refname)', 'refs/heads', 'refs/remotes/origin'], cwd).catch(() => ''),
-    runGit(['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'], cwd).catch(() => ''),
-  ]);
+  const output = await runGit(['for-each-ref', '--format=%(refname)%09%(symref:short)', 'refs/heads', 'refs/remotes/origin'], cwd).catch(() => '');
   const local = new Set();
   const remote = new Set();
-  for (const ref of output.split(/\r?\n/).filter(Boolean)) {
+  let originHead = '';
+  for (const line of output.split(/\r?\n/)) {
+    if (!line) continue;
+    const tab = line.indexOf('\t');
+    const ref = tab >= 0 ? line.slice(0, tab) : line;
+    const symref = tab >= 0 ? line.slice(tab + 1) : '';
     if (ref.startsWith('refs/heads/')) local.add(ref.slice('refs/heads/'.length));
-    else if (ref !== 'refs/remotes/origin/HEAD') remote.add(ref.slice('refs/remotes/origin/'.length));
+    else if (ref === 'refs/remotes/origin/HEAD') originHead = symref.replace(/^origin\//, '');
+    else if (ref.startsWith('refs/remotes/origin/')) remote.add(ref.slice('refs/remotes/origin/'.length));
   }
-  return { local, remote, originHead: originHead.replace(/^origin\//, '') };
+  return { local, remote, originHead };
+}
+
+function readCurrentBranchFast(gitDir) {
+  try {
+    const head = fs.readFileSync(path.join(gitDir, 'HEAD'), 'utf8').trim();
+    if (head.startsWith('ref: refs/heads/')) return head.slice('ref: refs/heads/'.length);
+    if (/^[0-9a-f]{40,64}$/i.test(head)) return '';
+  } catch {}
+  return null;
 }
 
 function pickDefaultBranch(refs, currentBranch) {
@@ -148,31 +160,30 @@ async function collectState(cwd) {
     state.error = tr('Открой папку проекта.', 'Open a project folder.');
     return state;
   }
-  let location;
-  try {
-    location = await runGit(['rev-parse', '--show-toplevel', '--absolute-git-dir'], cwd);
-  } catch {
+  // Launch independent git reads in one concurrent wave to minimize subprocess round-trips.
+  const [location, remote, refs, changedFiles] = await Promise.all([
+    runGit(['rev-parse', '--show-toplevel', '--absolute-git-dir'], cwd).catch(() => null),
+    readOriginUrl(cwd),
+    readRefs(cwd),
+    getChangedFiles(cwd).catch(() => []),
+  ]);
+  if (!location) {
     state.error = tr('Эта папка не подключена к Git.', 'This folder is not a Git repository.');
     return state;
   }
   [state.root, state.gitDir] = location.split(/\r?\n/);
   state.isRepo = true;
   Object.assign(state, readOperation(state.gitDir));
-  state.branch = await runGit(['branch', '--show-current'], cwd).catch(() => '');
+  const fastBranch = readCurrentBranchFast(state.gitDir);
+  state.branch = fastBranch !== null ? fastBranch : await runGit(['branch', '--show-current'], cwd).catch(() => '');
   if (!state.branch) {
     state.error = state.rebaseInProgress
       ? tr('Идёт rebase.', 'A rebase is in progress.')
       : tr('Сейчас не выбрана ни одна ветка (detached HEAD).', 'No branch is checked out (detached HEAD).');
     return state;
   }
-  // These reads do not depend on each other, so they run at the same time.
-  const [remote, listed, changedFiles, conflicts] = await Promise.all([
-    readOriginUrl(cwd),
-    listBranches(cwd, state.branch),
-    getChangedFiles(cwd),
-    state.mergeInProgress ? getConflictFiles(cwd).catch(() => []) : [],
-  ]);
-  const { refs, defaultBranch, branches } = listed;
+  const defaultBranch = pickDefaultBranch(refs, state.branch);
+  const branches = describeBranches(refs, defaultBranch, state.branch);
   state.remote = remote;
   state.isGitHub = usesGitHubIdentity(remote);
   state.defaultBranch = defaultBranch;
@@ -180,8 +191,12 @@ async function collectState(cwd) {
   state.hasCommits = refs.local.has(state.branch);
   state.remoteBranchExists = refs.remote.has(state.branch);
   state.changedFiles = changedFiles;
+  const [conflicts, aheadBehind] = await Promise.all([
+    state.mergeInProgress ? getConflictFiles(cwd).catch(() => []) : [],
+    countAheadBehind(cwd, state.branch, refs, remote),
+  ]);
   state.conflicts = conflicts;
-  Object.assign(state, await countAheadBehind(cwd, state.branch, refs, remote));
+  Object.assign(state, aheadBehind);
   return state;
 }
 

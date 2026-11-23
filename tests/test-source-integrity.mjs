@@ -10,11 +10,11 @@ const { getEnvironmentPaths } = require('../lib/paths');
 const repoRoot = path.resolve(import.meta.dirname, '..');
 
 for (const [name, damage] of [
-  ['empty agent', source => fs.writeFileSync(path.join(source, 'agents/workstation-verifier.md'), '')],
+  ['empty rule', source => fs.writeFileSync(path.join(source, 'rules/workstation-unified-design.template.md'), '')],
   ['whitespace guide', source => fs.writeFileSync(path.join(source, 'resources/guides/design.md'), ' \r\n\t')],
-  ['missing agents directory', source => fs.rmSync(path.join(source, 'agents'), { recursive: true })],
+  ['missing guides directory', source => fs.rmSync(path.join(source, 'resources/guides'), { recursive: true })],
   ['missing skill entrypoint', source => fs.unlinkSync(path.join(source, 'skills/agent-browser/SKILL.md'))],
-  ['empty workflow skill', source => fs.writeFileSync(path.join(source, 'skills/workstation-workflow/SKILL.md'), '')],
+  ['empty practice skill', source => fs.writeFileSync(path.join(source, 'skills/workstation-practice/SKILL.md'), '')],
   ['empty global instructions', source => fs.writeFileSync(path.join(source, 'rules/GEMINI.template.md'), '')],
 ]) {
   test('Damaged update preserves existing profile and backup tree: ' + name, t => {
@@ -39,14 +39,14 @@ for (const [name, damage] of [
       return result;
     };
     const before = snapshot(customRoots.userProfile);
-    for (const item of ['config', 'rules', 'resources', 'skills', 'scripts', 'agents', 'package.json']) {
+    for (const item of ['config', 'rules', 'resources', 'skills', 'scripts', 'package.json']) {
       fs.cpSync(path.join(repoRoot, item), path.join(source, item), { recursive: true,
         filter: file => !file.split(path.sep).includes('node_modules') });
     }
     damage(source);
     assert.throws(() => runInstaller({ ...options, repoRoot: source }), /source is incomplete or damaged/);
     assert.deepEqual(snapshot(customRoots.userProfile), before, 'No profile, payload or backup changes permitted');
-    assert.ok(fs.statSync(path.join(env.geminiConfigDir, 'agents/workstation-verifier.md')).size > 0);
+    assert.ok(fs.statSync(path.join(env.geminiConfigDir, 'workstation-unified/guides/design.md')).size > 0);
   });
 }
 
@@ -74,7 +74,7 @@ test('Damaged Git Panel source aborts an update before changing personal setting
     return result;
   };
   const before = snapshot(customRoots.userProfile);
-  for (const item of ['config', 'rules', 'resources', 'skills', 'scripts', 'agents', 'extensions', 'package.json', 'LICENSE']) {
+  for (const item of ['config', 'rules', 'resources', 'skills', 'scripts', 'extensions', 'package.json', 'LICENSE']) {
     fs.cpSync(path.join(repoRoot, item), path.join(source, item), { recursive: true,
       filter: file => !file.split(path.sep).includes('node_modules') });
   }

@@ -496,7 +496,6 @@ test('Local MCP runtime requires every pinned version and entrypoint; previews a
   const dependencies = JSON.parse(fs.readFileSync(path.join(root, 'resources/mcp-runtime/package.json'), 'utf8')).dependencies;
   for (const [name, entry] of [
     ['chrome-devtools-mcp', 'build/src/bin/chrome-devtools-mcp.js'],
-    ['@modelcontextprotocol/server-sequential-thinking', 'dist/index.js'],
   ]) {
     const directory = path.join(base, 'node_modules', name);
     fs.mkdirSync(path.dirname(path.join(directory, entry)), { recursive: true });
@@ -509,6 +508,6 @@ test('Local MCP runtime requires every pinned version and entrypoint; previews a
   fs.writeFileSync(manifest, '{"version":"0.0.0"}');
   assert.equal(verifyMcpRuntime(base), false);
   fs.writeFileSync(manifest, JSON.stringify({ version: dependencies['chrome-devtools-mcp'] }));
-  fs.unlinkSync(path.join(base, 'node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js'));
+  fs.unlinkSync(path.join(base, 'node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js'));
   assert.equal(verifyMcpRuntime(base), false);
 });

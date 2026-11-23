@@ -168,7 +168,7 @@ test('Every requested gallery tool participates in the latest-compatible install
         log() {},
     });
     assert.deepEqual(result.failures, []);
-    for (const id of ['vincaslt.highlight-matching-tag', 'anteprimorac.html-end-tag-labels', 'mikestead.dotenv',
+    for (const id of ['vincaslt.highlight-matching-tag', 'anteprimorac.html-end-tag-labels',
         'editorconfig.editorconfig', 'esbenp.prettier-vscode']) {
         const request = calls.find(item => item.id === id);
         assert.ok(request, id + ' reaches the installer');
@@ -176,6 +176,7 @@ test('Every requested gallery tool participates in the latest-compatible install
         assert.equal(request.options.version, undefined);
     }
     assert.ok(!catalog.some(item => item.id.toLowerCase() === 'ritwickdey.liveserver'));
+    assert.ok(!catalog.some(item => item.id.toLowerCase() === 'mikestead.dotenv'), 'Built-in dotenv handles .env files');
     assert.ok(catalog.filter(item => item.source === 'gallery').every(item => item.trackLatest && !item.version));
     assert.ok(!catalog.some(item => /auto.?import/i.test(item.name)), 'Built-in TypeScript owns symbol imports');
 });

@@ -135,15 +135,15 @@ test('Full install preserves personal settings, command denials, MCP credentials
   assert.deepEqual(mcp.mcpServers.github, { command: 'my-launcher', env: { TOKEN: 'KEEP_LOCAL_VALUE' }, $typeName: 'metadata' });
   assert.deepEqual(mcp.mcpServers.gsd, { command: 'custom-gsd', disabled: true }, 'A personal server named gsd is not setup-owned and stays');
   assert.ok(JSON.parse(fs.readFileSync(path.join(data.env.geminiConfigDir, 'skill-inventory.json'))).skills.includes('personal-skill'));
-  const workflow = path.join(data.env.geminiSkillsDir, 'workstation-workflow/SKILL.md'); assert.equal(fs.existsSync(workflow), true);
+  const practice = path.join(data.env.geminiSkillsDir, 'workstation-practice/SKILL.md'); assert.equal(fs.existsSync(practice), true);
   const restore = restoreBackup(result.backupInfo.backupDir, data.env);
-  assert.ok(restore.removed.includes(workflow)); assert.equal(fs.existsSync(workflow), false);
+  assert.ok(restore.removed.includes(practice)); assert.equal(fs.existsSync(practice), false);
   assert.equal(fs.readFileSync(path.join(data.env.geminiSkillsDir, 'personal-skill/SKILL.md'), 'utf8'), 'my skill');
   const restoredSettings = JSON.parse(fs.readFileSync(data.env.settingsJson));
   assert.equal(restoredSettings['personal.text'], 'a,}');
   assert.equal(restoredSettings['chat.tools.terminal.autoApprove'].rm, false);
   assert.equal(fs.existsSync(statePath(data.env)), false);
-  for (const relative of ['config/skills/workstation-workflow/SKILL.md', 'config/agents/workstation-verifier.md']) {
+  for (const relative of ['config/skills/workstation-practice/SKILL.md', 'config/workstation-unified/guides/design.md']) {
     assert.equal(fs.existsSync(path.join(data.env.geminiDir, relative)), false, 'Restore must remove new managed runtime files: ' + relative);
   }
 });

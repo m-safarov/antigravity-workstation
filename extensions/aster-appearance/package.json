@@ -2,7 +2,7 @@
   "name": "aster-appearance",
   "displayName": "Aster Atelier",
   "publisher": "workstation",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "11 editor palettes after the most used themes and 10 bundled programming fonts, 9 of them with coding ligatures. A focused appearance studio for Antigravity.",
   "license": "MIT",
   "engines": {

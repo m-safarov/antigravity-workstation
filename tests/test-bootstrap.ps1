@@ -150,6 +150,7 @@ try {
     $ide260 = New-Ide '2.6.0'
     $ide255 = New-Ide '2.5.5'
     $ide270 = New-Ide '2.7.0'
+    $ide280 = New-Ide '2.8.0'
     $appData = Join-Path $testRoot 'AppData Roaming'
     $emptyAppData = Join-Path $testRoot 'AppData never started'
     [IO.Directory]::CreateDirectory((Join-Path $appData 'Antigravity IDE\User\globalStorage')) | Out-Null
@@ -223,9 +224,11 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
     $run = Invoke-Scenario 'ide-terminal' -Terminal 'vscode'
     Assert-True ($run.Exit -eq 3 -and $run.Calls.Count -eq 0 -and $run.Output -match 'terminal of an editor') 'An editor terminal must pause and point to Windows PowerShell' $run
     $run = Invoke-Scenario 'old-ide' -Ide $ide255
-    Assert-True ($run.Exit -eq 4 -and $run.Calls.Count -eq 0 -and $run.Result.state -eq 'ide-not-ready' -and $run.Output -match 'supports only Antigravity IDE 2\.7\.0 or 2\.6\.0' -and $run.Output -match 'stable/2\.7\.0-') 'Another IDE version must stop with the official 2.7.0 download' $run
+    Assert-True ($run.Exit -eq 4 -and $run.Calls.Count -eq 0 -and $run.Result.state -eq 'ide-not-ready' -and $run.Output -match 'supports only Antigravity IDE 2\.8\.0 or 2\.7\.0 or 2\.6\.0' -and $run.Output -match 'stable/2\.8\.0-') 'Another IDE version must stop with the official 2.8.0 download' $run
     $run = Invoke-Scenario 'ide-270' -Ide $ide270
     Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -ge 1 -and $run.Calls[0].ide -eq $ide270) 'IDE 2.7.0 must be accepted like 2.6.0' $run
+    $run = Invoke-Scenario 'ide-280' -Ide $ide280
+    Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -ge 1 -and $run.Calls[0].ide -eq $ide280) 'IDE 2.8.0 must be accepted like 2.7.0 and 2.6.0' $run
     $run = Invoke-Scenario 'never-started' -AppData $emptyAppData
     Assert-True ($run.Exit -eq 4 -and $run.Calls.Count -eq 0 -and $run.Output -match 'never been started') 'An IDE that was never opened must stop before any change' $run
 

@@ -7,7 +7,11 @@ const SHELL_INTEGRATION_WAIT_MS = 3000;
 
 // CSI (colours, cursor moves), OSC (titles, shell integration marks) and the
 // remaining two-byte escape sequences.
-const ESCAPES = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]/g;
+const ESC = String.fromCharCode(27);
+const BEL = String.fromCharCode(7);
+const ESCAPES = new RegExp(`${ESC}\\[[0-?]*[ -/]*[@-~]|${ESC}\\][^${BEL}${ESC}]*(?:${BEL}|${ESC}\\\\)|${ESC}[@-Z\\\\-_]`, 'g');
+const CONTROL_CHAR = new RegExp(`[${String.fromCharCode(0)}-${String.fromCharCode(31)}${String.fromCharCode(127)}]`);
+const ESCAPE_QUOTE_CHAR = new RegExp(`[\\\\'!${String.fromCharCode(0)}-${String.fromCharCode(31)}${String.fromCharCode(127)}]`, 'g');
 
 function stripAnsi(text) {
   return String(text || '').replace(ESCAPES, '');
@@ -23,8 +27,8 @@ const escapeChar = char => NAMED_ESCAPES[char] || '\\x' + char.charCodeAt(0).toS
 function quoteArg(value) {
   const text = String(value);
   if (/^[\w@%+=:,./-]+$/.test(text)) return text;
-  if (!/[\x00-\x1f\x7f]/.test(text)) return `'${text.replace(/'/g, `'\\''`)}'`;
-  return `$'${text.replace(/[\\'!\x00-\x1f\x7f]/g, escapeChar)}'`;
+  if (!CONTROL_CHAR.test(text)) return `'${text.replace(/'/g, `'\\''`)}'`;
+  return `$'${text.replace(ESCAPE_QUOTE_CHAR, escapeChar)}'`;
 }
 
 // Git Bash turns arguments that start with / into Windows paths before a

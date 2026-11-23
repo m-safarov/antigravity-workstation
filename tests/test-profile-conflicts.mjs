@@ -31,11 +31,13 @@ function installProfile(customRoots, options = {}) {
   assert.equal(result.success, true, result.failures.join('; '));
 }
 
-test('The workflow skill and verifier agent are installed and no GSD runtime, hook or permission remains', t => {
+test('Active workstation skills are installed and no GSD runtime, obsolete workflow/verifier, hook or permission remains', t => {
   const { customRoots, env } = fixture(t);
   installProfile(customRoots, { autoApprove: true });
-  assert.ok(fs.existsSync(path.join(env.geminiSkillsDir, 'workstation-workflow/SKILL.md')));
-  assert.ok(fs.existsSync(path.join(env.geminiConfigDir, 'agents/workstation-verifier.md')));
+  assert.ok(fs.existsSync(path.join(env.geminiSkillsDir, 'workstation-frontend-mentor/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(env.geminiSkillsDir, 'workstation-practice/SKILL.md')));
+  assert.equal(fs.existsSync(path.join(env.geminiSkillsDir, 'workstation-workflow/SKILL.md')), false);
+  assert.equal(fs.existsSync(path.join(env.geminiConfigDir, 'agents/workstation-verifier.md')), false);
   for (const retired of ['antigravity/gsd-core', 'antigravity/hooks']) assert.equal(fs.existsSync(path.join(env.geminiDir, retired)), false, retired);
   const permissions = JSON.parse(fs.readFileSync(path.join(env.geminiDir, 'antigravity/settings.json'), 'utf8')).permissions.allow;
   assert.equal(permissions.some(permission => /gsd|antigravity\/hooks/.test(permission)), false);

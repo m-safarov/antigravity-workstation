@@ -6,10 +6,17 @@
 
 В Setup отключён `reactSnippets.settings.importReactOnTop`: новые `rfc/rafce` не добавляют неиспользуемый React import. Для legacy React Snippets 4.4.3 helper запрашивает штатную регенерацию cache через configuration API, не патчит vendor-файлы и восстанавливает временное назначение unchanged default. После первого обновления сохрани работу и выполни **Developer: Reload Window**; helper показывает `Workstation: Reload`, но сам не закрывает несохранённые окна. Неизвестные версии и workspace overrides не переписываются. Подписи class/id у closing tag видны мягким серым label color (`#8b949e99`); Tailwind autocomplete и парное выделение тегов сохранены.
 
+## Оптимизация скорости (1.3.31)
+
+- `profile.cjs` фильтрует события `onDidChangeConfiguration` только по управляемым ключам, кеширует разбор профиля по mtime/size и один раз индексирует расширения за проверку.
+- `workbench-ui.cjs` пропускает запросы, когда окно не в фокусе, использует адаптивный интервал в простое (1 с → 10 с) и мгновенно реагирует на фокус/видимость.
+- `jelly-patch.cjs` кеширует DOM-узлы каретки, пропускает повторные записи одинакового `opacity` и ставит `requestAnimationFrame` на паузу, когда окно скрыто.
+- `repair-chat.cjs` не держит постоянный фоновый опрос диска в простое и включает таймер только при наличии незавершённой задачи ремонта.
+
 ## Ускорение профиля и защита Undo (1.3.30)
 
 - `profile.cjs` индексирует языковые настройки один раз за проверку, не перезапускает полный обход 150 языков при каждом переключении вкладок в проекте и не вызывает предупреждения о window-scoped настройках (`editor.tokenColorCustomizations` и др.), убирая ~2-секундные паузы Extension Host.
-- `inline-diff-guard.cjs` вместе с резервными привязками `ctrl+z`/`ctrl+y`/`ctrl+shift+z` автоматически сбрасывает зависшие контексты `antigravity.inlineDiffCanUndo`/`CanRedo`, если `antigravity.inlineDiff.undo` не зарегистрирована (например после переключения на Side-by-Side в Antigravity 2.7.0).
+- `inline-diff-guard.cjs` вместе с резервными привязками `ctrl+z`/`ctrl+y`/`ctrl+shift+z` автоматически сбрасывает зависшие контексты `antigravity.inlineDiffCanUndo`/`CanRedo`, если `antigravity.inlineDiff.undo` не зарегистрирована (например после переключения на Side-by-Side в Antigravity 2.7.0/2.8.0).
 
 ## Значения по умолчанию после применения (1.3.29)
 

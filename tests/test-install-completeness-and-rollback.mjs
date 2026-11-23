@@ -13,7 +13,7 @@ const repoRoot = path.resolve(import.meta.dirname, '..');
 
 function copyRepo(target) {
   fs.mkdirSync(target, { recursive: true });
-  for (const name of ['package.json', 'LICENSE', 'config', 'rules', 'skills', 'agents', 'resources', 'extensions', 'scripts']) {
+  for (const name of ['package.json', 'LICENSE', 'config', 'rules', 'skills', 'resources', 'extensions', 'scripts']) {
     fs.cpSync(path.join(repoRoot, name), path.join(target, name), {
       recursive: true,
       filter: src => !src.split(path.sep).includes('node_modules'),

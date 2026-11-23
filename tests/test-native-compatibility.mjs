@@ -23,7 +23,13 @@ function fixture(t, product = { ideVersion: '2.6.0' }, main = 'not the official 
 test('The compatibility catalog pins the existing audited bundle, official source and actual native schema', () => {
   const catalog = loadCatalog({ repoRoot: root });
   assert.equal(catalog.format, 1);
-  assert.equal(catalog.builds.length, 4);
+  assert.equal(catalog.builds.length, 6);
+  const build280 = catalog.builds.find(b => b.ideVersion === '2.8.0' && b.architecture === 'x64');
+  assert.ok(build280);
+  assert.equal(build280.mainSha256, '187c3f56c0947da78d5991cb0ab34acbf00766bbeb96d7b3781f3b4fd8bffe4d');
+  assert.equal(build280.adapterId, 'uss-int32-agent-tab-v1');
+  assert.equal(build280.schema.sha256, 'b70f135c55d53617098087edd2da6ae2cbf306b923c8a699b0ee36b4a76c5149');
+
   const build = catalog.builds.find(b => b.ideVersion === '2.6.0');
   assert.equal(build.ideVersion, '2.6.0');
   assert.equal(build.mainSha256, NATIVE_MAIN_SHA256);
@@ -169,11 +175,11 @@ test('Locally installed audited Antigravity IDE bundle validates against the com
   assert.equal(result.adapterId, entry.adapterId);
 });
 
-test('Only Antigravity IDE 2.7.0 and 2.6.0 are supported; every other version stops with an install hint', t => {
+test('Only Antigravity IDE 2.8.0, 2.7.0 and 2.6.0 are supported; every other version stops with an install hint', t => {
   const catalog = loadCatalog({ repoRoot: root });
-  assert.deepEqual(SUPPORTED_IDE_VERSIONS, ['2.7.0', '2.6.0']);
-  assert.equal(SUPPORTED_IDE_VERSION, '2.7.0');
-  assert.deepEqual([...new Set(catalog.builds.map(build => build.ideVersion))].sort(), ['2.6.0', '2.7.0']);
+  assert.deepEqual(SUPPORTED_IDE_VERSIONS, ['2.8.0', '2.7.0', '2.6.0']);
+  assert.equal(SUPPORTED_IDE_VERSION, '2.8.0');
+  assert.deepEqual([...new Set(catalog.builds.map(build => build.ideVersion))].sort(), ['2.6.0', '2.7.0', '2.8.0']);
   for (const version of SUPPORTED_IDE_VERSIONS) {
     for (const architecture of ['x64', 'arm64']) {
       const build = catalog.builds.find(b => b.ideVersion === version && b.architecture === architecture);
@@ -184,12 +190,12 @@ test('Only Antigravity IDE 2.7.0 and 2.6.0 are supported; every other version st
     // A known version with unaudited bytes is a hash mismatch, not an unsupported version.
     assert.equal(inspectNativeCompatibility(fixture(t, { ideVersion: version }).env, { architecture: 'x64' }).reasonCode, 'BUNDLE_HASH_MISMATCH');
   }
-  for (const version of ['2.5.5', '2.5.2', '2.1.1', '2.6.6', '2.8.0']) {
+  for (const version of ['2.5.5', '2.5.2', '2.1.1', '2.6.6', '2.9.0']) {
     const result = inspectNativeCompatibility(fixture(t, { ideVersion: version }).env, { architecture: 'x64' });
     assert.equal(result.reasonCode, 'UNSUPPORTED_VERSION');
-    assert.match(result.reason, /install Antigravity IDE 2\.7\.0 or 2\.6\.0/);
+    assert.match(result.reason, /install Antigravity IDE 2\.8\.0 or 2\.7\.0 or 2\.6\.0/);
   }
-  assert.throws(() => validateCatalog({ format: 1, builds: [{ ...catalog.builds[0], ideVersion: '2.8.0' }] }), /Invalid native compatibility catalog entry/);
+  assert.throws(() => validateCatalog({ format: 1, builds: [{ ...catalog.builds[0], ideVersion: '2.9.0' }] }), /Invalid native compatibility catalog entry/);
 });
 
 test('The embedded schema check ignores minified helper names but rejects a changed or missing descriptor', () => {

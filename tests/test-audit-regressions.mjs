@@ -57,12 +57,13 @@ test('npm packaging excludes installed MCP dependencies while retaining their pi
 test('Template substitution preserves literal dollar patterns and JSON escapes', () => {
   const env = { userProfile: 'C:/Users/A$&B', nodeExe: 'D:/Node $&/node.exe', gitBashPath: 'D:/Git $&/bash.exe' };
   const result = JSON.parse(homeTemplate(env, 'config/mcp/active.template.json'));
-  const thinking = result.mcpServers['sequential-thinking'];
-  assert.equal(thinking.command, env.nodeExe);
-  assert.equal(thinking.args[0], env.userProfile + '/.gemini/config/mcp-runtime/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js');
+  const browser = result.mcpServers['chrome-devtools-mcp'];
+  assert.equal(browser.command, env.nodeExe);
+  assert.equal(browser.args[0], env.userProfile + '/.gemini/config/mcp-runtime/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js');
   assert.equal(Object.hasOwn(result.mcpServers, 'gsd'), false, 'GSD is not part of the managed MCP catalog');
+  assert.equal(Object.hasOwn(result.mcpServers, 'sequential-thinking'), false, 'sequential-thinking is retired in favor of native Antigravity reasoning');
   const quoted = JSON.parse(homeTemplate({ ...env, userProfile: '/tmp/User "quoted"' }, 'config/mcp/active.template.json'));
-  assert.ok(quoted.mcpServers['sequential-thinking'].args[0].startsWith('/tmp/User "quoted"/'));
+  assert.ok(quoted.mcpServers['chrome-devtools-mcp'].args[0].startsWith('/tmp/User "quoted"/'));
 });
 
 test('Restoring a fresh-profile backup removes configuration files that were absent before install', t => {
@@ -135,15 +136,15 @@ test('Doctor fails missing required extensions and damaged installed agents/hook
   assert.deepEqual(healthy.failures, [], 'An unchanged isolated installation must pass all applicable checks');
   assert.ok(healthy.checks.some(c => c.category === 'Payload' && c.status === 'pass'));
   const cliPath = fakeInventory(f, catalog.filter(e => e.id !== 'esbenp.prettier-vscode'));
-  fs.unlinkSync(path.join(f.env.geminiConfigDir, 'agents/workstation-verifier.md'));
-  fs.writeFileSync(path.join(f.env.geminiSkillsDir, 'workstation-workflow/SKILL.md'), 'broken');
+  fs.unlinkSync(path.join(f.env.geminiConfigDir, 'workstation-unified/guides/design.md'));
+  fs.writeFileSync(path.join(f.env.geminiSkillsDir, 'workstation-practice/SKILL.md'), 'broken');
   fs.writeFileSync(f.env.keybindingsJson, '[]');
   fs.writeFileSync(path.join(f.env.geminiConfigDir, 'mcp_config.json'), '{"mcpServers":{}}');
   const result = runDoctor({ customRoots: { ...f.customRoots, cliPath }, log() {} });
   assert.ok(result.failures.some(c => c.category === 'Extensions' && c.name === 'esbenp.prettier-vscode (latest)'));
-  assert.ok(result.failures.some(c => c.category === 'Payload'), 'Missing agent and altered skill must fail Doctor');
+  assert.ok(result.failures.some(c => c.category === 'Payload'), 'Missing guide and altered skill must fail Doctor');
   assert.ok(result.failures.some(c => c.name === 'Managed keybindings'));
-  assert.ok(result.failures.some(c => c.category === 'MCP' && c.name.includes('sequential-thinking launcher')));
+  assert.ok(result.failures.some(c => c.category === 'MCP' && c.name.includes('chrome-devtools-mcp launcher')));
 });
 
 test('Invalid source configuration stops before overwriting existing profile files', t => {
@@ -187,15 +188,15 @@ test('Gallery dry-run works without probing or launching an installed IDE', () =
   assert.deepEqual(result.failures, []);
 });
 
-test('GSD is fully retired: no skills, agents, hooks, runtime or MCP server ship with setup', () => {
-  for (const folder of ['resources/gsd-core', 'resources/hooks', 'resources/antigravity-runtime', 'resources/global-skills']) {
+test('GSD and obsolete agent workarounds are fully retired: no GSD runtime, sequential-thinking MCP or legacy verifier agent ship with setup', () => {
+  for (const folder of ['resources/gsd-core', 'resources/hooks', 'resources/antigravity-runtime', 'resources/global-skills', 'agents']) {
     assert.equal(fs.existsSync(path.join(root, folder)), false, folder);
   }
   assert.deepEqual(fs.readdirSync(path.join(root, 'skills')).filter(name => name.startsWith('gsd-')), []);
-  assert.deepEqual(fs.readdirSync(path.join(root, 'agents')), ['workstation-verifier.md']);
   assert.deepEqual(require('../config/hooks.json'), {});
   assert.equal(Object.hasOwn(require('../resources/mcp-runtime/package.json').dependencies, '@opengsd/gsd-core'), false);
-  assert.doesNotMatch(fs.readFileSync(path.join(root, 'resources/mcp-runtime/package-lock.json'), 'utf8'), /@opengsd/);
+  assert.equal(Object.hasOwn(require('../resources/mcp-runtime/package.json').dependencies, '@modelcontextprotocol/server-sequential-thinking'), false);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'resources/mcp-runtime/package-lock.json'), 'utf8'), /@opengsd|server-sequential-thinking/);
 });
 
 function panelFixture(t) {

@@ -1,6 +1,6 @@
 
 [CmdletBinding()]
-param([string]$ArtifactDirectory = '', [switch]$AppearanceOnly, [ValidateSet('2.6.0', '2.7.0')][string]$IdeVersion = '2.7.0')
+param([string]$ArtifactDirectory = '', [switch]$AppearanceOnly, [ValidateSet('2.6.0', '2.7.0', '2.8.0')][string]$IdeVersion = '2.8.0')
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows -or $env:GITHUB_ACTIONS -cne 'true' -or $env:RUNNER_ENVIRONMENT -cne 'github-hosted') {
     throw 'Run this actual IDE test only on an isolated GitHub-hosted Windows runner. It must not launch windows on your laptop.'

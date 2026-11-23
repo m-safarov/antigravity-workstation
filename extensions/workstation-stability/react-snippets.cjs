@@ -1,9 +1,18 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function same(a, b) {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a)) return Array.isArray(b) && a.length === b.length && a.every((item, i) => same(item, b[i]));
+  if (Array.isArray(b)) return false;
+  const aKeys = Object.keys(a).filter(key => a[key] !== undefined);
+  const bKeys = Object.keys(b).filter(key => b[key] !== undefined);
+  return aKeys.length === bKeys.length && aKeys.every(key => Object.hasOwn(b, key) && same(a[key], b[key]));
+}
 let pending;
 let needsReload = false;
+let readyCache = null;
 
 async function refresh(vscode) {
   const extension = vscode.extensions.getExtension?.('dsznajder.es7-react-js-snippets');
@@ -12,10 +21,16 @@ async function refresh(vscode) {
   if (config.get('importReactOnTop') !== false) return { status: 'override-preserved' };
   const file = path.join(extension.extensionPath, 'lib/snippets/generated.json');
   function ready() {
-    if (fs.lstatSync(file).isSymbolicLink() || fs.statSync(file).size > 4 * 1024 * 1024) throw new Error('Unsafe React snippet cache');
+    const link = fs.lstatSync(file);
+    if (link.isSymbolicLink() || link.size > 4 * 1024 * 1024) throw new Error('Unsafe React snippet cache');
+    if (readyCache && readyCache.file === file && readyCache.mtimeMs === link.mtimeMs && readyCache.size === link.size) {
+      return readyCache.value;
+    }
     const snippets = Object.values(JSON.parse(fs.readFileSync(file, 'utf8')));
-    return ['rfc', 'rafce'].every(prefix => snippets.some(item => item.prefix === prefix && Array.isArray(item.body)
+    const value = ['rfc', 'rafce'].every(prefix => snippets.some(item => item.prefix === prefix && Array.isArray(item.body)
       && !/import\s+(?:\*\s+as\s+)?React\b[^\n]*from\s*["']react["']/.test(item.body.join('\n'))));
+    readyCache = { file, mtimeMs: link.mtimeMs, size: link.size, value };
+    return value;
   }
   if (ready()) return { status: 'current', reloadWindowMayBeRequired: needsReload };
   await extension.activate();

@@ -5,7 +5,7 @@
 #   starts once on a new profile, then the profile is installed.
 # Mode 2: install or update; every profile setting is applied again, the user's theme, fonts, other settings and extensions stay.
 # Both modes turn AI inline suggestions off; ordinary IntelliSense, snippets and auto-import stay on.
-# Exit codes: 0 done, 2 repair task queued, 3 paused (IDE open or IDE terminal), 4 IDE 2.7.0/2.6.0 missing, other = failure.
+# Exit codes: 0 done, 2 repair task queued, 3 paused (IDE open or IDE terminal), 4 IDE 2.8.0/2.7.0/2.6.0 missing, other = failure.
 # Keep this file ASCII-only: Windows PowerShell 5.1 reads BOM-less scripts in the ANSI code page.
 param(
     [string]$Name = '',
@@ -24,9 +24,9 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $utf8 = New-Object Text.UTF8Encoding $false
 # Every audited IDE version (config/native-compatibility.json); the first one is the recommended download.
-$IdeVersions = @('2.7.0', '2.6.0')
+$IdeVersions = @('2.8.0', '2.7.0', '2.6.0')
 $IdeVersion = $IdeVersions[0]
-$IdeDownload = 'https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.7.0-4507555968450560/windows-{0}/Antigravity%20IDE.exe'
+$IdeDownload = 'https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.8.0-6733682917113856/windows-{0}/Antigravity%20IDE.exe'
 $IdeNames = @('Antigravity IDE', 'Antigravity', 'antigravity-ide')
 # "Zakryt'? (Y/N)" in Cyrillic, built from code points to keep this file ASCII.
 $CloseQuestion = (-join [char[]](0x0417, 0x0430, 0x043A, 0x0440, 0x044B, 0x0442, 0x044C)) + '? (Y/N)'

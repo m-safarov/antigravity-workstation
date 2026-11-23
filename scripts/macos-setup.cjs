@@ -27,7 +27,7 @@ const { fullReset } = require('../lib/full-reset');
 
 const repo = path.resolve(__dirname, '..');
 // Same audited versions as the Windows setup (lib/native-compatibility.js).
-const IDE_VERSIONS = ['2.7.0', '2.6.0'];
+const IDE_VERSIONS = ['2.8.0', '2.7.0', '2.6.0'];
 // The README modes always manage AI suggestions and the 1-second Auto Save (lib/installer.js).
 const QUIET_MANAGED_KEYS = new Set(['editor.inlineSuggest.enabled', 'files.autoSave', 'files.autoSaveDelay']);
 const WINDOWS_ONLY = ['terminal.integrated.profiles.windows', 'terminal.integrated.defaultProfile.windows'];
@@ -99,7 +99,7 @@ function firstStart(app, paths, log) {
 }
 
 // lib/installer.js updateMcpConfig: managed servers are refreshed, personal
-// servers and their credentials stay, the setup-3.0 GSD server goes.
+// servers and their credentials stay, retired setup servers go.
 function updateMcpConfig(current, template) {
   const overlay = (previous, managed) => {
     if (!managed || typeof managed !== 'object' || Array.isArray(managed)) return structuredClone(managed);
@@ -111,6 +111,10 @@ function updateMcpConfig(current, template) {
   result.mcpServers ||= {};
   const gsd = result.mcpServers.gsd;
   if (Array.isArray(gsd?.args) && gsd.args.some(arg => /mcp-runtime[\\/]node_modules[\\/]@opengsd[\\/]gsd-core[\\/]/.test(String(arg)))) delete result.mcpServers.gsd;
+  const thinking = result.mcpServers['sequential-thinking'];
+  if (Array.isArray(thinking?.args) && thinking.args.some(arg => /mcp-runtime[\\/]node_modules[\\/]@modelcontextprotocol[\\/]server-sequential-thinking[\\/]/.test(String(arg)))) {
+    delete result.mcpServers['sequential-thinking'];
+  }
   for (const [name, definition] of Object.entries(template.mcpServers)) {
     const previous = current.mcpServers?.[name];
     const server = overlay(previous, definition);

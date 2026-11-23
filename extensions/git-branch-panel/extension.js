@@ -35,9 +35,10 @@ function syncIdentity() {
 function watchRepositoryChanges(refresh) {
   const watcher = vscode.workspace.createFileSystemWatcher('**/*');
   const onChange = uri => {
-    if (isNoise(uri)) return;
+    const fsPath = String(uri?.fsPath || '');
+    if (NOISE.test(fsPath)) return;
     refresh();
-    if (GIT_CONFIG.test(String(uri?.fsPath || ''))) syncIdentity();
+    if (fsPath.endsWith('config') && GIT_CONFIG.test(fsPath)) syncIdentity();
   };
   return [watcher, watcher.onDidCreate(onChange), watcher.onDidChange(onChange), watcher.onDidDelete(onChange)];
 }
@@ -49,12 +50,22 @@ function activate(context) {
   provider = new GithubPanelProvider(vscode, context, log);
   const scripts = new NpmScripts(vscode);
   const refresh = () => provider?.refresh();
+  let lastWorkspaceRoot = provider.workspaceRootOrNull();
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(PANEL_ID, provider, { webviewOptions: { retainContextWhenHidden: true } }),
     vscode.commands.registerCommand(PANEL_ID + '.refresh', refresh),
     ...watchRepositoryChanges(refresh),
-    vscode.window.onDidChangeActiveTextEditor(refresh),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => { syncIdentity(); refresh(); }),
+    vscode.window.onDidChangeActiveTextEditor(() => {
+      const currentRoot = provider?.workspaceRootOrNull() || null;
+      if (currentRoot === lastWorkspaceRoot) return;
+      lastWorkspaceRoot = currentRoot;
+      refresh();
+    }),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      lastWorkspaceRoot = provider?.workspaceRootOrNull() || null;
+      syncIdentity();
+      refresh();
+    }),
     vscode.authentication.onDidChangeSessions(event => { if (event.provider.id === 'github') provider?.onGitHubSessionsChanged(); }),
     ...scripts.register(),
     terminal,
