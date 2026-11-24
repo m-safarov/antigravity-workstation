@@ -149,6 +149,31 @@ try {
             Assert-True (($text -match 'PAUSED: Antigravity is still running') -ne $case.Ready) "Test-ReadyToRun ($($case.Name)) pauses exactly when it does not continue; $text"
         }
     }
+    # Get-GitBash and Get-GitExecutable: respect GIT_BASH_PATH and resolve git.exe beside bash.exe when not on PATH.
+    $gitFunctions = @($ast.EndBlock.Statements | Where-Object { $_ -is [Management.Automation.Language.FunctionDefinitionAst] -and
+        @('Get-GitBash', 'Get-GitExecutable') -contains $_.Name })
+    Assert-True ($gitFunctions.Count -eq 2) 'Bootstrap must define Get-GitBash and Get-GitExecutable'
+    $fakeGitRoot = Join-Path $testRoot 'Custom Git Root'
+    $fakeGitBash = Join-Path $fakeGitRoot 'bin\bash.exe'
+    $fakeGitExe = Join-Path $fakeGitRoot 'cmd\git.exe'
+    [IO.Directory]::CreateDirectory((Split-Path $fakeGitBash -Parent)) | Out-Null
+    [IO.Directory]::CreateDirectory((Split-Path $fakeGitExe -Parent)) | Out-Null
+    [IO.File]::WriteAllText($fakeGitBash, 'fixture', $utf8)
+    [IO.File]::WriteAllText($fakeGitExe, 'fixture', $utf8)
+    $savedGitBash = $env:GIT_BASH_PATH
+    try {
+        $env:GIT_BASH_PATH = $fakeGitBash
+        $resolvedGit = & {
+            foreach ($function in $gitFunctions) { . ([scriptblock]::Create($function.Extent.Text)) }
+            function Get-Command { param([string]$Name, [switch]$All, [string]$CommandType, [object]$ErrorAction) $null }
+            $bash = Get-GitBash
+            [pscustomobject]@{ Bash = $bash; Git = (Get-GitExecutable $bash) }
+        }
+        Assert-True ($resolvedGit.Bash -eq $fakeGitBash) "Get-GitBash must honor GIT_BASH_PATH; got: $($resolvedGit.Bash)"
+        Assert-True ($resolvedGit.Git -eq $fakeGitExe) "Get-GitExecutable must find cmd\git.exe beside Git Bash when PATH omits git.exe; got: $($resolvedGit.Git)"
+    } finally {
+        if ($null -eq $savedGitBash) { Remove-Item Env:GIT_BASH_PATH -ErrorAction SilentlyContinue } else { $env:GIT_BASH_PATH = $savedGitBash }
+    }
     $ide260 = New-Ide '2.6.0'
     $ide255 = New-Ide '2.5.5'
     $ide270 = New-Ide '2.7.0'
@@ -163,7 +188,7 @@ try {
     Write-Fixture 'package.json' ('{"name":"antigravity-workstation-setup","version":"' + $version + '"}')
     Write-Fixture 'bin/workstation-setup.js' @'
 const fs = require('fs');
-fs.appendFileSync(process.env.WORKSTATION_BOOTSTRAP_TEST_LOG, JSON.stringify({ command: process.argv[2], args: process.argv.slice(3), entry: process.argv[1], ide: process.env.ANTIGRAVITY_INSTALL_DIR }) + '\n');
+fs.appendFileSync(process.env.WORKSTATION_BOOTSTRAP_TEST_LOG, JSON.stringify({ command: process.argv[2], args: process.argv.slice(3), entry: process.argv[1], ide: process.env.ANTIGRAVITY_INSTALL_DIR, gitBash: process.env.GIT_BASH_PATH }) + '\n');
 if (process.env.WORKSTATION_BOOTSTRAP_TEST_FAIL === process.argv[2]) {
   console.error('Setup incomplete: fixture ' + process.argv[2] + ' failure: \u041e\u0448\u0438\u0431\u043a\u0430 \u2717');
   process.exit(7);
@@ -193,6 +218,7 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
     Assert-True ($run.Calls[0].args -contains '--apply-profile') 'Command 2 must set every profile value again, not keep values of older setups' $run
     Assert-True ($run.Calls[0].args -contains '--quiet-completion' -and $run.Calls[0].args -contains '--auto-approve') 'Command 2 must turn AI suggestions off and let the agent work without asking' $run
     Assert-True ($run.Calls[0].ide -eq $ide260 -and $run.Calls[1].ide -eq $ide260) 'Install and Doctor must use the checked IDE 2.6.0 folder' $run
+    Assert-True ($run.Calls[0].gitBash -and (Test-Path -LiteralPath $run.Calls[0].gitBash -PathType Leaf) -and $run.Calls[1].gitBash -eq $run.Calls[0].gitBash) 'Install and Doctor must receive the verified Git Bash path' $run
     Assert-True ($run.Output -match [regex]::Escape($first) -and $run.Result.state -eq 'stages-complete') 'Command 2 must report the synced commit and result' $run
     Assert-True ($run.Output.Contains("fixture install ok: $([char]0x0413)")) 'UTF-8 installer output must reach the console intact' $run
     $source = Join-Path $download 'safarovmurod-antigravity-workstation\source'

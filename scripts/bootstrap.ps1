@@ -95,7 +95,13 @@ function Install-Prerequisite([string]$Id) {
     $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
     if (-not $winget) { throw 'winget is unavailable. Install Node.js 24+ and Git for Windows, then run the same command again.' }
     Write-Line "  Installing $Id with winget..."
-    & $winget.Source install --id $Id --exact --source winget --architecture $script:arch --silent --accept-source-agreements --accept-package-agreements --disable-interactivity | Out-Host
+    $wingetArgs = @('install', '--id', $Id, '--exact', '--source', 'winget', '--architecture', $script:arch, '--silent', '--accept-source-agreements', '--accept-package-agreements', '--disable-interactivity')
+    & $winget.Source @wingetArgs | Out-Host
+    # If Git.Git is already registered in winget (0x8A15002B / 0x8A150061) yet Git Bash is missing, force-reinstall once.
+    if ($Id -eq 'Git.Git' -and ($LASTEXITCODE -eq -1978335189 -or $LASTEXITCODE -eq -1978335135)) {
+        Write-Line '  Git.Git is registered without Git Bash; repairing with winget --force...' 'Yellow'
+        & $winget.Source @($wingetArgs + '--force') | Out-Host
+    }
     if ($LASTEXITCODE -ne 0) { throw "winget could not install $Id (exit $LASTEXITCODE). Fix the Windows installer error, then run the same command again." }
     Update-SessionPath -AfterInstall
 }
@@ -108,6 +114,81 @@ function Get-NodeTool {
     if ($runtime -notmatch '^(\d+)/(\w+)$' -or [int]$Matches[1] -lt 24 -or $Matches[2] -cne $script:arch) { return '' }
     if ((Invoke-Native $npmCommand.Source @('--version')).Text -notmatch '(?m)^(\d+)\.' -or [int]$Matches[1] -lt 10) { return '' }
     return $nodeCommand.Source
+}
+
+function Get-GitBash {
+    # Locate Git for Windows' bash.exe (never WSL System32\bash.exe).
+    if ($env:GIT_BASH_PATH -and (Test-Path -LiteralPath $env:GIT_BASH_PATH -PathType Leaf)) { return $env:GIT_BASH_PATH }
+    $roots = New-Object Collections.Generic.List[string]
+    foreach ($command in @(Get-Command git-bash.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
+        if ($command -and $command.Source) { $roots.Add((Split-Path $command.Source -Parent)) }
+    }
+    foreach ($command in @(Get-Command git.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
+        if (-not $command -or -not $command.Source) { continue }
+        $dir = Split-Path $command.Source -Parent
+        for ($level = 0; $level -lt 4 -and $dir; $level++) {
+            $roots.Add($dir)
+            $parent = Split-Path $dir -Parent
+            if (-not $parent -or $parent -eq $dir) { break }
+            $dir = $parent
+        }
+        $exec = Invoke-Native $command.Source @('--exec-path')
+        if ($exec.Code -eq 0 -and $exec.Text) {
+            $dir = ($exec.Text -split '\r?\n')[0].Trim() -replace '/', '\'
+            for ($level = 0; $level -lt 4 -and $dir; $level++) {
+                $roots.Add($dir)
+                $parent = Split-Path $dir -Parent
+                if (-not $parent -or $parent -eq $dir) { break }
+                $dir = $parent
+            }
+        }
+    }
+    foreach ($key in 'HKLM:\SOFTWARE\GitForWindows', 'HKCU:\SOFTWARE\GitForWindows', 'HKLM:\SOFTWARE\WOW6432Node\GitForWindows') {
+        $entry = Get-ItemProperty -LiteralPath $key -ErrorAction SilentlyContinue
+        if ($entry -and $entry.InstallPath) { $roots.Add(([string]$entry.InstallPath).Trim().Trim('"')) }
+    }
+    $uninstall = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    foreach ($entry in @(foreach ($hive in 'HKCU:\', 'HKLM:\') { Get-ItemProperty -Path ($uninstall | ForEach-Object { $hive + $_ }) -ErrorAction SilentlyContinue }) | Where-Object { $_.DisplayName -match '^Git($| )' }) {
+        foreach ($value in @($entry.InstallLocation, $entry.DisplayIcon) | Where-Object { $_ }) {
+            $location = ([string]$value -replace ',\s*-?\d+\s*$', '').Trim().Trim('"')
+            if ($location) { $roots.Add($(if ($location -match '\.exe$') { Split-Path $location -Parent } else { $location })) }
+        }
+    }
+    $localPrograms = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'Programs' } else { '' }
+    foreach ($candidate in @($env:ProgramFiles, $env:ProgramW6432, ${env:ProgramFiles(x86)}, $localPrograms) | Where-Object { $_ }) {
+        $roots.Add((Join-Path $candidate 'Git'))
+    }
+    if ($env:USERPROFILE) { $roots.Add((Join-Path $env:USERPROFILE 'scoop\apps\git\current')) }
+    foreach ($drive in [IO.DriveInfo]::GetDrives()) {
+        if ($drive.DriveType -ne 'Fixed' -or -not $drive.IsReady) { continue }
+        $driveRoot = $drive.RootDirectory.FullName
+        foreach ($sub in 'Git', 'Programs\Git', 'Program Files\Git', 'Apps\Git') { $roots.Add((Join-Path $driveRoot $sub)) }
+    }
+    $seen = @{}
+    foreach ($root in $roots) {
+        if (-not $root -or $seen.ContainsKey($root)) { continue }
+        $seen[$root] = $true
+        foreach ($relative in 'bin\bash.exe', 'usr\bin\bash.exe') {
+            try {
+                $bash = Join-Path $root $relative
+                if (Test-Path -LiteralPath $bash -PathType Leaf) { return $bash }
+            } catch { }
+        }
+    }
+    return ''
+}
+
+function Get-GitExecutable([string]$Bash) {
+    $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
+    if ($gitCommand) { return $gitCommand.Source }
+    if ($Bash) {
+        $gitRoot = Split-Path (Split-Path $Bash -Parent) -Parent
+        if ((Split-Path $gitRoot -Leaf) -ieq 'usr') { $gitRoot = Split-Path $gitRoot -Parent }
+        foreach ($candidate in (Join-Path $gitRoot 'cmd\git.exe'), (Join-Path $gitRoot 'bin\git.exe')) {
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+        }
+    }
+    return ''
 }
 
 function Get-IdeProcesses {

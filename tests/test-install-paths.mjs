@@ -12,7 +12,7 @@ const { runInstaller } = require('../lib/installer.js');
 const { installCustomGithubPanel } = require('../lib/extensions.js');
 const repoRoot = path.resolve(import.meta.dirname, '..');
 
-function windows(files, { located = [], running = [], registered = [], env = {}, product } = {}) {
+function windows(files, { located = [], running = [], registered = [], env = {}, product, gitWhere = 'D:\\Tools\\Git\\mingw64\\bin\\git.exe', gitExecPath = '', gitRegistry = '' } = {}) {
   const normalize = file => path.win32.normalize(file).toLowerCase();
   const present = new Set(files.map(normalize));
   for (const file of files) {
@@ -26,7 +26,15 @@ function windows(files, { located = [], running = [], registered = [], env = {},
     existsSync: file => present.has(normalize(file)),
     readFileSync() { if (!product) throw new Error('No product metadata'); return JSON.stringify(product); },
     execFileSync(command, args) {
-      if (command === 'where.exe') return args[0] === 'git.exe' ? 'D:\\Tools\\Git\\mingw64\\bin\\git.exe' : located.join('\r\n');
+      if (command === 'where.exe') return args[0] === 'git.exe' ? gitWhere : located.join('\r\n');
+      if (args?.[0] === '--exec-path') {
+        if (gitExecPath) return gitExecPath;
+        throw new Error('no exec-path');
+      }
+      if (command === 'reg.exe') {
+        if (gitRegistry) return `\r\nHKEY_LOCAL_MACHINE\\SOFTWARE\\GitForWindows\r\n    InstallPath    REG_SZ    ${gitRegistry}\r\n`;
+        throw new Error('registry key not found');
+      }
       assert.equal(command, 'powershell.exe');
       return JSON.stringify(args.at(-1).includes('Get-Process') ? running : registered);
     },
@@ -391,4 +399,37 @@ test('Standalone Antigravity.exe is ignored during discovery and in bootstrap.ps
   assert.match(bootstrap, /\$IdeNames = @\('Antigravity IDE', 'antigravity-ide'\)/, 'bootstrap process check excludes standalone Antigravity');
   assert.doesNotMatch(bootstrap, /\$IdeNames\s*=.*'Antigravity'/, 'standalone Antigravity must not be in $IdeNames');
   assert.doesNotMatch(bootstrap, /Join-Path \$env:APPDATA 'Antigravity'\)/, 'Mode 1 existing-profile check must not include standalone AppData\\Antigravity');
+});
+
+test('Windows Git Bash discovery handles per-user Git, Scoop/shim --exec-path, deep git-core, registry, and GIT_BASH_PATH', () => {
+  // 1. Per-user Git for Windows (%LOCALAPPDATA%\Programs\Git\bin\bash.exe) when PATH only has MinGit
+  const perUserBash = 'C:\\Users\\Test User\\AppData\\Local\\Programs\\Git\\bin\\bash.exe';
+  assert.equal(getEnvironmentPaths({}, windows([perUserBash], { gitWhere: 'C:\\MinGit\\cmd\\git.exe' })).gitBashPath, perUserBash);
+
+  // 2. Scoop/Chocolatey/WinGet shim resolved through git.exe --exec-path
+  const shim = 'C:\\Users\\Test User\\scoop\\shims\\git.exe';
+  const scoopBash = 'C:\\Users\\Test User\\scoop\\apps\\git\\2.47.1\\bin\\bash.exe';
+  assert.equal(getEnvironmentPaths({}, windows([shim, scoopBash], {
+    gitWhere: shim,
+    gitExecPath: 'C:/Users/Test User/scoop/apps/git/2.47.1/mingw64/libexec/git-core',
+  })).gitBashPath, scoopBash);
+
+  // 3. Deep mingw64\libexec\git-core\git.exe (4 levels below Git root)
+  const deepGit = 'D:\\Dev\\Git\\mingw64\\libexec\\git-core\\git.exe';
+  const deepBash = 'D:\\Dev\\Git\\usr\\bin\\bash.exe';
+  assert.equal(getEnvironmentPaths({}, windows([deepGit, deepBash], { gitWhere: deepGit })).gitBashPath, deepBash);
+
+  // 4. Git for Windows registry fallback when PATH has MinGit without bash.exe
+  const regBash = 'E:\\CustomTools\\Git\\bin\\bash.exe';
+  assert.equal(getEnvironmentPaths({}, windows([regBash], {
+    gitWhere: 'C:\\VisualStudio\\MinGit\\cmd\\git.exe',
+    gitRegistry: 'E:\\CustomTools\\Git',
+  })).gitBashPath, regBash);
+
+  // 5. Explicit GIT_BASH_PATH environment variable (exported by bootstrap.ps1 or user)
+  const explicitBash = 'D:\\My Custom Shell\\bin\\bash.exe';
+  assert.equal(getEnvironmentPaths({}, windows([explicitBash], {
+    gitWhere: '',
+    env: { GIT_BASH_PATH: explicitBash },
+  })).gitBashPath, explicitBash);
 });
