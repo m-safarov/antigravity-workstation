@@ -515,16 +515,24 @@ function Invoke-Bootstrap {
         Install-Prerequisite 'OpenJS.NodeJS.LTS'
         if (-not $DryRun) { $script:node = Get-NodeTool; if (-not $script:node) { throw "Node.js >=24 ($($script:arch)) with npm >=10 is still unavailable. Restart the terminal and run the same command again." } }
     }
-    if (-not (Get-Command git.exe -ErrorAction SilentlyContinue)) { Install-Prerequisite 'Git.Git' }
+    $gitBash = Get-GitBash
+    $script:git = Get-GitExecutable $gitBash
+    if (-not $script:git -or -not $gitBash) {
+        Install-Prerequisite 'Git.Git'
+        if (-not $DryRun) {
+            $gitBash = Get-GitBash
+            $script:git = Get-GitExecutable $gitBash
+        }
+    }
     if ($DryRun) {
         $plan = if ($CleanExtensions) { 'move every Antigravity setting, sign-in and chat into a backup (rebuildable caches are deleted), start the IDE once on a new profile, ' } else { '' }
         Write-Line "  [DRY-RUN] Would download the newest $SourceBranch, $($plan)install mode $mode with AI suggestions off and run Doctor. No files changed." 'Yellow'
         return 0
     }
-    $gitCommand = Get-Command git.exe -ErrorAction SilentlyContinue
-    if (-not $gitCommand) { throw 'Git is still unavailable. Restart the terminal and run the same command again.' }
-    $script:git = $gitCommand.Source
-    Write-Ok 'Node.js 24+ and Git are ready'
+    if (-not $script:git) { throw 'Git is still unavailable. Install Git for Windows (https://git-scm.com/downloads/win), restart the terminal and run the same command again.' }
+    if (-not $gitBash) { throw 'Git Bash (Git for Windows) is still unavailable. Install Git for Windows (https://git-scm.com/downloads/win), restart PowerShell and run the same command again.' }
+    $env:GIT_BASH_PATH = $gitBash
+    Write-Ok "Node.js 24+ and Git are ready (Git Bash: $gitBash)"
 
     Write-Step 3 'Download the newest setup'
     $base = Get-CacheBase
