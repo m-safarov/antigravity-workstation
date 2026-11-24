@@ -86,8 +86,21 @@ function Get-SourceHash([string]$File) {
 
 function Update-SessionPath([switch]$AfterInstall) {
     $installed = @([Environment]::GetEnvironmentVariable('Path', 'Machine'), [Environment]::GetEnvironmentVariable('Path', 'User'))
-    $paths = if ($AfterInstall) { $installed + @($env:Path) } else { @($env:Path) + $installed }
-    $env:Path = ($paths | Where-Object { $_ }) -join ';'
+    $ordered = if ($AfterInstall) { $installed + @($env:Path) } else { @($env:Path) + $installed }
+    $seen = @{}
+    $unique = New-Object Collections.Generic.List[string]
+    foreach ($block in $ordered) {
+        if (-not $block) { continue }
+        foreach ($entry in ($block -split ';')) {
+            $trimmed = $entry.Trim()
+            if (-not $trimmed) { continue }
+            $key = $trimmed.TrimEnd('\').ToLowerInvariant()
+            if ($seen.ContainsKey($key)) { continue }
+            $seen[$key] = $true
+            $unique.Add($trimmed)
+        }
+    }
+    $env:Path = $unique -join ';'
 }
 
 function Install-Prerequisite([string]$Id) {

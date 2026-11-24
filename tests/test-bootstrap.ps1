@@ -105,10 +105,14 @@ try {
     try {
         $env:Path = $selectedTools + ';' + $savedPath
         Update-SessionPath
-        Assert-True ($env:Path.StartsWith($selectedTools + ';')) 'Refreshing PATH must preserve the selected runtime ahead of older system tools'
+        $afterFirst = $env:Path
+        Assert-True ($afterFirst.StartsWith($selectedTools + ';')) 'Refreshing PATH must preserve the selected runtime ahead of older system tools'
+        Update-SessionPath
+        Assert-True ($env:Path -eq $afterFirst) 'Repeated PATH refreshes across bootstrap re-entry must deduplicate instead of bloating PATH'
         Update-SessionPath -AfterInstall
-        $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
-        Assert-True ($env:Path.StartsWith($machinePath)) 'After prerequisite installation the refreshed installed tool paths must take precedence'
+        $firstMachine = @(([Environment]::GetEnvironmentVariable('Path', 'Machine') -split ';') | ForEach-Object { $_.Trim() } | Where-Object { $_ })[0]
+        $selectedIndex = $env:Path.IndexOf($selectedTools, [StringComparison]::OrdinalIgnoreCase)
+        Assert-True ($env:Path.StartsWith($firstMachine + ';', [StringComparison]::OrdinalIgnoreCase) -and $selectedIndex -gt 0) 'After prerequisite installation the refreshed installed tool paths must take precedence'
     } finally { $env:Path = $savedPath }
 
     # Test-ReadyToRun on its own: it names the blocking processes, and only an interactive Y closes them.
