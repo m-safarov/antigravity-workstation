@@ -127,4 +127,6 @@ test('Only Antigravity in this Windows session counts as running', { skip: proce
   assert.equal(isIdeRunning(), true, 'without session columns every Antigravity process counts');
   list([self, '"Antigravity Helper.exe","5","Console","1","1 K"']);
   assert.equal(isIdeRunning(), false);
+  list([self, '"Antigravity.exe","2632","Console","1","120,000 K"']);
+  assert.equal(isIdeRunning(), false, 'standalone Antigravity.exe is a separate app, not Antigravity IDE');
 });

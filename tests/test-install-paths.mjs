@@ -375,3 +375,20 @@ test('Bootstrap, README and the native catalog name the same IDE 2.8.0, 2.7.0 an
   }
   assert.equal(/[^\x00-\x7f]/.test(bootstrap), false, 'Windows PowerShell 5.1 needs an ASCII-only bootstrap');
 });
+
+test('Standalone Antigravity.exe is ignored during discovery and in bootstrap.ps1 for both commands 1 and 2', () => {
+  const standalone = 'C:\\Users\\Test User\\AppData\\Local\\Programs\\antigravity\\Antigravity.exe';
+  const standaloneCli = 'C:\\Users\\Test User\\AppData\\Local\\Programs\\antigravity\\bin\\antigravity.cmd';
+  const ideRoot = 'C:\\Users\\Test User\\AppData\\Local\\Programs\\Antigravity IDE';
+  const ideCli = path.win32.join(ideRoot, 'bin\\antigravity-ide.cmd');
+  const ideExe = path.win32.join(ideRoot, 'Antigravity IDE.exe');
+  const io = windows([standalone, standaloneCli, ideCli, ideExe], { running: [standalone], located: [standaloneCli, ideCli] });
+  const env = getEnvironmentPaths({}, io);
+  assert.equal(env.ideRoot, ideRoot, 'standalone Antigravity.exe must not shadow Antigravity IDE');
+  assert.equal(env.cliPath, ideCli);
+
+  const bootstrap = fs.readFileSync(path.join(repoRoot, 'scripts/bootstrap.ps1'), 'utf8');
+  assert.match(bootstrap, /\$IdeNames = @\('Antigravity IDE', 'antigravity-ide'\)/, 'bootstrap process check excludes standalone Antigravity');
+  assert.doesNotMatch(bootstrap, /\$IdeNames\s*=.*'Antigravity'/, 'standalone Antigravity must not be in $IdeNames');
+  assert.doesNotMatch(bootstrap, /Join-Path \$env:APPDATA 'Antigravity'\)/, 'Mode 1 existing-profile check must not include standalone AppData\\Antigravity');
+});

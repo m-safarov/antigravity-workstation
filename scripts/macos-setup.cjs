@@ -148,7 +148,8 @@ function run(options = {}) {
 
   let resetBackup = null;
   if (mode === '1') {
-    const reset = fullReset({ appData: paths.appSupport, userProfile: home, ideRoot: null, geminiDir: paths.geminiDir, backupsDir: paths.backupsDir }, { repoRoot: repo });
+    const reset = fullReset({ appData: paths.appSupport, userProfile: home, ideRoot: null, geminiDir: paths.geminiDir, backupsDir: paths.backupsDir,
+      userDataName: paths.nameShort, dataFolderName: paths.dataFolderName }, { repoRoot: repo });
     resetBackup = reset.backup;
     log('Full reset backup: ' + reset.backup);
     if (live && options.launch !== false) firstStart(app, paths, log);

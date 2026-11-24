@@ -48,7 +48,8 @@ AI-подсказки (серый ghost text) выключаются, обычн
 ### Частые остановки
 
 - **`PAUSED: Antigravity is still running`** — с 3.11.0 `bootstrap.ps1`
-  (`Get-IdeProcesses`, только текущий `SessionId`) печатает имя, PID и путь
+  (`Get-IdeProcesses`, только текущий `SessionId`, только `Antigravity IDE` /
+  `antigravity-ide`, без отдельного `Antigravity.exe`) печатает имя, PID и путь
   процессов и спрашивает `Закрыть? (Y/N)`: Y — `Stop-Ide` (просьба закрыться,
   через 15 с принудительно) и продолжение; N или неинтерактивный ввод — прежний
   PAUSED с кодом 3.
@@ -59,11 +60,13 @@ AI-подсказки (серый ghost text) выключаются, обычн
 ### Где установщик ищет IDE (диск C или D)
 
 `Find-Ide` в `bootstrap.ps1` проверяет по порядку: переменную
-`ANTIGRAVITY_INSTALL_DIR`, регистрацию в реестре (Uninstall), `PATH`
+`ANTIGRAVITY_INSTALL_DIR`, регистрацию в реестре (Uninstall, только `Antigravity IDE`), `PATH`
 (`antigravity-ide.cmd`, `antigravity.cmd`, `agy.cmd`), затем
 `%LOCALAPPDATA%\Programs`, `Program Files`, `Program Files (x86)` и на **каждом
 несъёмном диске** (C:, D:, E: …) корень, `\Programs`, `\Program Files`, `\Apps`
-с папками `Antigravity IDE` и `Antigravity`. Стандартная папка установщика
+с папкой `Antigravity IDE` (отдельное приложение `Antigravity.exe` и его данные
+`%APPDATA%\Antigravity`, `~/.gemini/antigravity-cli`, `~/.gemini/jetski` не
+затрагиваются ни в Команде 1, ни в Команде 2). Стандартная папка установщика
 Google — `C:\Users\<имя>\AppData\Local\Programs\Antigravity IDE`. Для своей
 папки пользователь пишет перед командой
 `$env:ANTIGRAVITY_INSTALL_DIR = 'D:\Папка с Antigravity IDE.exe'`.

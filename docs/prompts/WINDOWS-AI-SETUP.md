@@ -36,7 +36,7 @@
 - Только для Команды 2: если нет %APPDATA%\<nameShort>\User\globalStorage\state.vscdb, запусти IDE и попроси войти в аккаунт и закрыть все окна.
 
 ШАГ 3. IDE закрыта
-Get-Process -Name 'Antigravity IDE','Antigravity','antigravity-ide' -ErrorAction SilentlyContinue. Есть процессы — попроси закрыть все окна Antigravity (и в трее) и жди. (В неинтерактивном терминале установщик сам их не закрывает: он остановится с PAUSED.)
+Get-Process -Name 'Antigravity IDE','antigravity-ide' -ErrorAction SilentlyContinue. Есть процессы — попроси закрыть все окна Antigravity IDE (и в трее) и жди; отдельное приложение Antigravity.exe закрывать не нужно. (В неинтерактивном терминале установщик сам их не закрывает: он остановится с PAUSED.)
 
 ШАГ 4. Запуск установщика в отдельном окне
 Установщик не работает в терминале редактора (видит TERM_PROGRAM / VSCODE_*), а окно от Start-Process наследует эти переменные. Поэтому запускай через explorer.exe:

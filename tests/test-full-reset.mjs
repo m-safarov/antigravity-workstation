@@ -26,7 +26,6 @@ function fixture(t) {
     [path.join(appData, 'Antigravity IDE', 'User', 'profiles', 'Work', 'settings.json')]: '{}',
     [path.join(appData, 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb')]: 'sign-in and agent preferences',
     [path.join(appData, 'Antigravity IDE', 'User', 'workspaceStorage', 'a', 'state.vscdb')]: 'workspace',
-    [path.join(appData, 'Antigravity', 'User', 'settings.json')]: '{"older":true}',
     [path.join(home, '.antigravity-ide', 'extensions', 'foreign.ext-1.0.0', 'package.json')]: '{}',
     [path.join(home, '.antigravity-ide', 'argv.json')]: '{"locale":"en"}',
     [path.join(home, '.antigravity', 'jelly-cursor', 'state.json')]: '{}',
@@ -46,6 +45,10 @@ function fixture(t) {
   const untouched = {
     [path.join(ideRoot, 'Antigravity IDE.exe')]: 'binary',
     [path.join(ideRoot, 'resources', 'app', 'product.json')]: '{}',
+    [path.join(appData, 'Antigravity', 'User', 'settings.json')]: '{"standalone":true}',
+    [path.join(home, '.antigravity', 'standalone.json')]: '{"keep":true}',
+    [path.join(home, '.gemini', 'antigravity-cli', 'state.json')]: '{"cli":true}',
+    [path.join(home, '.gemini', 'jetski', 'session.json')]: '{"jetski":true}',
     [path.join(home, 'projects', 'shop', '.vscode', 'settings.json')]: '{"project":true}',
     [path.join(home, '.gitconfig')]: '[user]',
     [path.join(appData, 'Code', 'User', 'settings.json')]: '{"vscode":true}',
@@ -54,7 +57,7 @@ function fixture(t) {
   return { home, env, files, untouched };
 }
 
-test('Command 1 moves every Antigravity setting, sign-in, chat, rule, skill, agent, MCP server and hook into one backup', t => {
+test('Command 1 moves every Antigravity IDE setting, sign-in, chat, rule, skill, agent, MCP server and hook into one backup without touching standalone Antigravity', t => {
   const { home, env, files, untouched } = fixture(t);
   const result = fullReset(env, { now: new Date('2026-11-07T10:20:30Z'), repoRoot: path.join(home, 'Downloads', 'antigravity-workstation') });
   assert.equal(result.backup, path.join(env.backupsDir, 'full-reset-20261107T102030'));
@@ -69,8 +72,8 @@ test('Command 1 moves every Antigravity setting, sign-in, chat, rule, skill, age
   const moved = {
     [path.join(backup, 'appdata', 'Antigravity IDE', 'User', 'globalStorage', 'state.vscdb')]: 'sign-in and agent preferences',
     [path.join(backup, 'appdata', 'Antigravity IDE', 'User', 'snippets', 'mine.code-snippets')]: '{}',
-    [path.join(backup, 'appdata', 'Antigravity', 'User', 'settings.json')]: '{"older":true}',
     [path.join(backup, 'home', '.antigravity-ide', 'extensions', 'foreign.ext-1.0.0', 'package.json')]: '{}',
+    [path.join(backup, 'home', '.antigravity', 'jelly-cursor', 'state.json')]: '{}',
     [path.join(backup, 'home', '.antigravity-tools', 'tool.txt')]: 'tool',
     [path.join(backup, 'portable', 'data', 'user-data', 'User', 'settings.json')]: '{"portable":true}',
     [path.join(backup, 'gemini', 'config', 'skills', 'my-skill', 'SKILL.md')]: 'personal skill',
@@ -78,11 +81,11 @@ test('Command 1 moves every Antigravity setting, sign-in, chat, rule, skill, age
     [path.join(backup, 'gemini', 'oauth_creds.json')]: 'sign-in',
   };
   for (const [file, text] of Object.entries(moved)) assert.equal(fs.readFileSync(file, 'utf8'), text, 'kept in the backup: ' + file);
-  for (const [file, text] of Object.entries(untouched)) assert.equal(fs.readFileSync(file, 'utf8'), text, 'outside Antigravity stays: ' + file);
+  for (const [file, text] of Object.entries(untouched)) assert.equal(fs.readFileSync(file, 'utf8'), text, 'outside Antigravity IDE stays: ' + file);
   const manifest = JSON.parse(fs.readFileSync(path.join(backup, 'manifest.json'), 'utf8'));
   assert.equal(manifest.state, 'complete');
   assert.equal(manifest.items.length, result.items.length);
-  assert.deepEqual(fs.readdirSync(env.geminiDir), ['backups'], 'only the backups folder is left in .gemini');
+  assert.deepEqual(fs.readdirSync(env.geminiDir).sort(), ['antigravity-cli', 'backups', 'jetski'], 'only backups and standalone Antigravity folders remain in .gemini');
 });
 
 test('Command 1 deletes rebuildable IDE caches instead of keeping them, and keeps every piece of user data in the backup', t => {
@@ -93,7 +96,7 @@ test('Command 1 deletes rebuildable IDE caches instead of keeping them, and keep
     'logs/20261107T101010/main.log', 'Crashpad/reports/x.dmp', 'Service Worker/CacheStorage/x', 'blob_storage/x/y'];
   for (const relative of caches) put(path.join(profile, relative), 'rebuildable');
   put(path.join(portable, 'GPUCache', 'data_0'), 'rebuildable');
-  put(path.join(env.appData, 'Antigravity', 'logs', 'old.log'), 'rebuildable');
+  put(path.join(env.appData, 'Antigravity', 'logs', 'standalone.log'), 'standalone app log');
   const data = {
     'User/History/-1a2b/entries.json': 'local file history', 'User/workspaceStorage/b/state.vscdb': 'workspace state',
     'Backups/1700000000000/file/x': 'unsaved file', 'Local Storage/leveldb/000003.log': 'web storage',
@@ -112,13 +115,13 @@ test('Command 1 deletes rebuildable IDE caches instead of keeping them, and keep
     assert.equal(fs.existsSync(path.join(backup, relative.split('/')[0])), false, 'not kept in the backup: ' + relative);
   }
   assert.equal(fs.existsSync(path.join(result.backup, 'portable', 'data', 'user-data', 'GPUCache')), false);
-  assert.equal(fs.existsSync(path.join(result.backup, 'appdata', 'Antigravity', 'logs')), false);
+  assert.equal(fs.readFileSync(path.join(env.appData, 'Antigravity', 'logs', 'standalone.log'), 'utf8'), 'standalone app log', 'standalone Antigravity app logs stay untouched');
   for (const [relative, text] of Object.entries(data)) assert.equal(fs.readFileSync(path.join(backup, relative), 'utf8'), text, 'kept: ' + relative);
   assert.equal(fs.readFileSync(path.join(result.backup, 'portable', 'data', 'user-data', 'User', 'settings.json'), 'utf8'), '{"portable":true}');
   const manifest = JSON.parse(fs.readFileSync(path.join(result.backup, 'manifest.json'), 'utf8'));
   assert.equal(manifest.state, 'complete');
   assert.deepEqual(manifest.deletedCaches.sort(), result.deletedCaches.sort());
-  assert.equal(result.deletedCaches.length, new Set(caches.map(relative => relative.split('/')[0])).size + 2);
+  assert.equal(result.deletedCaches.length, new Set(caches.map(relative => relative.split('/')[0])).size + 1);
   assert.deepEqual(result.keptCaches, []);
   assert.ok(!CACHE_FOLDERS.some(name => /^(User|Backups|Local Storage|IndexedDB|Network|Local State)$/.test(name)), 'user data is never a cache');
 });

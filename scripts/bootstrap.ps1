@@ -27,7 +27,8 @@ $utf8 = New-Object Text.UTF8Encoding $false
 $IdeVersions = @('2.8.0', '2.7.0', '2.6.0')
 $IdeVersion = $IdeVersions[0]
 $IdeDownload = 'https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.8.0-6733682917113856/windows-{0}/Antigravity%20IDE.exe'
-$IdeNames = @('Antigravity IDE', 'Antigravity', 'antigravity-ide')
+# Match only Antigravity IDE; standalone Antigravity.exe is a separate app and must not be closed.
+$IdeNames = @('Antigravity IDE', 'antigravity-ide')
 # "Zakryt'? (Y/N)" in Cyrillic, built from code points to keep this file ASCII.
 $CloseQuestion = (-join [char[]](0x0417, 0x0430, 0x043A, 0x0440, 0x044B, 0x0442, 0x044C)) + '? (Y/N)'
 $Steps = if ($CleanExtensions) { 6 } else { 5 }
@@ -197,7 +198,7 @@ function Find-Ide {
     else {
         $keys = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
         $entries = @(foreach ($hive in 'HKCU:\', 'HKLM:\') { Get-ItemProperty -Path ($keys | ForEach-Object { $hive + $_ }) -ErrorAction SilentlyContinue })
-        foreach ($entry in $entries | Where-Object { $_.DisplayName -match '^Antigravity( IDE)?($| )' }) {
+        foreach ($entry in $entries | Where-Object { $_.DisplayName -match '^Antigravity IDE($| )' }) {
             foreach ($value in @($entry.InstallLocation, $entry.DisplayIcon) | Where-Object { $_ }) {
                 $path = ([string]$value -replace ',\s*-?\d+\s*$', '') -replace '^\s*"|"\s*$', ''
                 $roots.Add($(if ($path -match '\.exe$') { Split-Path $path -Parent } else { $path }))
@@ -212,13 +213,13 @@ function Find-Ide {
             $root = $drive.RootDirectory.FullName
             $parents += @($root) + @('Programs', 'Program Files', 'Apps' | ForEach-Object { Join-Path $root $_ })
         }
-        foreach ($parent in $parents | Where-Object { $_ }) { foreach ($folder in 'Antigravity IDE', 'Antigravity') { $roots.Add((Join-Path $parent $folder)) } }
+        foreach ($parent in $parents | Where-Object { $_ }) { $roots.Add((Join-Path $parent 'Antigravity IDE')) }
     }
     $first = $null
     foreach ($root in $roots) {
         $product = Get-IdeProduct $root
         if (-not $product) { continue }
-        $data = if ([string]$product.nameShort -match '^Antigravity( IDE)?$') { [string]$product.nameShort } else { 'Antigravity IDE' }
+        $data = if ([string]$product.nameShort -match '^Antigravity IDE$') { [string]$product.nameShort } else { 'Antigravity IDE' }
         $found = [pscustomobject]@{ Root = $root; Version = [string]$product.ideVersion; Data = $data }
         if ($IdeVersions -contains $found.Version) { return $found }
         if (-not $first) { $first = $found }
@@ -475,7 +476,6 @@ function Invoke-Bootstrap {
         Write-Step 4 'Full reset: move every Antigravity setting, sign-in and chat into a backup'
         $existingProfile = @(
             (Join-Path $env:APPDATA 'Antigravity IDE'),
-            (Join-Path $env:APPDATA 'Antigravity'),
             (Join-Path $env:USERPROFILE '.antigravity-ide'),
             (Join-Path $env:USERPROFILE '.gemini\GEMINI.md')
         ) | Where-Object { Test-Path -LiteralPath $_ }

@@ -125,7 +125,7 @@ if ($env:GITHUB_EVENT_NAME -cne 'pull_request') {
     $stage = 'literal README commands on the disposable Windows profile'
     $onMain = $env:GITHUB_REF -ceq 'refs/heads/main'
     $env:ANTIGRAVITY_INSTALL_DIR = $ideRoot
-    if (Get-Process -Name 'Antigravity IDE', 'Antigravity', 'antigravity-ide' -ErrorAction SilentlyContinue) {
+    if (Get-Process -Name 'Antigravity IDE', 'antigravity-ide' -ErrorAction SilentlyContinue) {
         throw 'README verification requires every IDE process to have closed normally'
     }
     $repoRoot = Split-Path $PSScriptRoot -Parent
@@ -151,7 +151,7 @@ if ($env:GITHUB_EVENT_NAME -cne 'pull_request') {
         Remove-Item Env:WORKSTATION_NATIVE_SMOKE_PHASE, Env:WORKSTATION_NATIVE_SMOKE_SIGNALS, Env:WORKSTATION_NATIVE_SMOKE_REPO
     }
     $deadline = [DateTime]::UtcNow.AddSeconds(60)
-    while (Get-Process -Name 'Antigravity IDE', 'Antigravity', 'antigravity-ide' -ErrorAction SilentlyContinue) {
+    while (Get-Process -Name 'Antigravity IDE', 'antigravity-ide' -ErrorAction SilentlyContinue) {
         if ([DateTime]::UtcNow -ge $deadline) { throw 'README profile did not close normally' }
         Start-Sleep -Milliseconds 500
     }
@@ -199,7 +199,7 @@ if ($env:GITHUB_EVENT_NAME -cne 'pull_request') {
             Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(node|powershell|pwsh|cmd|git|winget|Antigravity.*|antigravity.*)\.exe$' } |
                 ForEach-Object { Write-Host ('{0} parent {1} {2}: {3}' -f $_.ProcessId, $_.ParentProcessId, $_.Name, $_.CommandLine) }
             & taskkill.exe /T /F /PID $commandProcess.Id 2>&1 | Out-Null
-            Get-Process -Name 'Antigravity IDE', 'Antigravity', 'antigravity-ide' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Get-Process -Name 'Antigravity IDE', 'antigravity-ide' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             $output | Set-Content -LiteralPath (Join-Path $ArtifactDirectory ($label + '.log'))
             throw "$label did not finish within 15 minutes"
         }
@@ -296,7 +296,7 @@ if ($env:GITHUB_EVENT_NAME -cne 'pull_request') {
         Remove-Item Env:WORKSTATION_NATIVE_SMOKE_PHASE, Env:WORKSTATION_NATIVE_SMOKE_SIGNALS, Env:WORKSTATION_NATIVE_SMOKE_REPO
     }
     $deadline = [DateTime]::UtcNow.AddSeconds(60)
-    while (Get-Process -Name 'Antigravity IDE', 'Antigravity', 'antigravity-ide' -ErrorAction SilentlyContinue) {
+    while (Get-Process -Name 'Antigravity IDE', 'antigravity-ide' -ErrorAction SilentlyContinue) {
         if ([DateTime]::UtcNow -ge $deadline) { throw 'The settings audit IDE did not close normally' }
         Start-Sleep -Milliseconds 500
     }

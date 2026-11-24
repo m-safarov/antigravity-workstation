@@ -38,7 +38,7 @@ function New-Ide([string]$Version) {
     [IO.File]::WriteAllText((Join-Path $root 'resources\app\product.json'), ('{"ideVersion":"' + $Version + '","nameShort":"Antigravity IDE"}'), $utf8)
     $root
 }
-function Invoke-Scenario([string]$Name, [string]$Mode = '', [string]$Fail = '', [string]$Launcher = $bootstrap, [switch]$IdeOpen, [switch]$OtherSession, [string]$Ide = $ide260, [string]$AppData = $appData, [string]$Terminal = 'none') {
+function Invoke-Scenario([string]$Name, [string]$Mode = '', [string]$Fail = '', [string]$Launcher = $bootstrap, [switch]$IdeOpen, [switch]$OtherSession, [switch]$StandaloneOpen, [string]$Ide = $ide260, [string]$AppData = $appData, [string]$Terminal = 'none') {
     $log = Join-Path $testRoot ($Name + '.calls')
     $result = Join-Path $testRoot ($Name + '.result.json')
     $wrapper = Join-Path $testRoot 'wrapper.ps1'
@@ -54,11 +54,13 @@ $env:WORKSTATION_BOOTSTRAP_TEST_LOG = $Log
 $env:WORKSTATION_BOOTSTRAP_TEST_FAIL = $Fail
 $env:LOCALAPPDATA = Split-Path $Download -Parent
 function Get-Process {
-    # 'yes': Antigravity in this Windows session; 'other': only in another user's session.
+    # 'yes': Antigravity IDE in this Windows session; 'other': only in another user's session;
+    # 'standalone': only the separate Antigravity.exe app is running.
     param([string[]]$Name, [object]$ErrorAction)
     $session = [Diagnostics.Process]::GetCurrentProcess().SessionId
-    if ($IdeOpen -eq 'yes') { [pscustomobject]@{ ProcessName = 'Antigravity IDE'; Id = 4242; SessionId = $session; Path = 'C:\Fixture IDE\Antigravity IDE.exe' } }
-    if ($IdeOpen -eq 'other') { [pscustomobject]@{ ProcessName = 'Antigravity IDE'; Id = 4343; SessionId = $session + 1; Path = $null } }
+    if ($IdeOpen -eq 'yes' -and ($Name -contains 'Antigravity IDE')) { [pscustomobject]@{ ProcessName = 'Antigravity IDE'; Id = 4242; SessionId = $session; Path = 'C:\Fixture IDE\Antigravity IDE.exe' } }
+    if ($IdeOpen -eq 'other' -and ($Name -contains 'Antigravity IDE')) { [pscustomobject]@{ ProcessName = 'Antigravity IDE'; Id = 4343; SessionId = $session + 1; Path = $null } }
+    if ($IdeOpen -eq 'standalone' -and ($Name -contains 'Antigravity')) { [pscustomobject]@{ ProcessName = 'Antigravity'; Id = 2632; SessionId = $session; Path = 'C:\Users\Fixture\AppData\Local\Programs\antigravity\Antigravity.exe' } }
 }
 # An interactive window answers N, so a scenario never waits for a keyboard.
 function Read-Host { param([string]$Prompt) 'n' }
@@ -80,7 +82,7 @@ if ($Mode) { $switches[$Mode] = $true }
 exit $LASTEXITCODE
 '@, $utf8)
     $saved = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $wrapper -Launcher $Launcher -Remote $remote -Download $download -Log $log -Fail $(if ($Fail) { $Fail } else { 'none' }) -Mode $(if ($Mode) { $Mode } else { 'none' }) -Result $result -IdeOpen $(if ($IdeOpen) { 'yes' } elseif ($OtherSession) { 'other' } else { 'no' }) -Ide $Ide -AppData $AppData -Terminal $Terminal 2>&1 | ForEach-Object { "$_" }
+    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $wrapper -Launcher $Launcher -Remote $remote -Download $download -Log $log -Fail $(if ($Fail) { $Fail } else { 'none' }) -Mode $(if ($Mode) { $Mode } else { 'none' }) -Result $result -IdeOpen $(if ($IdeOpen) { 'yes' } elseif ($OtherSession) { 'other' } elseif ($StandaloneOpen) { 'standalone' } else { 'no' }) -Ide $Ide -AppData $AppData -Terminal $Terminal 2>&1 | ForEach-Object { "$_" }
     $exit = $LASTEXITCODE
     $ErrorActionPreference = $saved
     $calls = @(if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Encoding UTF8 | ForEach-Object { $_ | ConvertFrom-Json } })
@@ -218,6 +220,8 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
         $run = Invoke-Scenario ('open-' + $mode) $mode -IdeOpen
         Assert-True ($run.Exit -eq 3 -and $run.Calls.Count -eq 0 -and $run.Result.state -eq 'paused' -and $run.Output -match 'PAUSED: Antigravity is still running') 'Both commands must pause without changes while the IDE is open' $run
         Assert-True ($run.Output -match 'Antigravity IDE  PID 4242  C:\\Fixture IDE\\Antigravity IDE\.exe') 'The pause must name the blocking process, its PID and path' $run
+        $standalone = Invoke-Scenario ('standalone-' + $mode) $mode -StandaloneOpen
+        Assert-True ($standalone.Exit -eq 0 -and $standalone.Calls.Count -ge 2) 'Standalone Antigravity.exe must not block or pause either command' $standalone
     }
     $run = Invoke-Scenario 'other-session' -OtherSession
     Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -eq 2 -and $run.Calls[0].command -eq 'install') 'Antigravity of another Windows session must not block this user' $run
