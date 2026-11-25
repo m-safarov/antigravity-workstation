@@ -150,9 +150,9 @@ test('Test AI Connection distinguishes missing_key, rejected_credential, unavail
   const endpoint = `http://127.0.0.1:${port}/v1beta`;
   const apiKey = 'local-secret-xyz-999';
 
-  // 1. Missing key (isolated from host env and user private .env)
+  // 1. Missing key (isolated from host env, user private .env, and default proxy URL)
   const ideMissing = createMockIde({ settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-3.5-flash-lite' } });
-  const resMissing = await ai.testAiConnection(ideMissing.vscode, ideMissing.context, ideMissing.output, { env: {}, envFile: null });
+  const resMissing = await ai.testAiConnection(ideMissing.vscode, ideMissing.context, ideMissing.output, { env: {}, envFile: null, proxyUrl: '' });
   assert.equal(resMissing.ok, false);
   assert.equal(resMissing.status, 'missing_key');
 
@@ -161,7 +161,7 @@ test('Test AI Connection distinguishes missing_key, rejected_credential, unavail
     settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-3.5-flash-lite' },
     persistedSecrets: new Map([[ai.SECRET_KEY, EXACT_PLACEHOLDER]]),
   });
-  const resPlaceholder = await ai.testAiConnection(idePlaceholder.vscode, idePlaceholder.context, idePlaceholder.output, { env: {}, envFile: null });
+  const resPlaceholder = await ai.testAiConnection(idePlaceholder.vscode, idePlaceholder.context, idePlaceholder.output, { env: {}, envFile: null, proxyUrl: '' });
   assert.equal(resPlaceholder.ok, false);
   assert.equal(resPlaceholder.status, 'missing_key');
 
@@ -453,4 +453,11 @@ test('Shared commit AI proxy keeps GEMINI_API_KEY strictly server-side, enforces
   );
   assert.equal(blockedRes.ok, false);
   assert.equal(blockedRes.status, 'disabled');
+
+  // Default proxy URL is pre-wired for out-of-the-box users and can be explicitly cleared with ""
+  assert.equal(ai.DEFAULT_PROXY_URL, 'https://workstation-commit-ai.safarovmancho.workers.dev/suggest');
+  const ideDefaultProxy = createMockIde();
+  assert.equal(ai.readAiSettings(ideDefaultProxy.vscode).proxyUrl, ai.DEFAULT_PROXY_URL);
+  const ideClearedProxy = createMockIde({ settings: { 'ai.proxyUrl': '' } });
+  assert.equal(ai.readAiSettings(ideClearedProxy.vscode).proxyUrl, '');
 });

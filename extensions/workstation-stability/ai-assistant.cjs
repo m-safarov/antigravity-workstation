@@ -11,7 +11,7 @@ const SECRET_KEY = 'workstationStability.aiApiKey';
 const DEFAULT_PROVIDER = 'gemini';
 const DEFAULT_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
-const DEFAULT_PROXY_URL = '';
+const DEFAULT_PROXY_URL = 'https://workstation-commit-ai.safarovmancho.workers.dev/suggest';
 const ALLOWED_PROVIDERS = new Set(['gemini', 'openai-compatible']);
 // SHA-256 of the bracketed example literal from older local config docs (only rejected when still wrapped in [...]).
 const BRACKETED_PLACEHOLDER_SHA256 = 'd60d2e1944677c592222013c0a49146c6e0891ec3384b866810598816f0f14c7';
@@ -165,7 +165,8 @@ function readAiSettings(vscode) {
   const provider = ALLOWED_PROVIDERS.has(rawProvider) ? rawProvider : DEFAULT_PROVIDER;
   const endpoint = String(config?.get?.('ai.endpoint', DEFAULT_ENDPOINT) || DEFAULT_ENDPOINT).trim() || DEFAULT_ENDPOINT;
   const model = String(config?.get?.('ai.model', DEFAULT_MODEL) || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
-  const proxyUrl = String(config?.get?.('ai.proxyUrl', DEFAULT_PROXY_URL) || DEFAULT_PROXY_URL).trim();
+  const rawProxy = config?.get?.('ai.proxyUrl', DEFAULT_PROXY_URL);
+  const proxyUrl = typeof rawProxy === 'string' ? rawProxy.trim() : DEFAULT_PROXY_URL;
   return { enabled, provider, endpoint, model, proxyUrl };
 }
 

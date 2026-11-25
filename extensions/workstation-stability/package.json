@@ -3,7 +3,7 @@
   "displayName": "Workstation Stability",
   "description": "Применяет профиль редактора и проверяет конфликты настроек.",
   "publisher": "workstation",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "engines": {
     "vscode": "^1.107.0"
   },
@@ -64,9 +64,9 @@
         },
         "workstationStability.ai.proxyUrl": {
           "type": "string",
-          "default": "",
+          "default": "https://workstation-commit-ai.safarovmancho.workers.dev/suggest",
           "scope": "application",
-          "description": "Optional HTTPS proxy URL (e.g. a Cloudflare Worker or Vercel route from services/commit-ai-proxy) for shared commit-message AI suggestions when no personal API key is configured. The upstream API key stays strictly on the server."
+          "description": "HTTPS proxy URL (Cloudflare Worker from services/commit-ai-proxy) for shared commit-message AI suggestions when no personal API key is configured. Set to empty string to use offline diff analysis only; the upstream API key stays strictly encrypted on Cloudflare."
         }
       }
     },
