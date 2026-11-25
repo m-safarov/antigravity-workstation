@@ -1,32 +1,45 @@
 'use strict';
 
 const { runGit } = require('../git-runner');
-const { collectState, getConflictFiles, readOriginUrl } = require('../git-state');
+const { collectState, getConflictFiles, readOriginUrl, readRemotes } = require('../git-state');
 const { PanelError } = require('../git-errors');
 const { tr } = require('../text');
 const { VISIBLE, loadReadyState, requireOrigin, requireNoChanges, fetchOrigin, checkBranchName } = require('./common');
 
-// The ↻ button: git fetch, so the panel shows what GitHub has now.
+async function fetchRemote(panel, cwd, remoteName = 'origin') {
+  if (remoteName === 'origin') return fetchOrigin(panel, cwd);
+  panel.progress(tr(`Получение данных с ${remoteName}…`, `Fetching from ${remoteName}…`));
+  await runGit(['fetch', remoteName, '--prune'], cwd, VISIBLE);
+}
+
+// The ↻ button: git fetch, so the panel shows what GitHub/remotes have now.
 async function fetchChanges(panel) {
   const cwd = panel.workspaceRoot();
-  if (!await readOriginUrl(cwd)) return;
-  await fetchOrigin(panel, cwd);
+  const remotes = await readRemotes(cwd);
+  const hasOrigin = remotes.includes('origin') || Boolean(await readOriginUrl(cwd));
+  if (!hasOrigin && !remotes.length) return;
+  if (hasOrigin) await fetchOrigin(panel, cwd);
+  for (const remote of remotes) {
+    if (remote === 'origin') continue;
+    await fetchRemote(panel, cwd, remote);
+  }
   panel.notice('clear');
 }
 
-async function requireRemoteBranch(cwd, branch) {
+async function requireRemoteBranch(cwd, branch, remoteName = 'origin') {
   try {
-    await runGit(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${branch}`], cwd);
+    await runGit(['rev-parse', '--verify', '--quiet', `refs/remotes/${remoteName}/${branch}`], cwd);
   } catch {
-    throw new PanelError(tr(`Ветки "${branch}" нет в GitHub.`, `GitHub has no branch "${branch}".`));
+    throw new PanelError(tr(`Ветки "${remoteName}/${branch}" нет на удалённом сервере (возможно, она удалена).`,
+      `Remote branch "${remoteName}/${branch}" does not exist (it may have been deleted).`));
   }
 }
 
 // A project connected to a GitHub repository that was created with its own
 // first commit (README) has no common history with it; git asks for
 // --allow-unrelated-histories before it merges them.
-async function merge(cwd, source) {
-  const args = ['merge', '--no-edit', `origin/${source}`];
+async function merge(cwd, sourceRef) {
+  const args = ['merge', '--no-edit', sourceRef];
   try {
     await runGit(args, cwd, VISIBLE);
   } catch (error) {
@@ -36,10 +49,10 @@ async function merge(cwd, source) {
 }
 
 // Returns false when git stopped on conflicts; they then show in the panel.
-async function mergeFromOrigin(panel, cwd, source) {
-  panel.progress(tr(`Объединение с origin/${source}…`, `Merging origin/${source}…`));
+async function mergeFromRemote(panel, cwd, sourceRef) {
+  panel.progress(tr(`Объединение с ${sourceRef}…`, `Merging ${sourceRef}…`));
   try {
-    await merge(cwd, source);
+    await merge(cwd, sourceRef);
     return true;
   } catch (error) {
     const conflicts = await getConflictFiles(cwd).catch(() => []);
@@ -50,19 +63,28 @@ async function mergeFromOrigin(panel, cwd, source) {
   }
 }
 
-// Pull, also offered when GitHub has newer commits: fetch and merge the same
-// branch from origin.
+// Pull: fetch configured upstream (or origin/<current branch>) and merge into current local branch.
 async function syncBranch(panel) {
   const cwd = panel.workspaceRoot();
   const state = await loadReadyState(cwd);
   requireOrigin(state);
   requireNoChanges(state);
   await panel.requireIdentity(cwd, state);
-  await fetchOrigin(panel, cwd);
-  await requireRemoteBranch(cwd, state.branch);
-  if (await mergeFromOrigin(panel, cwd, state.branch)) {
-    panel.notice('ok', tr('Изменения из GitHub получены.', 'Changes from GitHub received.'));
+  const remoteName = state.upstreamRemote || 'origin';
+  const sourceBranch = state.upstreamBranch || state.branch;
+  const sourceRef = `${remoteName}/${sourceBranch}`;
+  await fetchRemote(panel, cwd, remoteName);
+  await requireRemoteBranch(cwd, sourceBranch, remoteName);
+  if (await mergeFromRemote(panel, cwd, sourceRef)) {
+    panel.notice('ok', tr(`Изменения из ${sourceRef} добавлены в ${state.branch}.`,
+      `Changes from ${sourceRef} merged into ${state.branch}.`));
   }
+}
+
+function parseSourceSelection(rawSource, defaultRemote = 'origin') {
+  const value = typeof rawSource === 'string' ? rawSource.trim() : '';
+  if (!value) return { remoteName: defaultRemote, branchName: '' };
+  return { remoteName: defaultRemote, branchName: value };
 }
 
 async function pullBranch(panel, request) {
@@ -70,16 +92,23 @@ async function pullBranch(panel, request) {
   const state = await loadReadyState(cwd);
   requireOrigin(state);
   requireNoChanges(state);
-  const source = await checkBranchName(cwd, request.sourceBranch);
-  if (source !== state.branch) {
-    const question = tr(`Получить изменения из "${source}" и объединить с "${state.branch}"?`, `Merge the changes from "${source}" into "${state.branch}"?`);
+  const remoteName = typeof request?.sourceRemote === 'string' && request.sourceRemote.trim()
+    ? request.sourceRemote.trim()
+    : (state.upstreamRemote || 'origin');
+  const parsed = parseSourceSelection(request?.sourceBranch, remoteName);
+  const source = await checkBranchName(cwd, parsed.branchName);
+  const sourceRef = `${parsed.remoteName}/${source}`;
+  if (source !== state.branch || parsed.remoteName !== (state.upstreamRemote || 'origin')) {
+    const question = tr(`Получить изменения из "${source}" (${sourceRef}) и объединить с локальной веткой "${state.branch}"?`,
+      `Merge changes from "${source}" (${sourceRef}) into local branch "${state.branch}"?`);
     if (!await panel.confirm(question, tr('Получить', 'Get changes'))) return;
   }
   await panel.requireIdentity(cwd, state);
-  await fetchOrigin(panel, cwd);
-  await requireRemoteBranch(cwd, source);
-  if (await mergeFromOrigin(panel, cwd, source)) {
-    panel.notice('ok', tr(`Изменения из "${source}" добавлены в "${state.branch}".`, `Changes from "${source}" were added to "${state.branch}".`));
+  await fetchRemote(panel, cwd, parsed.remoteName);
+  await requireRemoteBranch(cwd, source, parsed.remoteName);
+  if (await mergeFromRemote(panel, cwd, sourceRef)) {
+    panel.notice('ok', tr(`Изменения из "${sourceRef}" добавлены в "${state.branch}".`,
+      `Changes from "${sourceRef}" were added to "${state.branch}".`));
   }
 }
 

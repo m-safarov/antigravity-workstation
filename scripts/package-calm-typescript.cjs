@@ -12,13 +12,19 @@ function buildCalmTypeScript(root = path.resolve(__dirname, '..')) {
   const bundle = fs.readFileSync(path.join(source, 'extension.cjs'));
   const entries = [
     ['[Content_Types].xml', Buffer.from('<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="json" ContentType="application/json"/><Default Extension="png" ContentType="image/png"/><Default Extension="md" ContentType="text/markdown"/><Default Extension="cjs" ContentType="application/javascript"/><Default Extension="txt" ContentType="text/plain"/><Default Extension="vsixmanifest" ContentType="text/xml"/></Types>')],
-    ['extension.vsixmanifest', Buffer.from('<?xml version="1.0" encoding="utf-8"?><PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011"><Metadata><Identity Language="en-US" Id="calm-typescript" Version="' + manifest.version + '" Publisher="workstation"/><DisplayName>Calm TypeScript</DisplayName><Description xml:space="preserve">Visual-only quiet JS/TS diagnostics, typing pulse, Auto Save, and Format.</Description><Properties><Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.107.0"/></Properties></Metadata><Installation><InstallationTarget Id="Microsoft.VisualStudio.Code"/></Installation><Dependencies/><Assets><Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true"/></Assets></PackageManifest>')],
+    ['extension.vsixmanifest', Buffer.from('<?xml version="1.0" encoding="utf-8"?><PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011"><Metadata><Identity Language="en-US" Id="calm-typescript" Version="' + manifest.version + '" Publisher="workstation"/><DisplayName>Calm TypeScript</DisplayName><Description xml:space="preserve">Visual-only quiet JS/TS diagnostics, typing pulse, Auto Save, and Format.</Description><Properties><Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.107.0"/></Properties></Metadata><Installation><InstallationTarget Id="Microsoft.VisualStudio.Code"/></Installation><Dependencies/><Assets><Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true"/><Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" Addressable="true"/><Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/icon.png" Addressable="true"/></Assets></PackageManifest>')],
     ['extension/package.json', fs.readFileSync(path.join(source, 'package.json'))],
     ['extension/icon.png', fs.readFileSync(path.join(source, 'icon.png'))],
     ['extension/README.md', fs.readFileSync(path.join(source, 'README.md'))],
     ['extension/dist/extension.cjs', bundle],
     ['extension/LICENSE.txt', fs.readFileSync(path.join(root, 'LICENSE'))],
   ];
+  const mediaDir = path.join(source, 'media');
+  if (fs.existsSync(mediaDir)) {
+    for (const name of fs.readdirSync(mediaDir).filter(file => /^diagnostics-(?:before|after)\.png$/.test(file)).sort()) {
+      entries.push(['extension/media/' + name, fs.readFileSync(path.join(mediaDir, name))]);
+    }
+  }
   const bytes = zipEntries(entries);
   const sha256 = content => crypto.createHash('sha256').update(content).digest('hex');
   return { file: path.join(source, 'calm-typescript-' + manifest.version + '.vsix'), bytes, pin: { id, version: manifest.version, vsixSha256: sha256(bytes), extensionBundleSha256: sha256(bundle) } };

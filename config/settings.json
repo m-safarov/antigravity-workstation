@@ -69,8 +69,7 @@
     "errorLens.errorRangeBackground": "#00000000",
     "errorLens.warningRangeBackground": "#00000000",
     "errorLens.infoRangeBackground": "#00000000",
-    "errorLens.hintRangeBackground": "#00000000",
-    "htmlEndTagLabels.labelColor": "#8b949e99"
+    "errorLens.hintRangeBackground": "#00000000"
   },
   "editor.tokenColorCustomizations": {},
   "files.autoSave": "afterDelay",
@@ -237,6 +236,12 @@
     "class",
     "className"
   ],
+  "tailwindCSS.classFunctions": [
+    "clsx",
+    "cn",
+    "cva",
+    "twMerge"
+  ],
   "tailwindCSS.lint.cssConflict": "warning",
   "tailwindCSS.lint.invalidTailwindDirective": "error",
   "tailwindCSS.lint.invalidApply": "error",
@@ -265,8 +270,6 @@
   "path-intellisense.extensionOnImport": false,
   "path-intellisense.showHiddenFiles": false,
   "path-intellisense.autoSlashAfterDirectory": true,
-  "htmlEndTagLabels.labelPrefix": "/",
-  "htmlEndTagLabels.labelColor": "#8b949e99",
   "gutterpreview.imagePreviewMaxWidth": 300,
   "files.associations": {
     "*.jsx": "javascriptreact",
@@ -309,6 +312,7 @@
     "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, pnpm-workspace.yaml, bun.lock, bun.lockb, .npmrc, .nvmrc",
     "tsconfig.json": "tsconfig.*.json",
     "vite.config.*": "vitest.config.*, eslint.config.*, prettier.config.*, .prettierrc*, .prettierignore, postcss.config.*, tailwind.config.*, .oxlintrc.json",
+    "next.config.*": "next-env.d.ts, middleware.*, proxy.*, instrumentation.*, eslint.config.*, prettier.config.*, .prettierrc*, .prettierignore, postcss.config.*, tailwind.config.*, .oxlintrc.json",
     ".env": ".env.*"
   },
   "better-comments.tags": [
@@ -376,12 +380,18 @@
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
+    "**/.next/**": true,
+    "**/.turbo/**": true,
+    "**/coverage/**": true,
     "**/dist/**": true,
     "**/build/**": true,
     "**/.cache/**": true
   },
   "search.exclude": {
     "**/node_modules": true,
+    "**/.next": true,
+    "**/.turbo": true,
+    "**/coverage": true,
     "**/dist": true,
     "**/build": true,
     "**/.git": true

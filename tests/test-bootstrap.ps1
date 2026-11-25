@@ -225,8 +225,11 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
     Assert-True ($run.Calls[0].gitBash -and (Test-Path -LiteralPath $run.Calls[0].gitBash -PathType Leaf) -and $run.Calls[1].gitBash -eq $run.Calls[0].gitBash) 'Install and Doctor must receive the verified Git Bash path' $run
     Assert-True ($run.Output -match [regex]::Escape($first) -and $run.Result.state -eq 'stages-complete') 'Command 2 must report the synced commit and result' $run
     Assert-True ($run.Output.Contains("fixture install ok: $([char]0x0413)")) 'UTF-8 installer output must reach the console intact' $run
-    $source = Join-Path $download 'safarovmurod-antigravity-workstation\source'
+    $source = Join-Path $download 'm-safarov-antigravity-workstation\source'
     Assert-True ((Test-Path -LiteralPath (Join-Path $source 'bin\workstation-setup.js')) -and -not (Test-Path -LiteralPath (Join-Path $source '.git'))) 'The source tree must contain only repository files' $run
+    $leftoverStaging = @(Get-ChildItem -LiteralPath (Join-Path $download 'm-safarov-antigravity-workstation') -Directory -Filter 'staging-*' -ErrorAction SilentlyContinue)
+    Assert-True ($leftoverStaging.Count -eq 0) 'Successful install must remove temporary staging directories' $run
+    Assert-True ($run.Output -match 'MANCHO SETING ANTIGRAVITI') 'Installer output must show the MANCHO SETING ANTIGRAVITI title' $run
 
     $run = Invoke-Scenario 'clean' 'CleanExtensions'
     Assert-True ($run.Exit -eq 0 -and ((@($run.Calls | ForEach-Object { $_.command })) -join ',') -eq 'full-reset,start-ide,install,doctor') 'Command 1 must reset, start the IDE once, install and run Doctor' $run
@@ -282,7 +285,7 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
     $run = Invoke-Scenario 'install-fail' '' 'install'
     Assert-True ($run.Exit -eq 2 -and $run.Calls.Count -eq 1 -and $run.Result.state -eq 'repair-pending' -and $run.Output -match 'Fixture repair task for full') 'An incomplete install must queue one repair task and skip Doctor' $run
     Assert-True ($run.Output -match 'BEGIN SETUP REPAIR TASK' -and $run.Output -match 'Repair text file:') 'Repair text must reach a file and the terminal without a clipboard' $run
-    $report = Get-Content -LiteralPath (Join-Path $download 'safarovmurod-antigravity-workstation\logs\setup-failure.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $report = Get-Content -LiteralPath (Join-Path $download 'm-safarov-antigravity-workstation\logs\setup-failure.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Assert-True ($report.sourceCommit -eq $second -and $report.stage -eq 'install' -and $report.failure.Contains([string][char]0x2717)) 'The failure report must keep the commit and the Unicode error' $run
 
     $run = Invoke-Scenario 'doctor-fail' '' 'doctor'

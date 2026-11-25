@@ -1,9 +1,9 @@
 {
   "id": "workstation.aster-appearance",
-  "version": "1.8.1",
-  "vsixSha256": "164e2e69acb7b998eb26e8b8d43ed9cb34bfbd18156bd12dd0c821ee7c8a59e7",
+  "version": "1.9.0",
+  "vsixSha256": "90572cdb86cf1e5e4ab5d5dabcffeba70b82a171c765746d7b45bf6bdcdd5459",
   "files": {
-    "package.json": "8dcd1cbab935ef8b7d37eb250a7c07baf9dcee1d4a9f62887812449e2b441773",
+    "package.json": "32b567da6ef7e2620433571e4707259105d8d6cdd72e5ddf8f0aa79557b726ea",
     "extension.cjs": "8b6a262b4431081e554fd6425472733cfe2e396b5870294c9e66ea8faacc74a2",
     "studio.cjs": "0b4e6693bdb8ba4cecb7d4bda4e2bfb0e7620b72b28181de928016f013572e02",
     "appearance.cjs": "26dbeab73cd8b288559d3de4fc8ce05b7415252b636e752ef6db88c71ce9d9b5",
@@ -21,7 +21,7 @@
     "panel.js": "1afa3ab82ef9cacdc0c33c93b4ff597732e1b9149e9a64de2476eaf8f5081c29",
     "icon.png": "06ae0e0eceb21821bcc36f122b497011d97ead12793c289e877c67811c4b142c",
     "icon.svg": "c0ce74a0b1d943f2b2554c0f77fdcf343548879a3762b55774e875428da51f18",
-    "README.md": "a401a9a87769783aee9607f739313fdb61e8c68735e520a90095b8ed1884f5fb",
+    "README.md": "14721fd17e347a6e72b34ba9a149b32304b862b0978a8853b5e07594b9de70f3",
     "themes/ayu-mirage.json": "ecdc919f7df530972a39def4b0644f6afc231b443b2a224873599df54367f22f",
     "themes/catppuccin-latte.json": "586422e5ff432c5fa3b60a05e74e334cf4c441ccddd76a134da9c792f407f863",
     "themes/catppuccin-mocha.json": "7fe5fdb9f1010b8401df26612e572079d644d366b2665d6807c01a034cc6c46a",
@@ -77,6 +77,9 @@
     "fonts/maplemono/OFL.txt": "eb2d28d2e565a0757e3d64e34ebb452e75a0cad87c0ab3faf4e08ba7596de902",
     "media/appearance-dark.png": "8def344d79466508629b83655ef886d122188c3f472cb57a2bf076b64866e847",
     "media/appearance-light.png": "beb5348da9dd22a83a6ae1573af02c339df4d33c6b2cc7fef3a90fb7b66ba8e5",
+    "media/guide-step-1-shortcut.png": "a5615f9c3d6e864ae4cc6810c05ce39a16812262f42a7cb4323ff28a42fd4eb3",
+    "media/guide-step-2-command.png": "6b3f292af6d4def00fd10d1c15b5b871caf7b7a46228c7820d5ab2751aeee9bd",
+    "media/guide-step-3-studio.png": "deffdc64c4afb1a61e0ba5d6717bdf936d94e6ac572477989bd1adc143b0d960",
     "media/source-evidence.json": "59143141b337c9e22b4734e969c87ad9617a2c4726f440cb1372a9abd6666c1c",
     "LICENSE.txt": "bfaae0aff18f1a000d36ddb068e81e3820a252b9ed5fabcd480fdfdd44012fe8"
   }

@@ -437,7 +437,8 @@ test('Published stability VSIX reproduces source bytes, its MIT license and shor
     }
     offset = start + size;
   }
-  assert.equal(names.length, 16);
+  assert.equal(names.length, 17);
+  assert.ok(names.includes('extension/ai-assistant.cjs'), 'the optional local AI SecretStorage helper ships with the stability helper');
   assert.ok(names.includes('extension/inline-diff-guard.cjs'), 'the inlineDiff undo guard ships with the stability helper');
   assert.ok(names.includes('extension/workbench-ui.cjs'), 'the interface addon ships with the helper that restores it');
   assert.ok(names.includes('extension/questions.cjs'));

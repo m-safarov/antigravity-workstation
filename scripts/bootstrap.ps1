@@ -14,8 +14,10 @@ param(
     [string]$DownloadRoot = '',
     [ValidatePattern('^\d+\.\d+\.\d+$')][string]$MinimumVersion = '0.0.0',
     [ValidatePattern('^(?!.*(?:\.\.|//))[A-Za-z0-9][A-Za-z0-9._/-]{0,149}[A-Za-z0-9_-]$')][string]$SourceBranch = 'main',
-    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$')][string]$RepoSlug = 'safarovmurod/antigravity-workstation',
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$')][string]$RepoSlug = 'm-safarov/antigravity-workstation',
     [string]$SourceUrl = '',
+    [string]$ArchiveUrl = '',
+    [ValidatePattern('^$|^[0-9a-f]{40}$')][string]$PinnedCommit = '',
     [string]$ResultFile = '',
     [switch]$Reentry
 )
@@ -26,24 +28,97 @@ $utf8 = New-Object Text.UTF8Encoding $false
 # Every audited IDE version (config/native-compatibility.json); the first one is the recommended download.
 $IdeVersions = @('2.8.0', '2.7.0', '2.6.0')
 $IdeVersion = $IdeVersions[0]
+$RecognizedUntestedVersions = @('2.5.5', '2.5.2', '2.4.0', '2.3.0', '2.2.0', '2.1.1')
 $IdeDownload = 'https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.8.0-6733682917113856/windows-{0}/Antigravity%20IDE.exe'
 # Match only Antigravity IDE; standalone Antigravity.exe is a separate app and must not be closed.
 $IdeNames = @('Antigravity IDE', 'antigravity-ide')
 # "Zakryt'? (Y/N)" in Cyrillic, built from code points to keep this file ASCII.
 $CloseQuestion = (-join [char[]](0x0417, 0x0430, 0x043A, 0x0440, 0x044B, 0x0442, 0x044C)) + '? (Y/N)'
+$BrandTitle = 'MANCHO SETING ANTIGRAVITI'
+$StagingOwner = 'antigravity-workstation-bootstrap'
 $Steps = if ($CleanExtensions) { 6 } else { 5 }
 $launchParameters = @{}
 foreach ($key in $PSBoundParameters.Keys) { $launchParameters[$key] = $PSBoundParameters[$key] }
 $code = 1; $stage = 'Start'; $reason = ''; $failCode = 0; $delegated = $false
 $lock = $null; $logs = ''; $source = ''; $commit = ''; $version = ''; $repairFile = ''; $node = ''; $git = ''; $arch = ''; $ide = $null; $resetBackup = ''
+$script:cacheBase = ''
+$script:stagingDirs = New-Object Collections.Generic.List[string]
 
-function Write-Line([string]$Text, [string]$Color = 'Gray') { Write-Host $Text -ForegroundColor $Color }
+function Test-ColorAllowed {
+    if ([Console]::IsOutputRedirected) { return $false }
+    if (-not [string]::IsNullOrEmpty($env:NO_COLOR)) { return $false }
+    if ($env:TERM -eq 'dumb') { return $false }
+    if ($env:CI -match '^(?i:1|true)$') { return $false }
+    if ($env:WORKSTATION_PLAIN_UI -match '^(?i:1|true)$') { return $false }
+    if ($env:WORKSTATION_SCREEN_READER -match '^(?i:1|true)$') { return $false }
+    return $true
+}
+
+function Get-TerminalWidth {
+    if ($env:WORKSTATION_TERM_WIDTH -match '^\d+$') { return [int]$env:WORKSTATION_TERM_WIDTH }
+    if ([Console]::IsOutputRedirected) { return 0 }
+    try { return [int]$Host.UI.RawUI.WindowSize.Width } catch { return 0 }
+}
+
+function Test-WideBannerAllowed {
+    return (Test-ColorAllowed) -and ((Get-TerminalWidth) -ge 80)
+}
+
+function Write-Line([string]$Text, [string]$Color = 'Gray') {
+    if (Test-ColorAllowed) { Write-Host $Text -ForegroundColor $Color }
+    else { Write-Host $Text }
+}
 
 function Write-Box([string[]]$Lines, [string]$Color) {
     $rule = '  ' + ('=' * 64)
     Write-Line ''; Write-Line $rule $Color
     foreach ($text in $Lines) { Write-Line ('   ' + $text) $Color }
     Write-Line $rule $Color
+}
+
+function Show-Banner([string]$ModeText, [string]$OsText) {
+    if ($Reentry) { return }
+    $title = 'MANCHO SETING ANTIGRAVITI'
+    if (Test-WideBannerAllowed) {
+        $art = @(
+            '  __  __    _    _   _  ____ _   _  ___    ____  _____ _____ ___ _   _  ____ ',
+            ' |  \/  |  / \  | \ | |/ ___| | | |/ _ \  / ___|| ____|_   _|_ _| \ | |/ ___|',
+            ' | |\/| | / _ \ |  \| | |   | |_| | | | | \___ \|  _|   | |  | ||  \| | |  _ ',
+            ' | |  | |/ ___ \| |\  | |___|  _  | |_| |  ___) | |___  | |  | || |\  | |_| |',
+            ' |_|  |_/_/   \_\_| \_|\____|_| |_|\___/  |____/|_____| |_| |___|_| \_|\____|',
+            '',
+            '      _    _   _ _____ ___ ____ ____      _    __     _____ _____ ___ ',
+            '     / \  | \ | |_   _|_ _/ ___|  _ \    / \   \ \   / /_ _|_   _|_ _|',
+            '    / _ \ |  \| | | |  | | |  _| |_) |  / _ \   \ \ / / | |  | |  | | ',
+            '   / ___ \| |\  | | |  | | |_| |  _ <  / ___ \   \ V /  | |  | |  | | ',
+            '  /_/   \_\_| \_| |_| |___\____|_| \_\/_/   \_\   \_/  |___| |_| |___|'
+        )
+        Write-Line ''
+        foreach ($row in $art) { Write-Line $row 'Cyan' }
+        Write-Line ''
+        Write-Line ('  ' + $title) 'Cyan'
+        Write-Line ("  Mode $ModeText  |  $OsText") 'Gray'
+    } else {
+        Write-Line $title 'Cyan'
+        Write-Line ("Mode $ModeText ($OsText)") 'Gray'
+    }
+}
+
+function Format-ByteSize([long]$Bytes) {
+    if ($Bytes -ge 1073741824) { return ('{0:N2} GB' -f ($Bytes / 1073741824.0)) }
+    if ($Bytes -ge 1048576) { return ('{0:N2} MB' -f ($Bytes / 1048576.0)) }
+    if ($Bytes -ge 1024) { return ('{0:N1} KB' -f ($Bytes / 1024.0)) }
+    return "$Bytes B"
+}
+
+function Format-Duration([double]$Seconds) {
+    if ($Seconds -lt 0) { $Seconds = 0 }
+    if ($Seconds -ge 60) {
+        $mins = [int][Math]::Floor($Seconds / 60)
+        $secs = [int][Math]::Floor($Seconds % 60)
+        return ('{0}m {1:D2}s' -f $mins, $secs)
+    }
+    return ('{0:N1}s' -f $Seconds)
 }
 
 function Write-Step([int]$Number, [string]$Text) {
@@ -53,8 +128,10 @@ function Write-Step([int]$Number, [string]$Text) {
     $bar = ('#' * [int]($percent / 5)).PadRight(20, '.')
     Write-Line ''
     Write-Line ('  [{0}/{1}] [{2}] {3,3}%  {4}' -f $Number, $Steps, $bar, $percent, $Text) 'Cyan'
-    $ProgressPreference = 'Continue'
-    Write-Progress -Activity 'Antigravity Workstation' -Status ('{0}/{1}  {2}' -f $Number, $Steps, $Text) -PercentComplete $percent
+    if (Test-ColorAllowed) {
+        $ProgressPreference = 'Continue'
+        Write-Progress -Activity $BrandTitle -Status ('{0}/{1}  {2}' -f $Number, $Steps, $Text) -PercentComplete $percent
+    }
 }
 
 function Write-Ok([string]$Text) { Write-Line ('        OK  ' + $Text) 'Green' }
@@ -71,9 +148,11 @@ function Invoke-Git([string]$Label, [string[]]$Arguments, [int]$Attempts = 1) {
     for ($attempt = 1; ; $attempt++) {
         $result = Invoke-Native $script:git $Arguments
         if ($result.Code -eq 0) { return $result.Text }
-        if ($attempt -ge $Attempts) { throw "git $Label failed (exit $($result.Code)): $($result.Text)" }
-        Write-Line "  git $Label failed ($attempt/$Attempts); retrying..." 'Yellow'
-        Start-Sleep -Seconds (2 * $attempt)
+        $isPermanent = $result.Text -match '(?i)does not appear to be a git repository|repository .* not found|authentication failed|could not read username|permission denied|pathspec .* did not match'
+        if ($isPermanent -or $attempt -ge $Attempts) { throw "git $Label failed (exit $($result.Code)): $($result.Text)" }
+        $delay = 2 * $attempt
+        Write-Line ("  Retry $attempt/$Attempts (git ${Label}): $($result.Text) (waiting ${delay}s)") 'Yellow'
+        Start-Sleep -Seconds $delay
     }
 }
 
@@ -82,6 +161,178 @@ function Get-SourceHash([string]$File) {
     $algorithm = [Security.Cryptography.SHA256]::Create()
     try { [BitConverter]::ToString($algorithm.ComputeHash($stream)) }
     finally { $algorithm.Dispose(); $stream.Dispose() }
+}
+
+function Enable-Tls12 {
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    } catch { }
+}
+
+function Get-HttpStatusCode([Exception]$ErrorObj) {
+    $ex = $ErrorObj
+    while ($ex) {
+        if ($ex -is [Net.WebException] -and $ex.Response -is [Net.HttpWebResponse]) {
+            return [int]$ex.Response.StatusCode
+        }
+        $ex = $ex.InnerException
+    }
+    return 0
+}
+
+function Invoke-StreamDownload([string]$Url, [string]$Destination, [string]$ItemLabel, [int]$MaxAttempts = 3, [int]$TimeoutSeconds = 60) {
+    Enable-Tls12
+    $plain = -not (Test-ColorAllowed)
+    $part = $Destination + '.part'
+    $permanentCodes = @(400, 401, 403, 404, 410, 451)
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $request = $null; $response = $null; $stream = $null; $outStream = $null
+        if (Test-Path -LiteralPath $part) { Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue }
+        try {
+            $request = [Net.HttpWebRequest]::Create($Url)
+            $request.Method = 'GET'
+            $request.Timeout = $TimeoutSeconds * 1000
+            $request.ReadWriteTimeout = $TimeoutSeconds * 1000
+            $request.AllowAutoRedirect = $true
+            $request.UserAgent = 'antigravity-workstation-bootstrap/3.14'
+            $response = $request.GetResponse()
+            $total = [long]$response.ContentLength
+            $stream = $response.GetResponseStream()
+            $outStream = [IO.File]::Open($part, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+            $buffer = New-Object byte[] 65536
+            $bytesRead = [long]0
+            $timer = [Diagnostics.Stopwatch]::StartNew()
+            $lastUpdate = -1000.0
+            $lastPrintedPercent = -1
+            while ($true) {
+                $read = $stream.Read($buffer, 0, $buffer.Length)
+                if ($read -le 0) { break }
+                $outStream.Write($buffer, 0, $read)
+                $bytesRead += $read
+                $elapsedMs = $timer.Elapsed.TotalMilliseconds
+                if ($elapsedMs - $lastUpdate -ge 200) {
+                    $lastUpdate = $elapsedMs
+                    $elapsedSec = $timer.Elapsed.TotalSeconds
+                    if ($total -gt 0) {
+                        $pct = [int][Math]::Min(100, [Math]::Floor(($bytesRead * 100.0) / $total))
+                        $speed = if ($elapsedSec -gt 0.05) { [long]($bytesRead / $elapsedSec) } else { 0 }
+                        $etaText = if ($elapsedSec -ge 1.0 -and $bytesRead -ge 262144 -and $speed -gt 0 -and $bytesRead -lt $total) {
+                            'ETA ' + (Format-Duration (($total - $bytesRead) / [double]$speed))
+                        } else { 'ETA --' }
+                        $line = ('  Downloading {0}: {1} / {2} ({3}%) {4}/s {5}' -f $ItemLabel, (Format-ByteSize $bytesRead), (Format-ByteSize $total), $pct, (Format-ByteSize $speed), $etaText)
+                        if ($plain) {
+                            if ($pct -ge $lastPrintedPercent + 25 -or $lastPrintedPercent -lt 0) {
+                                $lastPrintedPercent = $pct
+                                Write-Host $line
+                            }
+                        } else {
+                            [Console]::Write("`r" + $line.PadRight(78))
+                        }
+                    } else {
+                        $line = ('  Downloading {0}: {1} elapsed {2}' -f $ItemLabel, (Format-ByteSize $bytesRead), (Format-Duration $elapsedSec))
+                        if ($plain) {
+                            if ($lastPrintedPercent -lt 0) {
+                                $lastPrintedPercent = 0
+                                Write-Host $line
+                            }
+                        } else {
+                            [Console]::Write("`r" + $line.PadRight(78))
+                        }
+                    }
+                }
+            }
+            $timer.Stop()
+            $outStream.Close(); $outStream = $null
+            $stream.Close(); $stream = $null
+            $response.Close(); $response = $null
+            if (-not $plain) { [Console]::Write("`r" + (' ' * 78) + "`r") }
+            if ($total -gt 0 -and $bytesRead -ne $total) {
+                throw "Incomplete download for ${ItemLabel}: received $bytesRead of $total bytes"
+            }
+            if ($bytesRead -le 0) {
+                throw "Empty download received for $ItemLabel"
+            }
+            if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $Destination -Force }
+            [IO.File]::Move($part, $Destination)
+            if ($total -gt 0) {
+                Write-Line ('  Download complete (100%): {0} ({1} in {2})' -f $ItemLabel, (Format-ByteSize $bytesRead), (Format-Duration $timer.Elapsed.TotalSeconds)) 'Green'
+            } else {
+                Write-Line ('  Download complete: {0} ({1} in {2}, total size unknown)' -f $ItemLabel, (Format-ByteSize $bytesRead), (Format-Duration $timer.Elapsed.TotalSeconds)) 'Green'
+            }
+            return [pscustomobject]@{ Bytes = $bytesRead; Total = $total; ElapsedSeconds = $timer.Elapsed.TotalSeconds }
+        } catch {
+            if ($outStream) { try { $outStream.Dispose() } catch { } }
+            if ($stream) { try { $stream.Dispose() } catch { } }
+            if ($response) { try { $response.Dispose() } catch { } }
+            if (-not $plain) { try { [Console]::Write("`r" + (' ' * 78) + "`r") } catch { } }
+            if (Test-Path -LiteralPath $part) { Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue }
+            $status = Get-HttpStatusCode $_.Exception
+            $errMsg = $_.Exception.Message
+            if ($permanentCodes -contains $status) {
+                throw "Permanent download error (HTTP $status) for $ItemLabel ($Url): $errMsg. Check repository URL, branch name or access permissions, then rerun."
+            }
+            if ($attempt -ge $MaxAttempts) {
+                throw "Download failed after $MaxAttempts attempts for $ItemLabel ($Url): $errMsg. Check internet/proxy connectivity and rerun the same command."
+            }
+            $delay = 2 * $attempt
+            $reasonTag = if ($status -gt 0) { "HTTP $status - $errMsg" } else { $errMsg }
+            Write-Line ("  Retry $attempt/$MaxAttempts ($ItemLabel): $reasonTag (waiting ${delay}s)") 'Yellow'
+            Start-Sleep -Seconds $delay
+        }
+    }
+}
+
+function New-StagingDirectory([string]$Base) {
+    $dir = Join-Path $Base ('staging-' + [guid]::NewGuid().ToString('N'))
+    [IO.Directory]::CreateDirectory($dir) | Out-Null
+    $marker = [ordered]@{
+        owner = $StagingOwner
+        pid = $PID
+        createdAt = [DateTime]::UtcNow.ToString('o')
+        kind = 'staging'
+    }
+    [IO.File]::WriteAllText((Join-Path $dir '.workstation-staging.json'), ($marker | ConvertTo-Json -Compress), $utf8)
+    $script:stagingDirs.Add($dir)
+    return $dir
+}
+
+function Remove-OwnedStaging([string]$StagingDir, [string]$Base) {
+    if (-not $StagingDir -or -not $Base) { return }
+    if (-not (Test-Path -LiteralPath $StagingDir)) { return }
+    $fullBase = [IO.Path]::GetFullPath($Base).TrimEnd('\')
+    $fullTarget = [IO.Path]::GetFullPath($StagingDir).TrimEnd('\')
+    $parent = (Split-Path $fullTarget -Parent).TrimEnd('\')
+    $leaf = Split-Path $fullTarget -Leaf
+    if ($parent -ine $fullBase -or $leaf -notmatch '^staging-[a-f0-9]{32}$') {
+        throw "Refusing to clean unowned staging path: $StagingDir"
+    }
+    $item = Get-Item -LiteralPath $fullTarget -Force
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Refusing to clean linked staging path: $StagingDir"
+    }
+    $markerFile = Join-Path $fullTarget '.workstation-staging.json'
+    if (-not (Test-Path -LiteralPath $markerFile -PathType Leaf)) {
+        throw "Refusing to clean staging directory without ownership marker: $StagingDir"
+    }
+    $marker = Get-Content -LiteralPath $markerFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($marker.owner -cne $StagingOwner) {
+        throw "Refusing to clean staging directory with unexpected owner: $StagingDir"
+    }
+    try {
+        Remove-Item -LiteralPath $fullTarget -Recurse -Force -ErrorAction Stop
+    } catch {
+        if ($script:node -and (Test-Path -LiteralPath $script:node -PathType Leaf)) {
+            $removed = Invoke-Native $script:node @('-e', "require('fs').rmSync(process.argv[1],{recursive:true,force:true,maxRetries:3})", $fullTarget)
+            if ($removed.Code -ne 0) { Write-Line "  Warning: staging cleanup deferred for $fullTarget" 'Yellow' }
+        }
+    }
+}
+
+function Clear-LeftoverStaging([string]$Base) {
+    if (-not $Base -or -not (Test-Path -LiteralPath $Base -PathType Container)) { return }
+    foreach ($candidate in @(Get-ChildItem -LiteralPath $Base -Directory -Filter 'staging-*' -ErrorAction SilentlyContinue)) {
+        try { Remove-OwnedStaging $candidate.FullName $Base } catch { }
+    }
 }
 
 function Update-SessionPath([switch]$AfterInstall) {
@@ -285,6 +536,12 @@ function Get-IdeProduct([string]$Root) {
     return $null
 }
 
+function Get-IdeVersionTier([string]$DetectedVersion) {
+    if ($IdeVersions -contains $DetectedVersion) { return 'tested' }
+    if ($RecognizedUntestedVersions -contains $DetectedVersion) { return 'recognized' }
+    return 'unknown'
+}
+
 function Find-Ide {
     # Explicit folder, installer registration, PATH, the usual folders, then the root of every fixed drive (C:, D:, E:, B: ...).
     $roots = New-Object Collections.Generic.List[string]
@@ -325,7 +582,8 @@ function Test-Ide {
     $ide = Find-Ide
     $download = $IdeDownload -f $script:arch
     if (-not $ide -or $IdeVersions -notcontains $ide.Version) {
-        $found = if ($ide) { "Antigravity $($ide.Version) is installed in $($ide.Root)." } else { 'Antigravity IDE was not found on any fixed drive.' }
+        $tier = if ($ide) { Get-IdeVersionTier $ide.Version } else { 'unknown' }
+        $found = if ($ide) { "Antigravity $($ide.Version) (tier: $tier) is installed in $($ide.Root)." } else { 'Antigravity IDE was not found on any fixed drive.' }
         if ($DryRun) { Write-Line "  [DRY-RUN] $found A real run stops here until Antigravity IDE $($IdeVersions -join ' or ') is installed." 'Yellow'; return $true }
         Write-Box @("STOPPED: this setup supports only Antigravity IDE $($IdeVersions -join ' or '). Nothing was changed.", $found,
             "Install Antigravity IDE $IdeVersion ($($script:arch)): $download",
@@ -343,7 +601,7 @@ function Test-Ide {
     }
     # Every later step (install, Doctor, native AI-off) uses exactly this installation.
     $env:ANTIGRAVITY_INSTALL_DIR = $ide.Root
-    Write-Ok "Antigravity IDE $($ide.Version): $($ide.Root)"
+    Write-Ok "Antigravity IDE $($ide.Version) (tested): $($ide.Root)"
     return $true
 }
 
@@ -382,24 +640,214 @@ function Lock-Cache([string]$Base) {
     }
 }
 
-function Sync-Source([string]$Base) {
-    # One managed working tree per repository; Git downloads only what changed since the last run.
-    $gitDir = Join-Path $Base 'repo.git'
-    $tree = Join-Path $Base 'source'
-    $url = if ($SourceUrl) { $SourceUrl } else { "https://github.com/$RepoSlug.git" }
+function Resolve-PinnedRevision([string]$GitRemote, [string]$Branch, [bool]$UseGitHubApi) {
+    if ($PinnedCommit -match '^[0-9a-f]{40}$') { return $PinnedCommit }
+    if ($UseGitHubApi) {
+        Enable-Tls12
+        $encodedBranch = ($Branch -split '/' | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'
+        $apiUrl = "https://api.github.com/repos/$RepoSlug/commits/$encodedBranch"
+        $permanentCodes = @(400, 401, 404, 410, 422)
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            $request = $null; $response = $null; $reader = $null
+            try {
+                $request = [Net.HttpWebRequest]::Create($apiUrl)
+                $request.Method = 'GET'
+                $request.Timeout = 20000
+                $request.ReadWriteTimeout = 20000
+                $request.UserAgent = 'antigravity-workstation-bootstrap/3.14'
+                $request.Accept = 'application/vnd.github+json'
+                $response = $request.GetResponse()
+                $reader = New-Object IO.StreamReader($response.GetResponseStream(), $utf8)
+                $body = $reader.ReadToEnd()
+                $parsed = $body | ConvertFrom-Json
+                if ($parsed.sha -match '^[0-9a-f]{40}$') { return [string]$parsed.sha }
+                throw "GitHub API returned an invalid revision for $RepoSlug@$Branch"
+            } catch {
+                $status = Get-HttpStatusCode $_.Exception
+                if ($permanentCodes -contains $status) {
+                    throw "Permanent error resolving $RepoSlug@$Branch (HTTP $status): $($_.Exception.Message). Verify repository and branch names."
+                }
+                if ($status -eq 403) {
+                    Write-Line "  GitHub API rate limit encountered; resolving pinned revision via git ls-remote..." 'Yellow'
+                    break
+                }
+                if ($attempt -ge 3) {
+                    Write-Line "  GitHub API revision lookup failed ($($_.Exception.Message)); falling back to git ls-remote..." 'Yellow'
+                    break
+                }
+                $delay = 2 * $attempt
+                Write-Line ("  Retry $attempt/3 (resolve ${Branch}): $($_.Exception.Message) (waiting ${delay}s)") 'Yellow'
+                Start-Sleep -Seconds $delay
+            } finally {
+                if ($reader) { try { $reader.Dispose() } catch { } }
+                if ($response) { try { $response.Dispose() } catch { } }
+            }
+        }
+    }
     $env:GIT_TERMINAL_PROMPT = '0'
-    $config = @('-c', 'core.longpaths=true', '-c', 'core.autocrlf=false', '-c', 'core.symlinks=false', '-c', 'advice.detachedHead=false', '-c', 'gc.auto=0')
-    if (-not (Test-Path -LiteralPath (Join-Path $gitDir 'HEAD'))) { $null = Invoke-Git 'init' ($config + @('init', '--quiet', '--bare', $gitDir)) }
-    $repo = $config + @("--git-dir=$gitDir", "--work-tree=$tree")
-    $previous = (Invoke-Native $script:git ($repo + @('rev-parse', '--verify', '--quiet', 'HEAD'))).Text
-    $null = Invoke-Git 'fetch' ($repo + @('-c', 'http.lowSpeedLimit=1', '-c', 'http.lowSpeedTime=60', 'fetch', '--quiet', '--depth=1', '--no-tags', $url, $SourceBranch)) 3
-    [IO.Directory]::CreateDirectory($tree) | Out-Null
-    $null = Invoke-Git 'checkout' ($repo + @('checkout', '--quiet', '--force', '--detach', 'FETCH_HEAD'))
-    $null = Invoke-Git 'clean' ($repo + @('clean', '-ffdxq'))
-    $script:commit = Invoke-Git 'rev-parse' ($repo + @('rev-parse', 'HEAD'))
-    if ($script:commit -notmatch '^[0-9a-f]{40}$') { throw 'Git did not report the downloaded commit.' }
-    if ($previous -and $previous -ne $script:commit) { $null = Invoke-Git 'gc' ($config + @("--git-dir=$gitDir", 'gc', '--quiet', '--prune=now')) }
-    return $tree
+    $refResult = Invoke-Git 'ls-remote' @('-c', 'http.lowSpeedLimit=1', '-c', 'http.lowSpeedTime=30', 'ls-remote', '--heads', $GitRemote, "refs/heads/$Branch") $(if ($UseGitHubApi) { 3 } else { 1 })
+    foreach ($line in ($refResult -split '\r?\n')) {
+        if ($line -match '^([0-9a-f]{40})\s+refs/heads/') { return $Matches[1] }
+    }
+    throw "Could not resolve a single commit SHA for branch '$Branch' from '$GitRemote'."
+}
+
+function Test-StagedPayload([string]$Tree) {
+    if (-not $Tree -or -not (Test-Path -LiteralPath $Tree -PathType Container)) {
+        throw 'Staged setup payload directory is missing; active profile unchanged.'
+    }
+    $item = Get-Item -LiteralPath $Tree -Force
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw 'Staged setup payload cannot be a symbolic link or junction; active profile unchanged.'
+    }
+    if (Test-Path -LiteralPath (Join-Path $Tree '.git')) {
+        throw 'Staged setup payload must not contain a .git directory; active profile unchanged.'
+    }
+    $pkgFile = Join-Path $Tree 'package.json'
+    $entryFile = Join-Path $Tree 'bin\workstation-setup.js'
+    $bootstrapFile = Join-Path $Tree 'scripts\bootstrap.ps1'
+    if (-not (Test-Path -LiteralPath $pkgFile -PathType Leaf)) { throw 'Staged setup is missing package.json; active profile unchanged.' }
+    if (-not (Test-Path -LiteralPath $entryFile -PathType Leaf)) { throw 'Staged setup is missing bin\workstation-setup.js; active profile unchanged.' }
+    if (-not (Test-Path -LiteralPath $bootstrapFile -PathType Leaf)) { throw 'Staged setup is missing scripts\bootstrap.ps1; active profile unchanged.' }
+    $package = Get-Content -LiteralPath $pkgFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($package.name -ne 'antigravity-workstation-setup' -or $package.version -notmatch '^\d+\.\d+\.\d+$') {
+        throw 'Unexpected setup package identity; nothing was installed.'
+    }
+    if ([version]$package.version -lt [version]$MinimumVersion) {
+        throw "Setup $($package.version) is older than the required $MinimumVersion; nothing was installed."
+    }
+    return $package
+}
+
+function Promote-StagedTree([string]$StagedTree, [string]$TargetTree, [string]$StagingDir) {
+    $previous = Join-Path $StagingDir 'previous-source'
+    $hadExisting = Test-Path -LiteralPath $TargetTree
+    if ($hadExisting) {
+        $existingItem = Get-Item -LiteralPath $TargetTree -Force
+        if (($existingItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "Refusing to replace linked runtime path: $TargetTree"
+        }
+        [IO.Directory]::Move($TargetTree, $previous)
+    }
+    try {
+        [IO.Directory]::Move($StagedTree, $TargetTree)
+    } catch {
+        if ($hadExisting -and (Test-Path -LiteralPath $previous) -and -not (Test-Path -LiteralPath $TargetTree)) {
+            try { [IO.Directory]::Move($previous, $TargetTree) } catch { }
+        }
+        throw "Failed to promote verified staged payload into ${TargetTree}: $($_.Exception.Message)"
+    }
+}
+
+function Expand-VerifiedArchive([string]$ZipPath, [string]$ExtractDir) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [IO.Directory]::CreateDirectory($ExtractDir) | Out-Null
+    $fullExtract = [IO.Path]::GetFullPath($ExtractDir).TrimEnd('\') + '\'
+    $zip = [IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        if ($zip.Entries.Count -eq 0) { throw 'Downloaded archive is empty.' }
+        foreach ($entry in $zip.Entries) {
+            $relative = $entry.FullName -replace '/', '\'
+            if (-not $relative -or $relative.StartsWith('\') -or $relative -match '^[A-Za-z]:') {
+                throw "Archive contains unsafe entry path: $($entry.FullName)"
+            }
+            $dest = [IO.Path]::GetFullPath((Join-Path $ExtractDir $relative))
+            if (-not $dest.StartsWith($fullExtract, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Archive entry escapes staging directory: $($entry.FullName)"
+            }
+            if ($entry.FullName.EndsWith('/')) {
+                [IO.Directory]::CreateDirectory($dest) | Out-Null
+            } else {
+                [IO.Directory]::CreateDirectory((Split-Path $dest -Parent)) | Out-Null
+                [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dest, $true)
+            }
+        }
+    } finally {
+        $zip.Dispose()
+    }
+    if (Test-Path -LiteralPath (Join-Path $ExtractDir 'package.json') -PathType Leaf) { return $ExtractDir }
+    $topDirs = @(Get-ChildItem -LiteralPath $ExtractDir -Directory)
+    if ($topDirs.Count -eq 1 -and (Test-Path -LiteralPath (Join-Path $topDirs[0].FullName 'package.json') -PathType Leaf)) {
+        return $topDirs[0].FullName
+    }
+    throw 'Downloaded archive has an unexpected folder layout; active profile unchanged.'
+}
+
+function Sync-Source([string]$Base) {
+    # Every download lands in an owned per-run staging directory, is verified for one pinned revision,
+    # promoted atomically into $Base\source, and then the staging directory and archive are deleted.
+    $tree = Join-Path $Base 'source'
+    $staging = New-StagingDirectory $Base
+    try {
+        $stagedTree = ''
+        $resolvedCommit = ''
+        if ($ArchiveUrl) {
+            $zipPath = Join-Path $staging 'source.zip'
+            $null = Invoke-StreamDownload $ArchiveUrl $zipPath "$RepoSlug archive" 3 60
+            $extractDir = Join-Path $staging 'extract'
+            $stagedTree = Expand-VerifiedArchive $zipPath $extractDir
+            $resolvedCommit = if ($PinnedCommit -match '^[0-9a-f]{40}$') { $PinnedCommit } else { ((Get-SourceHash $zipPath) -replace '-', '').ToLowerInvariant().Substring(0, 40) }
+        } elseif (-not $SourceUrl) {
+            $gitRemote = "https://github.com/$RepoSlug.git"
+            $resolvedCommit = Resolve-PinnedRevision $gitRemote $SourceBranch $true
+            Write-Line "  Pinned revision: $resolvedCommit ($RepoSlug@$SourceBranch)"
+            $zipUrl = "https://codeload.github.com/$RepoSlug/zip/$resolvedCommit"
+            $zipPath = Join-Path $staging 'source.zip'
+            try {
+                $null = Invoke-StreamDownload $zipUrl $zipPath "$RepoSlug@$($resolvedCommit.Substring(0, 8))" 3 60
+                $extractDir = Join-Path $staging 'extract'
+                $stagedTree = Expand-VerifiedArchive $zipPath $extractDir
+            } catch {
+                if ($_.Exception.Message -match '^Permanent download error') { throw }
+                Write-Line "  Archive download unavailable ($($_.Exception.Message)); falling back to pinned git fetch of $resolvedCommit..." 'Yellow'
+                $stagedTree = ''
+            }
+        }
+        if (-not $stagedTree) {
+            $url = if ($SourceUrl) { $SourceUrl } else { "https://github.com/$RepoSlug.git" }
+            if (-not $resolvedCommit) {
+                $resolvedCommit = Resolve-PinnedRevision $url $SourceBranch (-not [bool]$SourceUrl)
+                Write-Line "  Pinned revision: $resolvedCommit"
+            }
+            $gitDir = Join-Path $staging 'repo.git'
+            $stagedTree = Join-Path $staging 'tree'
+            $env:GIT_TERMINAL_PROMPT = '0'
+            $config = @('-c', 'core.longpaths=true', '-c', 'core.autocrlf=false', '-c', 'core.symlinks=false', '-c', 'advice.detachedHead=false', '-c', 'gc.auto=0')
+            $null = Invoke-Git 'init' ($config + @('init', '--quiet', '--bare', $gitDir))
+            $repo = $config + @("--git-dir=$gitDir", "--work-tree=$stagedTree")
+            $fetchAttempts = if ($SourceUrl) { 1 } else { 3 }
+            $fetchedExact = $false
+            try {
+                $null = Invoke-Git 'fetch' ($repo + @('-c', 'http.lowSpeedLimit=1', '-c', 'http.lowSpeedTime=60', 'fetch', '--quiet', '--depth=1', '--no-tags', $url, $resolvedCommit)) $fetchAttempts
+                $fetchedExact = $true
+            } catch {
+                $null = Invoke-Git 'fetch' ($repo + @('-c', 'http.lowSpeedLimit=1', '-c', 'http.lowSpeedTime=60', 'fetch', '--quiet', '--depth=1', '--no-tags', $url, $SourceBranch)) $fetchAttempts
+            }
+            [IO.Directory]::CreateDirectory($stagedTree) | Out-Null
+            $null = Invoke-Git 'checkout' ($repo + @('checkout', '--quiet', '--force', '--detach', 'FETCH_HEAD'))
+            $actualCommit = Invoke-Git 'rev-parse' ($repo + @('rev-parse', 'HEAD'))
+            if ($actualCommit -notmatch '^[0-9a-f]{40}$') { throw 'Git did not report the downloaded commit.' }
+            if ($fetchedExact -and $actualCommit -cne $resolvedCommit) {
+                throw "Pinned revision mismatch: expected $resolvedCommit, received $actualCommit."
+            }
+            $resolvedCommit = $actualCommit
+            Write-Line "  Download complete (100%): git revision $($resolvedCommit.Substring(0, 8))" 'Green'
+        }
+        $null = Test-StagedPayload $stagedTree
+        Promote-StagedTree $stagedTree $tree $staging
+        $script:commit = $resolvedCommit
+        # Retire any legacy bare git cache left beside source by pre-3.14 runs.
+        $legacyGit = Join-Path $Base 'repo.git'
+        if ((Test-Path -LiteralPath $legacyGit -PathType Container) -and (Test-Path -LiteralPath (Join-Path $legacyGit 'HEAD') -PathType Leaf)) {
+            $lgItem = Get-Item -LiteralPath $legacyGit -Force
+            if (($lgItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0) {
+                Remove-Item -LiteralPath $legacyGit -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        return $tree
+    } finally {
+        Remove-OwnedStaging $staging $Base
+    }
 }
 
 function Invoke-Logged([string]$Label, [string[]]$Arguments) {
@@ -512,7 +960,7 @@ function Invoke-Bootstrap {
     $os = [Environment]::OSVersion.Version
     $cpu = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
     $mode = if ($CleanExtensions) { '1 - Full reset and setup' } else { '2 - Install or update' }
-    Write-Box @('ANTIGRAVITY WORKSTATION', "Mode $mode", "Windows build $($os.Build), $cpu") 'Cyan'
+    Show-Banner $mode "Windows build $($os.Build), $cpu"
 
     Write-Step 1 'Check Windows and Antigravity IDE'
     $script:arch = switch ($cpu) { 'AMD64' { 'x64' } 'ARM64' { 'arm64' } default { throw "Unsupported Windows architecture '$cpu'; Antigravity needs 64-bit Windows (x64 or ARM64)." } }
@@ -549,22 +997,23 @@ function Invoke-Bootstrap {
 
     Write-Step 3 'Download the newest setup'
     $base = Get-CacheBase
+    $script:cacheBase = $base
     $script:lock = Lock-Cache $base
+    Clear-LeftoverStaging $base
     Write-Line "  $SourceBranch -> $base"
     $script:source = Sync-Source $base
     $fresh = Join-Path $script:source 'scripts\bootstrap.ps1'
     if (-not $Reentry -and $PSCommandPath -and (Test-Path -LiteralPath $fresh) -and (Get-SourceHash $PSCommandPath) -ne (Get-SourceHash $fresh)) {
-        # The web copy can lag behind GitHub for a few minutes; the Git snapshot is authoritative.
+        # The web copy can lag behind GitHub for a few minutes; the downloaded snapshot is authoritative.
         Write-Line '  Running the newest bootstrap from the downloaded source...'
         $script:lock.Dispose(); $script:lock = $null; $script:delegated = $true
         $forward = @{} + $script:launchParameters
         $forward['Reentry'] = $true
+        if ($script:commit -match '^[0-9a-f]{40}$') { $forward['PinnedCommit'] = $script:commit }
         & $fresh @forward | Out-Host
         return $LASTEXITCODE
     }
-    $package = Get-Content -LiteralPath (Join-Path $script:source 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($package.name -ne 'antigravity-workstation-setup' -or $package.version -notmatch '^\d+\.\d+\.\d+$') { throw 'Unexpected setup package identity; nothing was installed.' }
-    if ([version]$package.version -lt [version]$MinimumVersion) { throw "Setup $($package.version) is older than the required $MinimumVersion; nothing was installed." }
+    $package = Test-StagedPayload $script:source
     $script:version = $package.version
     Write-Ok "Setup $($package.version), commit $($script:commit)"
     $script:logs = Join-Path $base 'logs'
@@ -617,6 +1066,7 @@ function Invoke-Bootstrap {
     $retired = Invoke-Native $script:node @((Join-Path $script:source 'scripts\queue-repair-chat.cjs'), '--doctor-passed')
     if ($retired.Code -ne 0) { Write-Line "  An older repair task could not be retired: $($retired.Text)" }
     Remove-LegacyCache $base
+    Clear-LeftoverStaging $base
     if ($CleanExtensions) {
         Write-Box @('DONE  Full reset and setup complete. Doctor: 0 failures. AI suggestions are off.',
             'Open Antigravity IDE now and sign in again; the first start applies the editor profile.',
@@ -641,9 +1091,16 @@ try {
         Publish-RepairText (New-RepairText) $fallback
     }
 } finally {
+    if ($script:cacheBase) {
+        foreach ($dir in $script:stagingDirs) {
+            try { Remove-OwnedStaging $dir $script:cacheBase } catch { }
+        }
+    }
     if ($lock) { $lock.Dispose() }
-    $ProgressPreference = 'Continue'
-    Write-Progress -Activity 'Antigravity Workstation' -Completed
+    if (Test-ColorAllowed) {
+        $ProgressPreference = 'Continue'
+        Write-Progress -Activity $BrandTitle -Completed
+    }
 }
 if ($ResultFile -and -not $delegated) {
     $state = switch ($code) { 0 { if ($DryRun) { 'dry-run' } else { 'stages-complete' } } 2 { 'repair-pending' } 3 { 'paused' } 4 { 'ide-not-ready' } default { 'failed' } }

@@ -1,6 +1,6 @@
 # Backend: читать только для серверной задачи
 
-Сначала прочитай package manifest, точку входа сервера и один соседний endpoint. Сохраняй действующий framework, язык и способ хранения данных. Не внедряй новый стек ради примера.
+Сначала прочитай package manifest, точку входа сервера и один соседний endpoint. Сохраняй действующий framework, язык и способ хранения данных (Express/Fastify/Nest/Node `http`, Next.js Route Handlers `app/api/**/route.ts` или Server Actions, Prisma/Drizzle/pg). Проверь `"type": "module"` (ESM) vs CommonJS, `tsconfig.json` и реальные npm-скрипты сборки/запуска. Не внедряй новый стек ради примера.
 
 До изменения проверь контракт: method, URL, params, body, response, коды ошибок, authentication и authorization. Валидация входа выполняется на сервере; клиентская валидация её не заменяет. Не возвращай secrets, stack traces и персональные данные в ошибках. Используй параметры запросов к БД, транзакции для связанных записей и действующие миграции проекта. При диагностике PostgreSQL (`28P01` и др.) проверяй источник параметров подключения (`.env` / `DATABASE_URL`, URL-кодирование спецсимволов) отдельно от кодировки вывода (на Windows `lc_messages = 'Russian_Russia.1251'` в `postgresql.conf` даёт `` в UTF-8 клиентах `pg` — помогает `lc_messages = 'C'`); пароли не выводи и `pg_hba.conf` не ослабляй.
 

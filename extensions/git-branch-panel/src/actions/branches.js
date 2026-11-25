@@ -1,10 +1,14 @@
 'use strict';
 
+const path = require('path');
 const { runGit } = require('../git-runner');
-const { listBranches } = require('../git-state');
+const { listBranches, listWorktrees } = require('../git-state');
 const { PanelError } = require('../git-errors');
 const { tr } = require('../text');
 const { VISIBLE, loadReadyState, checkBranchName } = require('./common');
+const { checkRemoteDeleteAuthorization } = require('./pull-requests');
+
+const ALLOWED_SCOPES = new Set(['local', 'remote', 'both']);
 
 async function currentBranch(cwd) {
   return runGit(['branch', '--show-current'], cwd).catch(() => '');
@@ -12,9 +16,9 @@ async function currentBranch(cwd) {
 
 // Fetching is useful but never required: branches are created, switched and
 // deleted offline and in repositories without origin too. It runs quietly.
-async function tryFetch(cwd, remote) {
+async function tryFetch(cwd, remote, remoteName = 'origin') {
   if (!remote) return false;
-  return runGit(['fetch', 'origin', '--prune'], cwd).then(() => true, () => false);
+  return runGit(['fetch', remoteName, '--prune'], cwd).then(() => true, () => false);
 }
 
 function requireSavedEditors(panel, cwd) {
@@ -131,8 +135,8 @@ async function resolveSha(cwd, ref) {
   return runGit(['rev-parse', '--verify', '--quiet', ref], cwd).catch(() => null);
 }
 
-async function remoteSha(cwd, branch) {
-  const line = await runGit(['ls-remote', '--heads', 'origin', `refs/heads/${branch}`], cwd).catch(() => '');
+async function remoteSha(cwd, branch, remoteName = 'origin') {
+  const line = await runGit(['ls-remote', '--heads', remoteName, `refs/heads/${branch}`], cwd).catch(() => '');
   const sha = line.trim().split(/\s+/)[0];
   return /^[a-f0-9]{40,64}$/i.test(sha || '') ? sha : null;
 }
@@ -143,30 +147,70 @@ async function countMissingFrom(cwd, base, sha) {
   return Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
 
-async function planDeletion(cwd, names, state, online) {
-  const base = await resolveSha(cwd, `refs/remotes/origin/${state.defaultBranch}`) || await resolveSha(cwd, `refs/heads/${state.defaultBranch}`);
+function samePath(left, right) {
+  if (!left || !right) return false;
+  return path.resolve(left).toLowerCase() === path.resolve(right).toLowerCase();
+}
+
+async function planDeletion(panel, cwd, names, state, online, scope, remoteName) {
+  const base = await resolveSha(cwd, `refs/remotes/${remoteName}/${state.defaultBranch}`) || await resolveSha(cwd, `refs/heads/${state.defaultBranch}`);
+  const worktrees = scope !== 'remote' ? await listWorktrees(cwd) : new Map();
   const plan = [];
   for (const branch of names) {
-    const local = await resolveSha(cwd, `refs/heads/${branch}`);
-    const remote = state.remote && online ? await remoteSha(cwd, branch) : null;
-    if (!local && !remote) throw new PanelError(tr(`Ветка "${branch}" не найдена.`, `Branch "${branch}" was not found.`));
-    plan.push({ branch, local, remote, localOnly: await countMissingFrom(cwd, base, local), remoteOnly: await countMissingFrom(cwd, base, remote) });
+    const wantLocal = scope === 'local' || scope === 'both';
+    const wantRemote = scope === 'remote' || scope === 'both';
+    const local = wantLocal ? await resolveSha(cwd, `refs/heads/${branch}`) : null;
+    if (local) {
+      const checkedOutAt = worktrees.get(branch);
+      if (checkedOutAt && !samePath(checkedOutAt, state.root)) {
+        throw new PanelError(tr(`Ветка "${branch}" открыта в другом worktree (${checkedOutAt}). Закрой или переключи тот worktree сначала.`,
+          `Branch "${branch}" is checked out in another worktree (${checkedOutAt}). Switch or remove that worktree first.`));
+      }
+    }
+    const remote = wantRemote && state.remote && online ? await remoteSha(cwd, branch, remoteName) : null;
+    if (remote && state.isGitHub) {
+      const authz = await checkRemoteDeleteAuthorization(panel, state.remote, branch);
+      if (!authz.allowed) {
+        throw new PanelError(authz.reason);
+      }
+    }
+    if (!local && !remote) {
+      if (scope === 'remote' && state.remote && !online) {
+        throw new PanelError(tr(`Нет связи с ${remoteName}: невозможно удалить удалённую ветку "${branch}".`,
+          `Cannot reach ${remoteName}: unable to delete remote branch "${branch}".`));
+      }
+      throw new PanelError(tr(`Ветка "${branch}" не найдена в выбранной области (${scope}).`, `Branch "${branch}" was not found in scope (${scope}).`));
+    }
+    plan.push({
+      branch,
+      remoteName,
+      local,
+      remote,
+      localOnly: await countMissingFrom(cwd, base, local),
+      remoteOnly: await countMissingFrom(cwd, base, remote),
+    });
   }
   return plan;
 }
 
-function describeDeletion(plan, state, online) {
+function describeDeletion(plan, state, online, scope, remoteName) {
   const where = item => {
     if (item.local && item.remote) return tr('на компьютере и в GitHub', 'on this computer and in GitHub');
-    return item.local ? tr('только на компьютере', 'on this computer only') : tr('только в GitHub', 'in GitHub only');
+    return item.local ? tr('только на компьютере', 'on this computer only') : tr(`только в GitHub (${remoteName})`, `in GitHub only (${remoteName})`);
   };
+  const header = tr(
+    `Удалить ветки? (${state.repoName || path.basename(state.root || '')}, remote: ${remoteName}, область: ${scope})\n`,
+    `Delete branches? (${state.repoName || path.basename(state.root || '')}, remote: ${remoteName}, scope: ${scope})\n`
+  );
   const lines = plan.map(item => {
     const unmerged = Math.max(item.localOnly, item.remoteOnly);
     const backup = unmerged ? tr(`; ${unmerged} commit(ов) нет в ${state.defaultBranch} — они сохранятся в резервной копии`, `; ${unmerged} commit(s) not in ${state.defaultBranch} — kept in a backup`) : '';
     return `${item.branch} — ${where(item)}${backup}`;
   });
-  if (state.remote && !online) lines.push(tr('GitHub недоступен: удаление только на компьютере.', 'GitHub is unreachable: deleting on this computer only.'));
-  return tr('Удалить ветки?\n', 'Delete branches?\n') + lines.join('\n');
+  if (scope !== 'local' && state.remote && !online) {
+    lines.push(tr('GitHub недоступен: удаление только на компьютере.', 'GitHub is unreachable: deleting on this computer only.'));
+  }
+  return header + lines.join('\n');
 }
 
 async function findSafeSwitchTarget(cwd, branchesToDelete) {
@@ -195,25 +239,47 @@ async function backupUnmerged(cwd, item, stamp, backups) {
   }
 }
 
-// The GitHub delete is leased to the commit shown in the confirmation, so a
-// newer push by someone else is never removed.
+// Treats local + remote deletion as two independent operations and reports partial outcomes accurately.
+// The GitHub delete is leased to the commit shown in the confirmation, so a newer push by someone else is never removed.
 async function deleteOne(cwd, item, stamp, backups) {
   try {
     await backupUnmerged(cwd, item, stamp, backups);
   } catch {
-    return tr('резервная копия не создана', 'backup failed');
+    return { localDeleted: false, remoteDeleted: false, error: tr('резервная копия не создана', 'backup failed') };
   }
+  let localDeleted = false;
+  let remoteDeleted = false;
+  const problems = [];
+
   if (item.local) {
-    try { await runGit(['branch', '-D', '--', item.branch], cwd, VISIBLE); } catch (error) { return 'local: ' + error.message; }
+    try {
+      await runGit(['branch', '-D', '--', item.branch], cwd, VISIBLE);
+      localDeleted = true;
+    } catch (error) {
+      problems.push('local: ' + error.message);
+    }
   }
-  if (!item.remote) return '';
-  try {
-    await runGit(['push', `--force-with-lease=refs/heads/${item.branch}:${item.remote}`, 'origin', '--delete', '--', item.branch], cwd, VISIBLE);
-  } catch (error) {
-    if (!/remote ref does not exist/.test(error.message)) return 'GitHub: ' + error.message;
+  if (item.remote) {
+    try {
+      await runGit(['push', `--force-with-lease=refs/heads/${item.branch}:${item.remote}`, item.remoteName, '--delete', '--', item.branch], cwd, VISIBLE);
+      remoteDeleted = true;
+      await runGit(['branch', '-dr', `${item.remoteName}/${item.branch}`], cwd).catch(() => {});
+    } catch (error) {
+      if (/remote ref does not exist/.test(error.message)) {
+        remoteDeleted = true;
+        await runGit(['branch', '-dr', `${item.remoteName}/${item.branch}`], cwd).catch(() => {});
+      } else {
+        problems.push('GitHub: ' + error.message);
+      }
+    }
   }
-  await runGit(['branch', '-dr', `origin/${item.branch}`], cwd).catch(() => {});
-  return '';
+  if (problems.length && (localDeleted || remoteDeleted)) {
+    const partialPrefix = localDeleted
+      ? tr('локально удалена; ', 'local deleted; ')
+      : tr('удалена на сервере; ', 'remote deleted; ');
+    return { localDeleted, remoteDeleted, error: partialPrefix + problems.join('; ') };
+  }
+  return { localDeleted, remoteDeleted, error: problems.join('; ') };
 }
 
 function deletionReport(deleted, failed, backups, keptBranch) {
@@ -225,29 +291,35 @@ function deletionReport(deleted, failed, backups, keptBranch) {
   return { level: 'warn', text: done + tr('. Не удалось: ', '. Failed: ') + failed.map(item => `${item.name} (${item.error})`).join('; ') + notes };
 }
 
-// One confirmation deletes a branch on this computer and in GitHub. Commits
-// the default branch does not have are kept in refs/workstation-backup/ first.
+// Deletes branch(es) according to explicit scope ('local' | 'remote' | 'both').
+// Commits the default branch does not have are backed up in refs/workstation-backup/ first.
 async function deleteBranches(panel, request) {
   const cwd = panel.workspaceRoot();
+  const scope = typeof request?.scope === 'string' && request.scope.trim() ? request.scope.trim().toLowerCase() : 'both';
+  if (!ALLOWED_SCOPES.has(scope)) {
+    throw new PanelError(tr('Недопустимая область удаления (выбери local, remote или both).', 'Invalid deletion scope (choose local, remote, or both).'));
+  }
   const names = await validateDeleteNames(cwd, request.branches);
   const state = await loadReadyState(cwd);
+  const remoteName = typeof request?.remote === 'string' && request.remote.trim() ? request.remote.trim() : (state.upstreamRemote || 'origin');
   const forbidden = new Set(['main', 'master', state.defaultBranch]);
   const mainBranch = names.find(name => forbidden.has(name));
   if (mainBranch) throw new PanelError(tr(`Ветку "${mainBranch}" удалять нельзя: это основная ветка.`, `"${mainBranch}" is the main branch and cannot be deleted.`));
-  const deletingCurrent = names.includes(state.branch);
-  if (deletingCurrent) requireSavedEditors(panel, cwd);
+  const deletingCurrentLocal = scope !== 'remote' && names.includes(state.branch);
+  if (deletingCurrentLocal) requireSavedEditors(panel, cwd);
   panel.progress(tr('Подготовка удаления…', 'Preparing deletion…'));
-  const online = await tryFetch(cwd, state.remote);
-  const plan = await planDeletion(cwd, names, state, online);
-  if (!await panel.confirm(describeDeletion(plan, state, online), tr('Удалить', 'Delete'))) return;
-  const keptBranch = deletingCurrent ? await leaveBranch(cwd, state.branch, names) : '';
+  const online = scope === 'local' ? false : await tryFetch(cwd, state.remote, remoteName);
+  const plan = await planDeletion(panel, cwd, names, state, online, scope, remoteName);
+  if (!await panel.confirm(describeDeletion(plan, state, online, scope, remoteName), tr('Удалить', 'Delete'))) return;
+  const keptBranch = deletingCurrentLocal ? await leaveBranch(cwd, state.branch, names) : '';
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*$/, '');
   const backups = [], deleted = [], failed = [];
   for (const item of plan) {
-    const error = await deleteOne(cwd, item, stamp, backups);
-    if (error) failed.push({ name: item.branch, error }); else deleted.push(item.branch);
+    const outcome = await deleteOne(cwd, item, stamp, backups);
+    if (outcome.error) failed.push({ name: item.branch, error: outcome.error });
+    else deleted.push(item.branch);
   }
-  await tryFetch(cwd, state.remote);
+  if (scope !== 'local') await tryFetch(cwd, state.remote, remoteName);
   const report = deletionReport(deleted, failed, backups, keptBranch);
   panel.notice(report.level, report.text);
 }

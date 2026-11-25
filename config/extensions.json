@@ -1,13 +1,5 @@
 [
   {
-    "id": "anteprimorac.html-end-tag-labels",
-    "name": "HTML End Tag Labels",
-    "description": "Labels HTML end tags in VSCode",
-    "category": "Other",
-    "source": "gallery",
-    "trackLatest": true
-  },
-  {
     "id": "bradgashler.htmltagwrap",
     "name": "htmltagwrap",
     "description": "Wraps selected code with HTML tags",
@@ -128,6 +120,22 @@
     "trackLatest": true
   },
   {
+    "id": "Prisma.prisma",
+    "name": "Prisma",
+    "description": "Syntax highlighting, formatting, validation and jump-to-definition for Prisma schema files (.prisma) in Next.js and Node.js projects.",
+    "category": "Programming Languages",
+    "source": "gallery",
+    "trackLatest": true
+  },
+  {
+    "id": "redhat.vscode-yaml",
+    "name": "YAML",
+    "description": "YAML language support with JSON Schema validation for Docker Compose, GitHub Actions, OpenAPI and Node.js/Next.js config files.",
+    "category": "Programming Languages",
+    "source": "gallery",
+    "trackLatest": true
+  },
+  {
     "id": "usernamehw.errorlens",
     "name": "Error Lens",
     "description": "Improve highlighting of errors, warnings and other language diagnostics.",
@@ -170,7 +178,7 @@
   {
     "id": "workstation.calm-typescript",
     "name": "Calm TypeScript",
-    "version": "3.4.1",
+    "version": "3.5.0",
     "description": "Calm diagnostic presentation with visible but soft squiggles (errors ~70%, warnings ~55%), visible unused hints and Error Lens, a soft typing pulse and a short line highlight after Ctrl+S; validation stays enabled and Auto Save is left to the IDE.",
     "category": "Programming Languages",
     "source": "local-vsix"
@@ -178,24 +186,24 @@
   {
     "id": "workstation.git-branch-panel",
     "name": "Git Branch Panel",
-    "version": "1.8.2",
-    "description": "GitHub panel: create a repository and connect it to GitHub, commit selected files, push and pull the current branch as the repository owner under the GitHub noreply identity with every git command visible in the Git Bash terminal, get changes, and switch, create or delete branches; npm scripts view below it runs npm run dev and other package.json scripts in the terminal and links the dev server address",
+    "version": "1.9.0",
+    "description": "GitHub panel: repository and upstream tracking status, commit selected files with Tab diff-derived commit suggestions, push without force, explicit pull, Pull Requests with selectable head/base, safe local/remote/both branch deletion with permission, protection and worktree checks, and npm scripts runner.",
     "category": "Other",
     "source": "local-vsix"
   },
   {
     "id": "workstation.stability-helper",
     "name": "Workstation Stability",
-    "version": "1.3.31",
-    "description": "Applies and verifies managed settings in the active IDE profile and restores audited extension fixes.",
+    "version": "1.4.0",
+    "description": "Applies and verifies managed settings in the active IDE profile, restores audited extension fixes, and provides optional local AI API key SecretStorage and connection-test commands.",
     "category": "Other",
     "source": "local-vsix"
   },
   {
     "id": "workstation.aster-appearance",
     "name": "Aster Atelier",
-    "version": "1.8.1",
-    "description": "Eleven palettes in a dark and a light section with clearly coloured green comments, ten bundled programming fonts (nine with verified coding ligatures) and seven font styles; works offline.",
+    "version": "1.9.0",
+    "description": "Eleven palettes in a dark and a light section with clearly coloured green comments, ten bundled programming fonts (nine with verified coding ligatures) and seven font styles; works offline with bundled visual guide assets.",
     "category": "Other",
     "source": "local-vsix"
   }

@@ -1,8 +1,24 @@
 # Aster Atelier
 
+![Aster Atelier](icon.png)
+
 Eleven editor palettes after the most used themes. Ten bundled programming fonts and seven font styles. One studio for all of them, fully offline: every theme and font ships inside the extension.
 
-Open **Aster Atelier: Темы и шрифты** from the Command Palette (or the gear menu of this extension).
+## Как открыть Aster Atelier / Чӣ хел кушодан
+
+1. Нажмите **`Ctrl + Shift + P`** (**Клавишаҳоро пахш кунед**), чтобы открыть Command Palette.
+
+![Шаг 1: Ctrl+Shift+P — Command Palette](media/guide-step-1-shortcut.png)
+
+2. Введите **`Aster Atelier`** и выберите **`Aster Atelier: Темы и шрифты`**.
+
+![Шаг 2: Выберите Aster Atelier: Темы и шрифты](media/guide-step-2-command.png)
+
+3. Выберите тему, настройте яркость/контраст кода и выберите шрифт с лигатурами прямо в панели.
+
+![Шаг 3: Панель Aster Atelier — темы, яркость/контраст и шрифты](media/guide-step-3-studio.png)
+
+## Возможности студии
 
 - **Theme** — every theme is a card drawn in its own colours, in two sections, **Тёмные** and **Светлые**. Aster palettes and the IDE's own themes (Antigravity Light/Dark, Dark+, Light+, Solarized Dark; marked «IDE») stand together, each section ordered from the darkest editor background to the brightest. A click on a card (or Enter on the focused card) selects it at once and applies the theme; quick clicks write only the newest choice. Arrow keys move between cards without applying; the page keeps its scroll position. A theme chosen elsewhere gets its own card at its place.
 - **Code colours** — **Яркость цветов кода** and **Контраст кода** retune the code colours of an Aster palette. A code sample in the selected theme follows the sliders live; the editor changes with **Применить яркость и контраст**, and **Отмена** returns to the applied values.
@@ -20,7 +36,7 @@ All ten fonts ship inside the extension (SIL Open Font License, SHA-256 pinned) 
 
 **Light:** Catppuccin Latte · One Light · Light Owl · GitHub Light
 
-Each palette keeps the hues of the theme it follows — sources, licences and the colour rules are in [THEMES.md](THEMES.md). A palette removed in 1.8.0 (Night Owl, Panda, Gruvbox Dark, Cobalt2, SynthWave 84, Everforest Dark, Rose Pine Moon, Kanagawa Wave, Vitesse Dark, Solarized Light, Ayu Light) opens its closest kept palette of the same kind. Quiet Light is no longer offered.
+Each palette keeps the hues of the theme it follows — sources, licences and the colour rules are in [THEMES.md](THEMES.md).
 
 ## Fonts
 
@@ -37,4 +53,6 @@ Each palette keeps the hues of the theme it follows — sources, licences and th
 | Rec Mono Linear (Recursive for code) | all | no — Russian text uses a fallback font | 400, 700 |
 | Maple Mono | all | yes | 100–800 |
 
-**Styles:** Normal · Italic · Italic comments · Italic keywords · Italic comments and keywords · Bold keywords · Bold declarations (functions, methods, classes, interfaces, types). A style never changes the weight; operators such as `=>` `===` `&&` stay upright and regular. Weight presets saved by earlier versions (Light, Medium, Semibold, Bold, Bold Italic) become their weight and the plain or italic style at startup. Existing personal colours and token rules are retained.
+**Styles:** Normal · Italic · Italic comments · Italic keywords · Italic comments and keywords · Bold keywords · Bold declarations (functions, methods, classes, interfaces, types). A style never changes the weight; operators such as `=>` `===` `&&` stay upright and regular. Existing personal colours and token rules are retained.
+
+Часть профиля [Antigravity Workstation](https://github.com/m-safarov/antigravity-workstation#quick-start).

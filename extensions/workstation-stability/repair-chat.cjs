@@ -35,7 +35,7 @@ function redact(text, maximum = 16384) {
     .replace(/(https?:\/\/[^\s?#]+)\?[^\s]+/gi, '$1?[REDACTED]')
     .replace(/(\b(?:Bearer|Basic)\s+)[A-Za-z0-9_.~+/-]+=*/gi, '$1[REDACTED]')
     .replace(/((?<![\w-])["']?[\w-]*(?:token|secret|password|api[_-]?key|authorization)["']?\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;]+)/gi, '$1[REDACTED]')
-    .replace(/\b(?:gh[opusr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]{16,})\b/g, '[REDACTED]').slice(0, maximum);
+    .replace(/\b(?:AQ\.[A-Za-z0-9._-]{12,}|AIza[0-9A-Za-z_-]{20,}|gh[opusr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]{16,})\b/g, '[REDACTED]').slice(0, maximum);
 }
 function files(directory) {
   return { request: path.join(directory, 'request.json'), status: path.join(directory, 'status.json'), lock: path.join(directory, 'dispatch.lock') };

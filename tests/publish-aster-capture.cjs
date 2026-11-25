@@ -36,7 +36,7 @@ function verify(directory) {
 function publish(env = process.env) {
   const expected = env.ASTER_CAPTURE_EXPECTED_HEAD;
   if (env.GITHUB_ACTIONS !== 'true' || env.RUNNER_ENVIRONMENT !== 'github-hosted' || env.GITHUB_EVENT_NAME !== 'workflow_dispatch' ||
-    env.GITHUB_REPOSITORY !== 'safarovmurod/antigravity-workstation' || env.GITHUB_REF !== 'refs/heads/' + branch ||
+    env.GITHUB_REPOSITORY !== 'm-safarov/antigravity-workstation' || env.GITHUB_REF !== 'refs/heads/' + branch ||
     !/^[a-f0-9]{40}$/.test(expected || '') || expected !== env.GITHUB_SHA) throw new Error('Explicit hosted capture publication is required');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   if (git('rev-parse', 'HEAD') !== expected || git('status', '--porcelain')) throw new Error('Capture checkout must be exact and clean');

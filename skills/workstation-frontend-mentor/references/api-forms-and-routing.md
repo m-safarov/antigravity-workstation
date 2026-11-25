@@ -48,7 +48,7 @@ Layout + Outlet и Header/Footer один раз — default новой стра
 Detail `/items/:id` должен получать id из URL и работать после F5/direct URL; location.state может помогать UI, но не быть единственным источником данных. Проверить router версию и сервер SPA fallback, когда релевантно.
 Не считать любое Number(id) ошибкой: смотреть тип настоящего API id.
 При token error проверить Network/status/ответ и код refresh. Не заявлять истечение token без доказательства. Не просить прислать token. Refresh/route guards менять только по реальному контракту, проверять отсутствие бесконечного retry и поведение после неудачи.
-Frontend env VITE_* доступны browser; личный Gemini/OpenAI/Anthropic token и server secret там не хранить.
+Frontend env `VITE_*` и `NEXT_PUBLIC_*` доступны browser; личный Gemini/OpenAI/Anthropic token, `DATABASE_URL` и server secret там не хранить. В проектах Next.js App Router сохраняй границу Server/Client Components (`'use client'` только там, где нужны hooks, события или browser API), файлы `layout.tsx`/`page.tsx`/`loading.tsx`/`error.tsx`/`not-found.tsx` и серверную проверку в Route Handlers / Server Actions.
 
 ## Effect / render
 

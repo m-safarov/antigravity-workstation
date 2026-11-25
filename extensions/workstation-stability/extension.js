@@ -48,6 +48,7 @@ function activate(context) {
   const lockFile = path.join(context.globalStorageUri.fsPath, 'maintenance.lock');
   context.subscriptions.push(output);
   require('./questions.cjs').registerQuestions(vscode, context);
+  require('./ai-assistant.cjs').registerAiCommands(vscode, context, output);
   require('./gallery-updates.cjs').watchGalleryUpdates(vscode, context, output);
   require('./profile.cjs').watchEditorProfile(vscode, context, output);
   require('./inline-diff-guard.cjs').watchInlineDiffUndo(vscode, context, output);
@@ -96,8 +97,7 @@ function activate(context) {
   }
 
   function extensionsRoot() {
-    const extension = vscode.extensions.getExtension('anteprimorac.html-end-tag-labels') ||
-      vscode.extensions.getExtension('workstation.stability-helper');
+    const extension = vscode.extensions.getExtension('workstation.stability-helper');
     return path.dirname(extension ? extension.extensionPath : context.extensionPath);
   }
 

@@ -97,7 +97,7 @@ function showHelp() {
 Workstation Antigravity Setup CLI
 
 USAGE:
-  npx.cmd --yes github:safarovmurod/antigravity-workstation [command] [options]
+  npx.cmd --yes github:m-safarov/antigravity-workstation [command] [options]
   node bin/workstation-setup.js [command] [options]
   Windows only (PowerShell: use npx.cmd).
 
@@ -144,10 +144,10 @@ OPTIONS:
   --version, -v       Show package version
 
 EXAMPLES:
-  npx.cmd --yes github:safarovmurod/antigravity-workstation install --skip-permissions --name "Разработчик"
-  npx.cmd --yes github:safarovmurod/antigravity-workstation install --skip-permissions --dry-run
-  npx.cmd --yes github:safarovmurod/antigravity-workstation install --rules-only --dry-run
-  npx.cmd --yes github:safarovmurod/antigravity-workstation doctor
+  npx.cmd --yes github:m-safarov/antigravity-workstation install --skip-permissions --name "Разработчик"
+  npx.cmd --yes github:m-safarov/antigravity-workstation install --skip-permissions --dry-run
+  npx.cmd --yes github:m-safarov/antigravity-workstation install --rules-only --dry-run
+  npx.cmd --yes github:m-safarov/antigravity-workstation doctor
 `);
 }
 
@@ -266,21 +266,29 @@ function main() {
       break;
     }
     case 'doctor': {
-      const docRes = runDoctor(opts.extensionProfile ? { extensionProfile: opts.extensionProfile } : {});
+      const doctorOpts = opts.extensionProfile ? { extensionProfile: opts.extensionProfile } : {};
+      if (opts.json) doctorOpts.log = () => {};
+      const docRes = runDoctor(doctorOpts);
+      if (opts.json) console.log(JSON.stringify(docRes, null, 2));
       process.exitCode = docRes.ok ? 0 : 1;
       break;
     }
 
     case 'backup': {
       if (opts.dryRun) {
-        console.log(`[DRY-RUN] Would create a manual setup backup under ${envPaths.backupsDir}; no files written.`);
+        if (opts.json) console.log(JSON.stringify({ dryRun: true, backupsDir: envPaths.backupsDir }, null, 2));
+        else console.log(`[DRY-RUN] Would create a manual setup backup under ${envPaths.backupsDir}; no files written.`);
         process.exitCode = 0;
         return;
       }
-      console.log('Creating manual backup of Antigravity settings...');
+      if (!opts.json) console.log('Creating manual backup of Antigravity settings...');
       const bRes = createBackup(envPaths, 'manual');
-      console.log(`✓ Backup saved to: ${bRes.backupDir}`);
-      console.log(`  Files included: ${bRes.backedUp.join(', ')}`);
+      if (opts.json) {
+        console.log(JSON.stringify(bRes, null, 2));
+      } else {
+        console.log(`✓ Backup saved to: ${bRes.backupDir}`);
+        console.log(`  Files included: ${bRes.backedUp.join(', ')}`);
+      }
       process.exitCode = 0;
       break;
     }
@@ -329,12 +337,14 @@ function main() {
           rulesOnly: opts.rulesOnly,
           extensionProfile: opts.extensionProfile || 'full',
           home: opts.home,
-          log: opts.rulesOnly ? console.error : console.log,
+          quiet: opts.json,
+          log: opts.json ? () => {} : (opts.rulesOnly ? console.error : console.log),
         });
-        if (opts.rulesOnly) console.log(JSON.stringify(res, null, 2));
+        if (opts.rulesOnly || opts.json) console.log(JSON.stringify(res, null, 2));
         process.exitCode = res.success ? 0 : 1;
       } catch (err) {
-        console.error(`\nInstallation failed: ${err.message}`);
+        if (opts.json) console.log(JSON.stringify({ success: false, error: err.message }, null, 2));
+        else console.error(`\nInstallation failed: ${err.message}`);
         process.exitCode = 1;
       }
       break;

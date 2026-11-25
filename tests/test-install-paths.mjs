@@ -268,7 +268,7 @@ test('README has exactly two Windows PowerShell commands for IDE 2.8.0/2.7.0/2.6
   assert.match(commandOne, /-File \$file -CleanExtensions\n/);
   assert.match(commandTwo, /-File \$file\n/);
   for (const command of [commandOne, commandTwo]) {
-    assert.match(command, /'https:\/\/raw\.githubusercontent\.com\/safarovmurod\/antigravity-workstation\/main\/scripts\/bootstrap\.ps1'/);
+    assert.match(command, /'https:\/\/raw\.githubusercontent\.com\/m-safarov\/antigravity-workstation\/main\/scripts\/bootstrap\.ps1'/);
     assert.match(command, /powershell\.exe -NoProfile -ExecutionPolicy Bypass -File \$file/);
     assert.match(command, /finally \{ Remove-Item -LiteralPath \$file/);
     assert.doesNotMatch(command, /-(?:AutoApprove|QuietCompletion|RulesOnly)\b/i);
@@ -286,15 +286,15 @@ test('README has exactly two Windows PowerShell commands for IDE 2.8.0/2.7.0/2.6
 
 test('README step 0 sets the GitHub identity and both AI prompts are self-contained downloads', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
-  const zip = 'https://github.com/safarovmurod/antigravity-workstation/archive/refs/heads/main.zip';
+  const zip = 'https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip';
   assert.ok(readme.includes('git config --global user.name'), 'README documents git user.name');
   assert.match(readme, /git config --global user\.email/);
   assert.ok(readme.indexOf('## КОД 1 — чистая установка') < readme.indexOf('## КОД 2 — обновление'), 'CODE 1 comes before CODE 2 at the top of README');
   assert.ok(readme.includes(zip));
   for (const name of ['WINDOWS-AI-SETUP.md', 'MAC-AI-SETUP.md']) {
     const prompt = fs.readFileSync(path.join(repoRoot, 'docs/prompts', name), 'utf8');
-    assert.ok(readme.includes('https://raw.githubusercontent.com/safarovmurod/antigravity-workstation/main/docs/prompts/' + name), name + ' has a download link');
-    assert.ok(prompt.includes(zip) && prompt.includes('https://github.com/safarovmurod/antigravity-workstation'), name + ' names the ZIP and the repository');
+    assert.ok(readme.includes('https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/docs/prompts/' + name), name + ' has a download link');
+    assert.ok(prompt.includes(zip) && prompt.includes('https://github.com/m-safarov/antigravity-workstation'), name + ' names the ZIP and the repository');
     assert.match(prompt, /Не задавай вопросов посередине/);
     assert.match(prompt, /git config --global user\.name "Имя Фамилия"/);
     assert.match(prompt, /резервн/i);

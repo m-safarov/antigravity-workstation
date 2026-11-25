@@ -384,7 +384,7 @@ test('Extension success requires actual CLI registration; a success message alon
   const script = process.platform === 'win32' ? path.join(base, 'test-ide.js') : cli;
   const registered = path.join(base, 'registered');
   fs.writeFileSync(script, `#!${process.execPath}\nconst fs = require('node:fs');\nif (process.argv.includes('--list-extensions') && fs.existsSync(${JSON.stringify(registered)})) console.log('test.demo@1.0.0');\nelse if (process.argv.includes('--install-extension')) console.log('successfully installed');\n`);
-  if (process.platform === 'win32') fs.writeFileSync(cli, `@"${process.execPath}" "${script}" %*\r\n`);
+  if (process.platform === 'win32') fs.writeFileSync(cli, `@chcp 65001>nul\r\n@"${process.execPath}" "${script}" %*\r\n`);
   else fs.chmodSync(cli, 0o755);
   assert.equal(installExtension(cli, 'test.demo', { log: () => {} }).success, false);
   fs.writeFileSync(registered, 'registered');
@@ -408,7 +408,7 @@ console.log(response.output);
 if (response.error) console.error(response.error);
 process.exit(response.status);
 `);
-  if (process.platform === 'win32') fs.writeFileSync(cli, `@"${process.execPath}" "${script}" %*\r\n`);
+  if (process.platform === 'win32') fs.writeFileSync(cli, `@chcp 65001>nul\r\n@"${process.execPath}" "${script}" %*\r\n`);
   else fs.chmodSync(cli, 0o755);
   return { cli, base, attempts: () => Number(fs.readFileSync(counter, 'utf8')) };
 }

@@ -8,13 +8,6 @@ const vm = require('node:vm');
 
 const TARGETS = [
   {
-    id: 'anteprimorac.html-end-tag-labels',
-    version: '1.0.0',
-    file: 'out/closing-labels-decorations.js',
-    originalHash: '4f535d1eb0155885b9d8d342068835a18d87763dbbcb7b56875f19cda0fc3331',
-    patchedHash: '5ae6874171381ea28c606587801f380a03cbf3eb9377e82337de18bc40abe652',
-  },
-  {
     id: 'christian-kohler.path-intellisense',
     version: '2.10.0',
     file: 'out/providers/javascript/javascript.provider.js',
@@ -41,16 +34,7 @@ function replaceOnce(source, before, after) {
 }
 
 function patchSource(target, source) {
-  if (target.id === 'anteprimorac.html-end-tag-labels') {
-    source = replaceOnce(source, '        const ast = babelParser.parse(input.getText(), {',
-      '        let ast;\n        try {\n            ast = babelParser.parse(input.getText(), {');
-    source = replaceOnce(source, '            plugins,\n        });',
-      '            plugins,\n            });\n        }\n        catch (error) {\n            if (error instanceof SyntaxError) {\n                return [];\n            }\n            throw error;\n        }');
-    source = replaceOnce(source, '    update() {\n        if (!this.activeEditor) {',
-      '    update() {\n        if (!this.activeEditor || this.activeEditor.document.isClosed) {');
-    source = replaceOnce(source, '    dispose() {\n        this.activeEditor = undefined;',
-      '    dispose() {\n        if (this.updateTimeout) {\n            clearTimeout(this.updateTimeout);\n            this.updateTimeout = undefined;\n        }\n        this.activeEditor = undefined;');
-  } else if (target.id === 'christian-kohler.path-intellisense') {
+  if (target.id === 'christian-kohler.path-intellisense') {
     source = replaceOnce(source,
       'const childrenOfPath = yield file_utills_1.getChildrenOfPath(path, config.showHiddenFiles, config.filesExclude);',
       'const childrenOfPath = yield file_utills_1.getChildrenOfPath(/[\\\\/]$/.test(context.fromString) ? path : require("path").dirname(path), config.showHiddenFiles, config.filesExclude);');

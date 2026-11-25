@@ -158,6 +158,12 @@ async function main(ideRoot, executable, directory, output) {
   const calmFiles = new Map(['package.json', 'README.md', 'icon.png'].map(file => [file, fs.readFileSync(path.join(calmRoot, file))]));
   calmFiles.set('dist/extension.cjs', fs.readFileSync(path.join(calmRoot, 'extension.cjs')));
   calmFiles.set('LICENSE.txt', fs.readFileSync(path.join(repo, 'LICENSE')));
+  const calmMedia = path.join(calmRoot, 'media');
+  if (fs.existsSync(calmMedia)) {
+    for (const file of fs.readdirSync(calmMedia).filter(name => /^diagnostics-(?:before|after)\.png$/.test(name)).sort()) {
+      calmFiles.set('media/' + file, fs.readFileSync(path.join(calmMedia, file)));
+    }
+  }
   const builds = [[require(path.join(repo, 'scripts/package-calm-typescript.cjs')).buildCalmTypeScript(), calmFiles, read(path.join(calmRoot, 'package.json'))],
     [require(path.join(repo, 'scripts/package-stability.cjs')).buildVsix(), require(path.join(repo, 'scripts/package-stability.cjs')).payload(), read(path.join(repo, 'extensions/workstation-stability/package.json'))]];
   const hash = bytes => require('node:crypto').createHash('sha256').update(bytes).digest('hex');

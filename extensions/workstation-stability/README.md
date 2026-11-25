@@ -1,57 +1,35 @@
 # Workstation Stability
 
-Обычный Setup 3.0.28 сохраняет personal settings и shortcuts. Helper 1.3.18 не перезаписывает уже существующие значения в preservation request, включая правки после планирования установки. Vendor AI completion switches меняются только для явно выбранного quiet mode. Широкие agent permissions, Secure Mode и sandbox требуют отдельного `--auto-approve`/`automation`; установка расширения сама по себе их не меняет.
+![Workstation Stability](icon.png)
 
-## React snippets и чистый редактор
+Служебное расширение профиля [Antigravity Workstation](https://github.com/m-safarov/antigravity-workstation#quick-start): применяет управляемый профиль редактора с сохранением личных настроек, защищает Undo/Redo в Antigravity 2.7.0/2.8.0, управляет безопасным обновлением gallery-расширений и предоставляет опциональную локальную ИИ-помощь с хранением ключа в IDE `SecretStorage`.
 
-В Setup отключён `reactSnippets.settings.importReactOnTop`: новые `rfc/rafce` не добавляют неиспользуемый React import. Для legacy React Snippets 4.4.3 helper запрашивает штатную регенерацию cache через configuration API, не патчит vendor-файлы и восстанавливает временное назначение unchanged default. После первого обновления сохрани работу и выполни **Developer: Reload Window**; helper показывает `Workstation: Reload`, но сам не закрывает несохранённые окна. Неизвестные версии и workspace overrides не переписываются. Подписи class/id у closing tag видны мягким серым label color (`#8b949e99`); Tailwind autocomplete и парное выделение тегов сохранены.
+## Опциональная локальная ИИ-помощь (1.4.0)
 
-## Оптимизация скорости (1.3.31)
+Все базовые функции установки, редактора и Git работают полностью без ИИ (`workstationStability.ai.enabled: false` по умолчанию).
 
-- `profile.cjs` фильтрует события `onDidChangeConfiguration` только по управляемым ключам, кеширует разбор профиля по содержимому файла и один раз индексирует расширения за проверку.
-- `workbench-ui.cjs` пропускает запросы, когда окно не в фокусе, использует адаптивный интервал в простое (1 с → 10 с) и мгновенно реагирует на фокус/видимость.
-- `jelly-patch.cjs` кеширует DOM-узлы каретки, пропускает повторные записи одинакового `opacity` и ставит `requestAnimationFrame` на паузу, когда окно скрыто.
-- `repair-chat.cjs` не держит постоянный фоновый опрос диска в простое и включает таймер только при наличии незавершённой задачи ремонта.
+Если вы хотите включить ИИ-помощь (восстановление после ошибок установки по строгому allowlist и подсказки сообщений commit в Git Branch Panel):
 
-## Ускорение профиля и защита Undo (1.3.30)
+1. Нажмите **`Ctrl + Shift + P`** → **`Workstation: Configure AI API Key`**.
+2. Вставьте личный ключ в скрытое (masked) поле — он сохраняется **только** в `SecretStorage` IDE (поддерживаются замена, очистка и безопасная отмена `Esc` с сохранением текущего ключа; пример-плейсхолдер из README автоматически считается пустым).
+3. Настройте провайдер, endpoint и модель отдельно в Settings (`workstationStability.ai.provider`, `workstationStability.ai.endpoint`, `workstationStability.ai.model`, `workstationStability.ai.enabled`).
+4. Проверьте подключение: **`Ctrl + Shift + P`** → **`Workstation: Test AI Connection`** — команда делает минимальный аутентифицированный запрос и показывает короткий redacted-результат (отсутствующий ключ, отклонённый ключ, недоступная модель или сбой сети).
 
-- `profile.cjs` индексирует языковые настройки один раз за проверку, не перезапускает полный обход 150 языков при каждом переключении вкладок в проекте и не вызывает предупреждения о window-scoped настройках (`editor.tokenColorCustomizations` и др.), убирая ~2-секундные паузы Extension Host.
-- `inline-diff-guard.cjs` вместе с резервными привязками `ctrl+z`/`ctrl+y`/`ctrl+shift+z` автоматически сбрасывает зависшие контексты `antigravity.inlineDiffCanUndo`/`CanRedo`, если `antigravity.inlineDiff.undo` не зарегистрирована (например после переключения на Side-by-Side в Antigravity 2.7.0/2.8.0).
+Процессы терминала вне IDE не имеют доступа к `SecretStorage` расширения и используют детерминированное восстановление без записи ключей на диск.
 
-## Значения по умолчанию после применения (1.3.29)
+## Чистый редактор и производительность (1.4.0)
 
-Если профиль этого запроса уже применён, а managed-настройка снова стоит на значении по умолчанию (например, settings.json очищен), helper один раз за запрос возвращает managed-значение. Явное значение пользователя остаётся и показывается как конфликт; тема, шрифты и личные настройки сохраняются как раньше. Индикатор `Workstation: N` считает managed-настройки, чьё действующее значение отличается от профиля (на уровне пользователя, языка или проекта); клик открывает отчёт с файлом и scope.
+- Расширение `anteprimorac.html-end-tag-labels` выведено из состава профиля (убраны серые подписи Tailwind-классов вроде `/.flex.items-center...` после закрывающих JSX/TSX тегов); при этом полностью сохранены Tailwind CSS IntelliSense, Highlight Matching Tag и встроенный `editor.linkedEditing`.
+- `reactSnippets.settings.importReactOnTop` выключен; новые `rfc/rafce` не добавляют лишний `import React`.
+- `inline-diff-guard.cjs` защищает `Ctrl+Z` / `Ctrl+Y` / `Ctrl+Shift+Z` при баге `antigravity.inlineDiff.undo` в Antigravity 2.7.0/2.8.0.
+- `profile.cjs`, `workbench-ui.cjs`, `jelly-patch.cjs` и `repair-chat.cjs` оптимизированы без холостого опроса диска и лишних проходов по языкам.
 
-## Вопросы задачи с галочками
+## Другие команды
 
-Command Palette → **Workstation: Вопросы задачи (галочки и свой вариант)**. Вставь JSON вопросов, который подготовил чат:
+- **`Workstation: Apply and Check Editor Settings`** — проверить и применить управляемые настройки (тема, шрифты и личные значения сохраняются; принудительный сброс требует явного подтверждения).
+- **`Workstation: Inspect Project Setting Conflicts (Read Only)`** — посмотреть, где настройки проекта отличаются от профиля.
+- **`Workstation: Check Antigravity Stability`** / **`Restore Known Extension Fixes`** — диагностика и восстановление известных исправлений расширений.
+- **`Workstation: Reconnect MCP (Reload Window)`** — переподключение MCP-серверов.
+- **`Workstation: Вопросы задачи (галочки и свой вариант)`** — удобный выбор ответов на вопросы из чата с копированием в буфер обмена.
 
-```json
-[{"title":"Как исправить код?","options":["Сохранить мою логику","Middle","Architect"]}]
-```
-
-Для каждого вопроса выбери галочки и при необходимости свой ответ. После подтверждения ответы копируются в clipboard: вставь и отправь их в текущий Gemini-чат. Отмена не копирует частичные ответы. Это реальный выбор в UI IDE, а не встроенная форма внутри сообщения Gemini; автоматической отправки в чат нет.
-
-![Workstation Stability](https://raw.githubusercontent.com/safarovmurod/antigravity-workstation/main/extensions/workstation-stability/icon.png)
-
-Применяет профиль редактора, проверяет конфликтующие настройки проекта и состояние отложенной установки. Обычные подсказки TypeScript остаются доступны, AI-подсказки выключены. Неподдерживаемые внутренние исправления сторонних расширений не применяет.
-
-Восстановление без указанного пути выбирает последний пригодный backup; перед реальным восстановлением сохрани работу и закрой IDE.
-
-## Обновления gallery без нового commit
-
-В 1.3.11 полный Setup сохраняет проверяемый план собственного gallery updater. Через минуту после старта IDE он проверяет metadata, затем проверяет не чаще раза в сутки. Сбой не считается успешной проверкой; повтор допускается через час. Обновляются только уже установленные обязательные gallery ID выбранного setup-профиля, только на latest stable compatible с реальным текущим IDE/OS/architecture. Удалённые пользователем extensions не переустанавливаются. Совпадающий полный package повторно не скачивается. Lock общий с установщиком; при полном setup updater ждёт.
-
-Это отдельный механизм Workstation, а не включение native per-extension Auto Update: VSIX может оставаться `pinned:true`. Чужие pins не меняются. `workstationStability.autoUpdateManagedExtensions=false` отключает этот механизм; `workstationStability.autoUpdateExcludedExtensions` исключает перечисленные managed ID. Состояние и версия записываются в `~/.gemini/config/workstation-setup/gallery-update-status.json` и Output. Исходный snapshot и Node должны оставаться доступны; bootstrap сохраняет используемый snapshot. После ручного изменения проверяемого source запусти Setup снова.
-
-Локальные Git Branch Panel / Stability / Calm VSIX не имеют Marketplace auto-update: они обновляются повторным полным Setup по README из текущего main с freshness guard. Фоновый gallery updater их не обновляет. Реальный native old-version → update → restart сценарий находится в Windows smoke; наличие сценария само по себе не означает PASS.
-
-Состояние: **View → Output → Workstation Antigravity Stability**. Подробности конфликта показывают файл настройки.
-
-Обычный старт, смена проекта и повторный Setup сохраняют выбранную тему. Команда **Workstation: Apply and Check Editor Settings** — принудительное восстановление managed defaults, включая тему; перед изменением появляется явное подтверждение. Cancel ничего не сбрасывает. Личные tokenColorCustomizations/textMateRules сохраняются и при подтверждённом reset.
-
-Расширение устанавливается вместе с [Antigravity Workstation](../../README.md).
-
-The managed formatting and suggestion shortcuts are also contributed as extension defaults in every profile where this helper is enabled. Named profiles do not need a copy of the default user keybindings file; personal user shortcuts keep their normal priority.
-
-Setup 3.0.9 can queue recovery of a failed full installation. This helper sends one task to the current native Antigravity 2.5.5 chat with its current model after installer/cache locks release. It does not change model or account settings. Sending is not a verified repair: the task must run the original Doctor verification command. A crash/timeout is not retried automatically; the explicit Retry Setup Repair Task command is available after checking the chat.
+Логи: **View → Output → Workstation Antigravity Stability**.

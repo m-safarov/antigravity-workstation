@@ -4,9 +4,15 @@ const vscode = acquireVsCodeApi();
 // The extension refreshes the panel on every file and .git change; this slow
 // check only covers changes the editor's file watcher does not report.
 const REFRESH_INTERVAL_MS = 20000;
+const SUGGEST_DEBOUNCE_MS = 450;
 let state = null;
 let busy = false;
 let renderedFilesKey = '';
+let activeSuggestion = '';
+let activeSuggestionSource = 'none';
+let suggestRequestId = 0;
+let suggestTimer = null;
+let lastSuggestionContextKey = '';
 
 function byId(id) {
   return document.getElementById(id);
@@ -43,6 +49,89 @@ function setBlockOpen(id, open) {
   byId('block-' + id).querySelector('.chevron').textContent = open ? '▼' : '▶';
 }
 
+// Commit message suggestion (debounced, Tab-accepted only when empty, never auto-commits)
+
+function clearCommitSuggestion() {
+  activeSuggestion = '';
+  activeSuggestionSource = 'none';
+  const bar = byId('commitSuggestionBar');
+  if (bar) bar.hidden = true;
+}
+
+function renderCommitSuggestion() {
+  const bar = byId('commitSuggestionBar');
+  const box = byId('commitMessage');
+  if (!bar || !box) return;
+  const hasManual = Boolean(box.value && box.value.trim().length > 0);
+  if (!activeSuggestion || hasManual || !checkedFiles().length) {
+    bar.hidden = true;
+    return;
+  }
+  bar.hidden = false;
+  const textEl = byId('commitSuggestionText');
+  const badgeEl = byId('commitSuggestionBadge');
+  if (textEl) textEl.textContent = activeSuggestion;
+  if (badgeEl) badgeEl.textContent = activeSuggestionSource === 'ai' ? UI.suggestAi : UI.suggestLocal;
+}
+
+function scheduleCommitSuggestion() {
+  if (typeof clearTimeout === 'function' && suggestTimer) {
+    clearTimeout(suggestTimer);
+    suggestTimer = null;
+  }
+  const box = byId('commitMessage');
+  const files = checkedFiles();
+  if (!state || state.error || !files.length || (box && box.value.trim().length > 0)) {
+    lastSuggestionContextKey = '';
+    clearCommitSuggestion();
+    return;
+  }
+  const contextKey = JSON.stringify([state.root, state.branch, files, renderedFilesKey]);
+  if (contextKey === lastSuggestionContextKey && activeSuggestion) {
+    renderCommitSuggestion();
+    return;
+  }
+  lastSuggestionContextKey = contextKey;
+  clearCommitSuggestion();
+  const reqId = ++suggestRequestId;
+  const dispatch = () => {
+    suggestTimer = null;
+    if (reqId !== suggestRequestId) return;
+    if (box && box.value.trim().length > 0) return;
+    vscode.postMessage({ command: 'suggestCommit', files, requestId: reqId });
+  };
+  if (typeof setTimeout === 'function') suggestTimer = setTimeout(dispatch, SUGGEST_DEBOUNCE_MS);
+  else dispatch();
+}
+
+function handleCommitSuggestionResponse(message) {
+  if (!message || message.requestId !== suggestRequestId) return;
+  const box = byId('commitMessage');
+  if (box && box.value.trim().length > 0) {
+    clearCommitSuggestion();
+    return;
+  }
+  activeSuggestion = typeof message.suggestion === 'string' ? message.suggestion.trim() : '';
+  activeSuggestionSource = message.source || 'local';
+  renderCommitSuggestion();
+}
+
+function handleCommitKeydown(event) {
+  if (event.ctrlKey && event.key === 'Enter' && !byId('commitButton').disabled) {
+    commit();
+    return;
+  }
+  if (event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+    const box = byId('commitMessage');
+    if (activeSuggestion && box && box.value.trim().length === 0) {
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      box.value = activeSuggestion;
+      clearCommitSuggestion();
+      renderControls();
+    }
+  }
+}
+
 // Files
 
 function fileInputs() {
@@ -65,7 +154,10 @@ function fileRow(item, previous) {
   input.checked = !item.secret && (previous.has(item.file) ? previous.get(item.file) : true);
   input.dataset.file = item.file;
   input.dataset.secret = String(item.secret);
-  input.addEventListener('change', renderControls);
+  input.addEventListener('change', () => {
+    renderControls();
+    scheduleCommitSuggestion();
+  });
   const name = (item.originalFile ? item.originalFile + ' → ' : '') + item.file + (item.secret ? ' 🔒' : '');
   row.append(input, span('file-status', item.status), span('file-name', name));
   return row;
@@ -94,9 +186,23 @@ function updateSelectAll() {
 function selectAllFiles(checked) {
   selectableFiles().forEach(input => { input.checked = checked; });
   renderControls();
+  scheduleCommitSuggestion();
 }
 
-// Push
+// Repository / Push / Pull
+
+function updateRepoSummary(current) {
+  const summary = byId('repoSummary');
+  if (!summary) return;
+  if (!current || !current.isRepo || current.error) {
+    summary.hidden = true;
+    return;
+  }
+  const repoLabel = current.repoName || current.root || '';
+  const upstreamLabel = current.upstream ? current.upstream : UI.noUpstream;
+  summary.hidden = false;
+  summary.textContent = repoLabel + ' · ' + current.branch + ' (' + upstreamLabel + ') · ↓' + (current.behind || 0) + ' ↑' + (current.ahead || 0);
+}
 
 function canPush(current) {
   const hasSomethingToPush = current.ahead > 0 || !current.remoteBranchExists;
@@ -104,20 +210,28 @@ function canPush(current) {
   return Boolean(current.remote) && current.hasCommits && hasSomethingToPush && current.behind === 0 && !current.mergeInProgress;
 }
 
-// Pull merges the same branch from GitHub, so the branch must be there.
+// Pull merges the tracking branch (configured upstream or origin/<branch>).
 function canPull(current) {
   return Boolean(current.remote) && current.remoteBranchExists && !current.mergeInProgress;
 }
 
 function updatePush(current) {
   const connected = Boolean(current.remote);
+  const targetRef = current.upstream || ('origin/' + current.branch);
   let summary = UI.noRemote;
   if (connected) {
-    summary = current.branch + ' → origin/' + current.branch;
+    summary = 'Push: ' + current.branch + ' → ' + targetRef;
     if (current.ahead > 0) summary += ' · ' + UI.toPush + ': ' + current.ahead;
     else if (!current.remoteBranchExists) summary += ' · ' + UI.notOnGitHub;
   }
   byId('pushSummary').textContent = summary;
+  const dirEl = byId('syncDirectionSummary');
+  if (dirEl) {
+    dirEl.hidden = !connected;
+    dirEl.textContent = connected
+      ? 'Pull: ' + targetRef + ' → ' + current.branch + (current.behind > 0 ? ' · ' + UI.incoming + ': ' + current.behind : '')
+      : '';
+  }
   byId('syncRow').hidden = !connected;
   byId('connectButton').hidden = connected;
   byId('pushButton').textContent = current.ahead > 0 ? UI.push + ' (' + current.ahead + ')' : UI.push;
@@ -126,13 +240,29 @@ function updatePush(current) {
   byId('behindText').textContent = UI.behind + ': ' + current.behind;
 }
 
-// Branches
+function updatePullSummary(current) {
+  const el = byId('pullSummary');
+  if (!el || !current) return;
+  const source = byId('pullSource').value;
+  const remoteName = current.upstreamRemote || 'origin';
+  el.textContent = source ? (remoteName + '/' + source + ' → ' + current.branch) : '—';
+}
 
-function fillBranchSelect(id, branches, fallback, keepPrevious) {
+// Branches & Pull Requests
+
+function fillBranchSelect(id, branches, fallback, keepPrevious, emptyOptionLabel) {
   const select = byId(id);
+  if (!select) return;
   const previous = select.value;
   const selected = keepPrevious && branches.some(branch => branch.name === previous) ? previous : fallback;
   select.innerHTML = '';
+  if (emptyOptionLabel) {
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = emptyOptionLabel;
+    emptyOpt.selected = !selected;
+    select.appendChild(emptyOpt);
+  }
   for (const branch of branches) {
     const option = document.createElement('option');
     option.value = branch.name;
@@ -144,10 +274,27 @@ function fillBranchSelect(id, branches, fallback, keepPrevious) {
 
 function updateBranchLists(current) {
   const remote = current.branches.filter(branch => branch.isRemote);
-  const pullFallback = remote.some(branch => branch.name === current.branch) ? current.branch : current.defaultBranch;
+  const upstreamBranch = current.upstreamBranch && remote.some(branch => branch.name === current.upstreamBranch) ? current.upstreamBranch : '';
+  const pullFallback = upstreamBranch || (remote.some(branch => branch.name === current.branch) ? current.branch : current.defaultBranch);
   fillBranchSelect('branchSelect', current.branches, current.branch, false);
   fillBranchSelect('newBranchBase', current.branches, current.branch, true);
   fillBranchSelect('pullSource', remote, pullFallback, true);
+  updatePullSummary(current);
+  // PR selectors: explicit choices; never silently force main when user chose another base.
+  fillBranchSelect('prHead', remote, remote.some(b => b.name === current.branch) ? current.branch : '', true, UI.prSelectBranch);
+  const prBaseDefault = remote.some(b => b.name === current.defaultBranch && b.name !== current.branch) ? current.defaultBranch : '';
+  fillBranchSelect('prBase', remote, prBaseDefault, true, UI.prSelectBranch);
+}
+
+function showPrResult(pr) {
+  const box = byId('prResult');
+  if (!box) return;
+  if (!pr || !pr.url) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  box.textContent = '#' + pr.number + ' (' + pr.head + ' → ' + pr.base + '): ' + pr.url;
 }
 
 function deleteSelection() {
@@ -168,7 +315,8 @@ function updateDeleteList(branches, current) {
     input.dataset.branch = branch.name;
     input.checked = previous.has(branch.name);
     input.addEventListener('change', renderControls);
-    row.append(input, span('', branch.name === current ? branch.name + ' (' + UI.active + ')' : branch.name));
+    const scopeHint = branch.isLocal && branch.isRemote ? '' : (branch.isLocal ? ' [local]' : ' [remote]');
+    row.append(input, span('', (branch.name === current ? branch.name + ' (' + UI.active + ')' : branch.name) + scopeHint));
     list.appendChild(row);
   }
 }
@@ -236,17 +384,29 @@ function showAuthor(author) {
 }
 
 function applyState(next) {
+  const prevRoot = state ? state.root : null;
+  const prevBranch = state ? state.branch : null;
   state = next;
   busy = Boolean(next.busy);
   updateRepoProblem(next);
+  updateRepoSummary(next);
   byId('blocks').hidden = Boolean(next.error);
-  if (next.error) byId('authorLine').hidden = true;
+  if (next.error) {
+    byId('authorLine').hidden = true;
+    clearCommitSuggestion();
+  }
   if (!next.error) {
+    if (prevRoot !== next.root || prevBranch !== next.branch) {
+      lastSuggestionContextKey = '';
+      clearCommitSuggestion();
+      showPrResult(null);
+    }
     updateChangedFiles(next.changedFiles);
     updatePush(next);
     updateBranchLists(next);
     updateConflicts(next);
     updateDeleteList(next.branches, next.branch);
+    scheduleCommitSuggestion();
   }
   renderControls();
 }
@@ -262,6 +422,11 @@ function renderControls() {
   byId('syncButton').disabled = !canPull(state);
   byId('pullButton').disabled = !byId('pullSource').value;
   byId('newBranchButton').disabled = !byId('newBranchName').value.trim();
+  const prHead = byId('prHead')?.value || '';
+  const prBase = byId('prBase')?.value || '';
+  const prTitle = byId('prTitle')?.value?.trim() || '';
+  const prBtn = byId('createPrButton');
+  if (prBtn) prBtn.disabled = !state.isGitHub || !prHead || !prBase || prHead === prBase || !prTitle;
   byId('deleteButton').disabled = deleteSelection().length === 0;
   byId('deleteButton').textContent = UI.deleteButton + (deleteSelection().length ? ' (' + deleteSelection().length + ')' : '');
 }
@@ -278,7 +443,7 @@ function showNotice(message) {
   action.hidden = !message.action;
   action.textContent = message.action ? UI[message.action] : '';
   action.dataset.command = message.action || '';
-  if (message.clear) byId(message.clear).value = '';
+  if (message.clear && byId(message.clear)) byId(message.clear).value = '';
 }
 
 // Events
@@ -308,11 +473,25 @@ function createBranch() {
   runAction('newBranch', { name: byId('newBranchName').value.trim(), baseBranch: byId('newBranchBase').value });
 }
 
+function createPr() {
+  runAction('createPullRequest', {
+    head: byId('prHead').value,
+    base: byId('prBase').value,
+    title: byId('prTitle').value.trim(),
+    body: byId('prBody').value.trim(),
+    draft: Boolean(byId('prDraft').checked),
+  });
+}
+
 function wireControls() {
   document.addEventListener('click', onClick);
   byId('selectAll').addEventListener('change', event => selectAllFiles(event.target.checked));
-  byId('commitMessage').addEventListener('input', renderControls);
-  byId('commitMessage').addEventListener('keydown', event => { if (event.ctrlKey && event.key === 'Enter' && !byId('commitButton').disabled) commit(); });
+  byId('commitMessage').addEventListener('input', () => {
+    renderCommitSuggestion();
+    renderControls();
+    if (!byId('commitMessage').value.trim()) scheduleCommitSuggestion();
+  });
+  byId('commitMessage').addEventListener('keydown', handleCommitKeydown);
   byId('commitButton').addEventListener('click', commit);
   byId('pushButton').addEventListener('click', () => runAction('push'));
   byId('branchSelect').addEventListener('change', event => {
@@ -321,9 +500,17 @@ function wireControls() {
   byId('newBranchName').addEventListener('input', renderControls);
   byId('newBranchName').addEventListener('keydown', event => { if (event.key === 'Enter') createBranch(); });
   byId('newBranchButton').addEventListener('click', createBranch);
+  byId('pullSource').addEventListener('change', () => updatePullSummary(state));
   byId('pullButton').addEventListener('click', () => runAction('pullBranch', { sourceBranch: byId('pullSource').value }));
   byId('resolveButton').addEventListener('click', () => runAction('resolveConflicts', { resolutions: conflictChoices() }));
-  byId('deleteButton').addEventListener('click', () => runAction('deleteBranches', { branches: deleteSelection() }));
+  byId('prHead').addEventListener('change', renderControls);
+  byId('prBase').addEventListener('change', renderControls);
+  byId('prTitle').addEventListener('input', renderControls);
+  byId('createPrButton').addEventListener('click', createPr);
+  byId('deleteButton').addEventListener('click', () => runAction('deleteBranches', {
+    branches: deleteSelection(),
+    scope: byId('deleteScope')?.value || 'both',
+  }));
 }
 
 window.addEventListener('message', event => {
@@ -331,6 +518,8 @@ window.addEventListener('message', event => {
   if (message && message.type === 'state') applyState(message.state);
   if (message && message.type === 'notice') showNotice(message);
   if (message && message.type === 'author') showAuthor(message.author);
+  if (message && message.type === 'commitSuggestion') handleCommitSuggestionResponse(message);
+  if (message && message.type === 'prResult') showPrResult(message.pr);
 });
 
 wireControls();

@@ -9,11 +9,16 @@ const checks = [];
 const processes = [];
 const executed = [];
 let warningCount = 0;
-const known = { mode: 'repair', changed: false, reviewRequired: false, targets: [{ id: 'anteprimorac.html-end-tag-labels', status: 'protected' }] };
+const known = { mode: 'repair', changed: false, reviewRequired: false, targets: [{ id: 'christian-kohler.path-intellisense', status: 'protected' }] };
 const notices = {};
 function load(tabs = []) {
   const registered = new Map();
-  const context = { extensionPath, globalStorageUri: { fsPath: storage }, subscriptions: [], globalState: {
+  const secretStore = new Map();
+  const context = { extensionPath, globalStorageUri: { fsPath: storage }, subscriptions: [], secrets: {
+    async get(key) { return secretStore.get(key); },
+    async store(key, value) { secretStore.set(key, value); },
+    async delete(key) { secretStore.delete(key); },
+  }, globalState: {
     get(key, fallback) { return notices[key] ?? fallback; },
     async update(key, value) { notices[key] = value; },
   } };
@@ -46,6 +51,7 @@ function load(tabs = []) {
       if (name === './profile.cjs') return { watchEditorProfile(_vscode, ctx) { ctx.subscriptions.push(vscode.commands.registerCommand('workstationStability.applySettings', async () => ({}))); } };
       if (name === './repair-chat.cjs') return require(path.join(extensionPath, 'repair-chat.cjs'));
       if (name === './questions.cjs') return require(path.join(extensionPath, 'questions.cjs'));
+      if (name === './ai-assistant.cjs') return require(path.join(extensionPath, 'ai-assistant.cjs'));
       if (name === './gallery-updates.cjs') return { watchGalleryUpdates() {} };
       if (name === './inline-diff-guard.cjs') return { watchInlineDiffUndo() {} };
       if (name === './jelly-patch.cjs') return { scheduleJellyPatch() {} };
@@ -68,7 +74,7 @@ async function finish(child, result) {
 (async () => {
   const first = load();
   const second = load();
-  assert.equal(first.registered.size, 6); pass('Six global commands registered');
+  assert.equal(first.registered.size, 9); pass('Nine global commands registered (including AI key/test/generate)');
   const repair = first.registered.get('workstationStability.repair')();
   assert.equal(processes.length, 1);
   assert.ok(fs.existsSync(path.join(storage, 'maintenance.lock'))); pass('Repair holds an exclusive global lock');
@@ -94,7 +100,7 @@ async function finish(child, result) {
   assert.equal(executed[0].closeLabels.length,1);
   pass('Recovery preserves dirty tabs and unrelated project tabs');
   recovery.dispose();
-  const unknown = { mode: 'status', changed: false, reviewRequired: true, targets: [{ id: 'anteprimorac.html-end-tag-labels', status: 'needs_review', version: '9.0.0' }] };
+  const unknown = { mode: 'status', changed: false, reviewRequired: true, targets: [{ id: 'christian-kohler.path-intellisense', status: 'needs_review', version: '9.0.0' }] };
   let pending = first.registered.get('workstationStability.status')();
   await finish(processes[1], unknown); await pending;
   pending = first.registered.get('workstationStability.status')();

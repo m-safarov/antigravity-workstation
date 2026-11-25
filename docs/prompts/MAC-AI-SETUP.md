@@ -2,8 +2,8 @@
 
 Команды 1 и 2 из README — только для Windows. На Mac тот же профиль ставят этот промпт и скрипт проекта `scripts/macos-setup.cjs`. Открой ИИ-агент с доступом к терминалу Mac (Claude Code, Codex, Gemini CLI, Cursor…), приложи ZIP или дай ссылку на репозиторий и вставь текст из блока ниже. Для полного сброса допиши в начале: «Команда 1». Руками нужно будет войти в аккаунт, нажать Cmd+Q и выключить два переключателя AI Tab, когда агент попросит.
 
-- Репозиторий: https://github.com/safarovmurod/antigravity-workstation
-- ZIP: https://github.com/safarovmurod/antigravity-workstation/archive/refs/heads/main.zip
+- Репозиторий: https://github.com/m-safarov/antigravity-workstation
+- ZIP: https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip
 
 ````text
 Ты — агент установки профиля Antigravity Workstation на macOS. Работай сам от начала до конца. Не задавай вопросов посередине — всё нужное описано ниже.
@@ -12,7 +12,7 @@
 Поставить на Mac тот же профиль, что ставит установщик Windows, для Antigravity IDE 2.8.0, 2.7.0 или 2.6.0: настройки и клавиши, расширения из config/extensions.json, 10 шрифтов Aster Atelier, правила, skills, MCP с runtime, agent-browser, выключенные AI-подсказки и резервную копию — и доказать результат проверками шага 11.
 
 ИСТОЧНИК
-Репозиторий https://github.com/safarovmurod/antigravity-workstation (ветка main) или ZIP https://github.com/safarovmurod/antigravity-workstation/archive/refs/heads/main.zip. Установщик Windows (bin/, scripts/bootstrap.ps1) на Mac его НЕ запускай. Файлы профиля пишет только scripts/macos-setup.cjs (шаг 5).
+Репозиторий https://github.com/m-safarov/antigravity-workstation (ветка main) или ZIP https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip. Установщик Windows (bin/, scripts/bootstrap.ps1) на Mac его НЕ запускай. Файлы профиля пишет только scripts/macos-setup.cjs (шаг 5).
 
 РЕЖИМ
 - По умолчанию «Команда 2» (--mode 2): настройки и клавиши профиля ставятся заново; тема, шрифты, свои настройки, расширения, skills и MCP пользователя остаются.

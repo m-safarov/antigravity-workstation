@@ -19,10 +19,12 @@ const profile = require('../extensions/workstation-stability/profile.cjs');
 const repairChat = require('../extensions/workstation-stability/repair-chat.cjs');
 const calm = require('../extensions/calm-typescript/extension.cjs');
 
-test('mikestead.dotenv is retired and absent from the active extension catalog', () => {
+test('mikestead.dotenv and anteprimorac.html-end-tag-labels are retired and absent from the active extension catalog', () => {
   const catalog = require('../config/extensions.json');
   assert.equal(RETIRED_EXTENSIONS['mikestead.dotenv'], true);
   assert.equal(catalog.some(ext => ext.id.toLowerCase() === 'mikestead.dotenv'), false);
+  assert.equal(RETIRED_EXTENSIONS['anteprimorac.html-end-tag-labels'], true);
+  assert.equal(catalog.some(ext => ext.id.toLowerCase() === 'anteprimorac.html-end-tag-labels'), false);
 });
 
 test('updateMcpConfig retires setup-owned sequential-thinking while preserving custom user servers', () => {

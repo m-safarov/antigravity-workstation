@@ -121,7 +121,7 @@ function fakeInventory(f, entries) {
   const file = path.join(f.base, 'inventory.cjs');
   fs.writeFileSync(file, '#!' + process.execPath + '\nconsole.log(' + JSON.stringify(entries.map(e => e.id + '@' + (e.version || '9.0.0')).join('\n')) + ');\n');
   if (process.platform === 'win32') {
-    const cmd = path.join(f.base, 'inventory.cmd'); fs.writeFileSync(cmd, '@"' + process.execPath + '" "' + file + '" %*\r\n'); return cmd;
+    const cmd = path.join(f.base, 'inventory.cmd'); fs.writeFileSync(cmd, '@chcp 65001>nul\r\n@"' + process.execPath + '" "' + file + '" %*\r\n'); return cmd;
   }
   fs.chmodSync(file, 0o755); return file;
 }

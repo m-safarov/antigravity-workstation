@@ -429,18 +429,22 @@ test('A command the panel ignores still answers with state, so the buttons never
   assert.equal(panel.messages.filter(message => message.type === 'state').length, 1);
 });
 
-test('No Pull Request or Prettier path exists and Commit, Push and Pull are separate buttons', () => {
-  assert.deepEqual(Object.keys(ACTIONS).sort(), ['abortOperation', 'commit', 'connectGitHub', 'deleteBranches', 'fetch', 'fixAuthor', 'initRepository', 'newBranch', 'pullBranch', 'push', 'resolveConflicts', 'signIn', 'switchBranch', 'syncBranch']);
+test('Pull Request, Commit, Push, Pull and Scoped Delete actions exist cleanly without Prettier or vscode.git coupling', () => {
+  assert.deepEqual(Object.keys(ACTIONS).sort(), ['abortOperation', 'commit', 'connectGitHub', 'createPullRequest', 'deleteBranches', 'fetch', 'fixAuthor', 'initRepository', 'newBranch', 'pullBranch', 'push', 'resolveConflicts', 'signIn', 'switchBranch', 'syncBranch']);
   const html = renderHtml();
   assert.match(html, /id="commitButton"[^>]*>Commit</);
   assert.match(html, /id="pushButton"[^>]*>Push</);
   assert.match(html, /id="syncButton" data-command="syncBranch">Pull</);
+  assert.match(html, /id="createPrButton"/);
+  assert.match(html, /id="deleteScope"/);
+  assert.match(html, /id="commitSuggestionBar"/);
+  assert.match(html, /class="ext-footer"/);
   assert.match(html, /data-command="initRepository">Создать репозиторий</);
   assert.match(html, /data-command="connectGitHub">Подключить к GitHub</);
   const files = ['extension.js', ...require(path.join(panelRoot, 'package.json')).files.filter(file => /\.(js|css)$/.test(file))];
   for (const file of files) {
     const source = fs.readFileSync(path.join(panelRoot, file), 'utf8');
-    assert.doesNotMatch(source, /pull request|pullRequest|\/compare\/|prettier|formatBeforeCommit|executeFormatDocumentProvider/i, file);
+    assert.doesNotMatch(source, /prettier|formatBeforeCommit|executeFormatDocumentProvider/i, file);
     assert.doesNotMatch(source, /getAPI\(|vscode\.git|\.gif|\.mp4/, file);
     // Only the npm scripts view opens a browser: the dev server address.
     if (file !== 'src/npm-scripts.js') assert.doesNotMatch(source, /openExternal/, file);

@@ -1,15 +1,22 @@
 # Calm TypeScript
 
-![Calm TypeScript](https://raw.githubusercontent.com/safarovmurod/antigravity-workstation/main/extensions/calm-typescript/icon.png)
+![Calm TypeScript](icon.png)
 
-Ошибки JavaScript и TypeScript видны, но не режут глаз: ошибки примерно на 70% непрозрачности, предупреждения — 55%, подсказки — 45% и 35%; в светлой теме цвета темнее. С 3.4.0 старые цвета 15% из 3.3.x заменяются автоматически. Проверка типов и обычные подсказки продолжают работать. Курсор плавный; после **Ctrl+S** строка мягко подсвечивается. С версии 3.3.7 расширение само ничего не сохраняет: автосохранение делает IDE (`files.autoSave: afterDelay`, 1 с), поэтому код не переформатируется во время набора.
+Спокойные, но хорошо читаемые диагностики JavaScript и TypeScript (React, Next.js и Node.js): ошибки остаются видимыми (~70% непрозрачности), предупреждения — 55%, подсказки — 45% и 35%, без сплошных цветных полос фона от Error Lens. Проверка типов TypeScript, панель Problems и обычный IntelliSense работают полностью.
 
-Настройки: **Settings → Extensions → Calm TypeScript**. Reset возвращает значения, запомненные при первой активации этого расширения; состояние старого расширения не переносится.
+Курсор плавный (`editor.cursorSmoothCaretAnimation: on`, ширина 2 px); после ручного **Ctrl+S** строка мягко подсвечивается. Расширение само не сохраняет файлы — автосохранением управляет IDE (`files.autoSave: afterDelay`), чтобы код не переформатировался во время набора.
 
-Снимки ниже относятся к версии 3.3.0; текущая версия рисует ошибки заметнее.
+## До и после (`calmTypeScript.quietMode`)
 
-| До | После (снимок 3.3.0) |
-|---|---|
-| ![Обычная диагностика](https://raw.githubusercontent.com/safarovmurod/antigravity-workstation/main/docs/images/diagnostics-before.png) | ![Calm TypeScript: ошибки остаются, оформление спокойнее](https://raw.githubusercontent.com/safarovmurod/antigravity-workstation/main/docs/images/diagnostics-after.png) |
+Оба снимка сделаны в одной сессии Antigravity IDE на одном файле `example.ts`, теме и масштабе — переключается только `calmTypeScript.quietMode`. Обе ошибки TypeScript (`⊗ 2`) остаются на месте.
 
-Расширение входит в [Antigravity Workstation](https://github.com/safarovmurod/antigravity-workstation#quick-start).
+| До (`quietMode: false`) — сплошной фон Error Lens | После (`quietMode: true`) — спокойная диагностика без фоновых блоков |
+| --- | --- |
+| ![До: стандартная диагностика со сплошным фоном](media/diagnostics-before.png) | ![После: Calm TypeScript — ошибки остаются, фоновый шум убран](media/diagnostics-after.png) |
+
+## Настройки и сброс
+
+- Настройки: **Settings → Extensions → Calm TypeScript** (`quietMode`, `smoothTyping`, `typingPulse`, `savePulse`).
+- Команда сброса: **Command Palette → `Calm TypeScript: Reset Managed Editor Settings`** — возвращает значения, сохранённые при первой активации расширения.
+
+Расширение входит в [Antigravity Workstation](https://github.com/m-safarov/antigravity-workstation#quick-start) и хранит все изображения офлайн внутри VSIX.

@@ -160,10 +160,8 @@ test('Invalid configuration error includes its path without exposing private JSO
 
 test('Repository declares the exact current settings, rules, guides and four local extensions', () => {
   const settings = readJson(path.join(repoRoot, 'config/settings.json'));
-  // 289: the three VS Code Speech keys Antigravity 2.6.0 does not register were retired in 3.4.0;
-  // 3.4.1 adds the signal volume 0, so the IDE plays no sound at all. The language blocks keep only
-  // their formatter, exact-default keys and Auto Rename Tag left; Unicode safety, file nesting and clean files came in.
-  assert.equal(Object.keys(settings).length, 284);
+  // 283: 3.14.0 retires the two htmlEndTagLabels.* settings and adds tailwindCSS.classFunctions.
+  assert.equal(Object.keys(settings).length, 283);
   assert.equal(settings['accessibility.signalOptions.volume'], 0);
   for (const key of ['accessibility.voice.autoSynthesize', 'accessibility.voice.keywordActivation', 'accessibility.voice.speechTimeout']) {
     assert.equal(Object.hasOwn(settings, key), false, key + ' is not a setting of this IDE');
@@ -182,12 +180,13 @@ test('Repository declares the exact current settings, rules, guides and four loc
   ]);
   assert.deepEqual(fs.readdirSync(path.join(repoRoot, 'resources/guides')).sort(), ['design.md', 'full-stack.md']);
   const extensions = readJson(path.join(repoRoot, 'config/extensions.json'));
-  assert.equal(extensions.length, 25);
+  assert.equal(extensions.length, 26);
   assert.equal(new Set(extensions.map(item => item.id.toLowerCase())).size, extensions.length);
-  assert.equal(extensions.filter(item => item.source === 'gallery').length, 20);
-  assert.ok(!extensions.some(item => /turbo-console-log|auto-rename-tag|mikestead\.dotenv/i.test(item.id)), 'Turbo Console Log, Auto Rename Tag and redundant DotENV are removed');
+  assert.equal(extensions.filter(item => item.source === 'gallery').length, 21);
+  assert.ok(!extensions.some(item => /turbo-console-log|auto-rename-tag|mikestead\.dotenv|html-end-tag-labels/i.test(item.id)), 'Turbo Console Log, Auto Rename Tag, DotENV and HTML End Tag Labels are removed');
   assert.equal(require('../lib/extensions').RETIRED_EXTENSIONS['mikestead.dotenv'], true, 'mikestead.dotenv is retired in favor of built-in dotenv');
-  for (const id of ['yoavbls.pretty-ts-errors', 'dbaeumer.vscode-eslint', 'ms-vscode.live-server', 'vitest.explorer']) {
+  assert.equal(require('../lib/extensions').RETIRED_EXTENSIONS['anteprimorac.html-end-tag-labels'], true, 'anteprimorac.html-end-tag-labels is retired');
+  for (const id of ['yoavbls.pretty-ts-errors', 'dbaeumer.vscode-eslint', 'ms-vscode.live-server', 'vitest.explorer', 'Prisma.prisma', 'redhat.vscode-yaml']) {
     assert.ok(extensions.some(item => item.id === id && item.source === 'gallery' && item.trackLatest === true && item.category && item.description), id);
   }
   assert.deepEqual(extensions.filter(item => item.optional), [], 'every catalog extension is installed');
@@ -195,9 +194,10 @@ test('Repository declares the exact current settings, rules, guides and four loc
     'iranon.jelly-cursor', 'workstation.aster-appearance', 'workstation.calm-typescript', 'workstation.git-branch-panel', 'workstation.stability-helper',
   ]);
   const tsRoot = path.join(repoRoot, 'extensions/calm-typescript');
+  const tsPkg = readJson(path.join(tsRoot, 'package.json'));
   const manifest = readJson(path.join(tsRoot, 'manifest.json'));
   assert.equal(manifest.id, 'workstation.calm-typescript');
-  assert.equal(manifest.version, '3.4.1');
+  assert.equal(manifest.version, tsPkg.version);
   assert.ok(fs.readdirSync(tsRoot).includes('calm-typescript-' + manifest.version + '.vsix'));
   assert.equal(sha256(path.join(tsRoot, 'calm-typescript-' + manifest.version + '.vsix')), manifest.vsixSha256);
   assert.equal(extensions.find(item => item.id === manifest.id).version, manifest.version);
@@ -296,7 +296,8 @@ test('One isolated full install applies managed settings, keeps personal keys an
   }
 
   const index = readJson(path.join(env.extensionsDir, 'extensions.json'));
-  const tsEntry = index.find(item => item.identifier?.id === 'workstation.calm-typescript' && item.version === '3.4.1');
+  const calmVersion = readJson(path.join(repoRoot, 'extensions/calm-typescript/package.json')).version;
+  const tsEntry = index.find(item => item.identifier?.id === 'workstation.calm-typescript' && item.version === calmVersion);
   assert.ok(tsEntry, 'Calm TypeScript must be registered in isolated extension index');
   const tsBundle = path.join(env.extensionsDir, tsEntry.relativeLocation, 'dist/extension.cjs');
   assert.ok(fs.existsSync(tsBundle));

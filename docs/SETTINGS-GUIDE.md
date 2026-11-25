@@ -2,7 +2,7 @@
 
 Этот документ — единая точка правды для любого ИИ или разработчика: **какая настройка существует, что она реально делает, зачем она нужна и какой баг решает**. Читай его перед тем, как менять что-либо в `config/`.
 
-Репозиторий: `safarovmurod/antigravity-workstation`. Продукт — установщик/менеджер настроек для Antigravity IDE (форк VS Code, engine 1.107) + собственные расширения (Aster Atelier, Workstation Stability, Calm TypeScript, Git Branch Panel).
+Репозиторий: `m-safarov/antigravity-workstation`. Продукт — установщик/менеджер настроек для Antigravity IDE (форк VS Code, engine 1.107) + собственные расширения (Aster Atelier, Workstation Stability, Calm TypeScript, Git Branch Panel).
 
 ---
 
@@ -23,9 +23,9 @@ GitHub main → scripts/bootstrap.ps1 (Windows 10/11)
 
 | Файл | Что это | Кто меняет |
 |---|---|---|
-| `config/settings.json` | managed-настройки редактора (284 ключа) | человек/ИИ руками |
+| `config/settings.json` | managed-настройки редактора (283 ключа) | человек/ИИ руками |
 | `config/keybindings.json` | managed-горячие клавиши | человек/ИИ руками |
-| `config/extensions.json` | каталог 26 расширений (источник, версия) | человек/ИИ руками |
+| `config/extensions.json` | каталог 26 расширений (21 gallery + 5 local VSIX) | человек/ИИ руками |
 | `extensions/aster-appearance/themes/*.json` | 11 палитр Aster — **GENERATED** из `palettes.cjs` | только `scripts/build-aster.cjs` |
 | `extensions/*/manifest.json` | SHA-256 pin упакованных VSIX | только `scripts/package-*.cjs` |
 
@@ -59,7 +59,7 @@ GitHub main → scripts/bootstrap.ps1 (Windows 10/11)
 - Текст и подчёркивания с 16.11.2026 видны, но не режут глаз: ошибки ≈70% (alpha `b3`), предупреждения ≈55% (`8c`), info ≈45% (`73`), hint ≈35% (`59`). Подчёркивания `editor{Error,Warning,Info}.foreground` — один набор для любой темы: средние тона `#ef4444`, `#f59e0b`, `#0ea5e9`, которые читаются и на тёмном, и на светлом фоне. Текст Error Lens: в тёмных темах `#f87171`, `#fbbf24`, `#7dd3fc`, `#94a3b8` (`errorLens.*Foreground`), в светлых (`errorLens.*ForegroundLight`) — более тёмные `#dc2626`, `#d97706`, `#0284c7`, `#64748b` с той же прозрачностью. Раньше было alpha `26` (≈15%) — почти невидимо; такие значения у старых установок обновление заменяет (`RETIRED_MANAGED_COLORS`), личные цвета остаются.
 - ⚠️ Calm TypeScript (`QUIET_COLORS` в `extensions/calm-typescript/extension.cjs`) при `calmTypeScript.quietMode: true` сам записывает эти цвета; его значения должны совпадать с config (тест `test-calm-typescript.mjs` сверяет). Палитры Aster задают свои theme-scoped цвета, которые выигрывают у глобальных.
 - `errorLens.enabled: true, followCursor: allLines, delay: 500` — подсказки работают, но не перекрывают код.
-- `htmlEndTagLabels.labelColor: #8b949e99` (и настройка, и цвет темы) — подписи закрывающих тегов видны мягким серым (≈60%) в тёмных и светлых темах; раньше были полностью прозрачны.
+- `anteprimorac.html-end-tag-labels` выведен в 3.14.0 (рисовал длинные серые Tailwind-подписи у закрывающих тегов `</div>/.flex...`); ключи `htmlEndTagLabels.*` и `workbench.colorCustomizations["htmlEndTagLabels.labelColor"]` удаляются при обновлении (`RETIRED_SETTING_PREFIXES` и `RETIRED_MANAGED_COLORS`), а Tailwind IntelliSense, Highlight Matching Tag и `editor.linkedEditing` остаются.
 
 ⚠️ Правило: эти ключи живут **в двух местах** — здесь и в каждой из 11 палитр Aster (`extensions/aster-appearance/themes/*`, generated). Менять только через `scripts/build-aster.cjs`, не руками в темах.
 
@@ -90,7 +90,7 @@ GitHub main → scripts/bootstrap.ps1 (Windows 10/11)
 - `oxc.enable.oxfmt: false` — Oxc-форматтер не конкурирует с Prettier.
 
 ### 3.7 Tailwind CSS IntelliSense
-- `tailwindCSS.classAttributes: [class, className]`, `emmetCompletions: true`, `includeLanguages` для js/ts/tsx — классы подсказываются в React.
+- `tailwindCSS.classAttributes: [class, className]`, `tailwindCSS.classFunctions: [clsx, cn, cva, twMerge]`, `emmetCompletions: true`, `includeLanguages` для js/ts/tsx — классы подсказываются в React и Next.js (включая `cn(...)` / `clsx(...)` / `cva(...)` / `twMerge(...)`).
 - `lint.*` — конфликты классов warning, остальное error.
 - Подсказки «can be written as» приходят отсюда — их вид управляется Error Lens (см. §3.2).
 
@@ -103,7 +103,7 @@ GitHub main → scripts/bootstrap.ps1 (Windows 10/11)
 
 ### 3.9 Терминал и Explorer
 - `terminal.integrated.defaultProfile.windows: Git Bash` + профиль с `${GIT_BASH_PATH}` — путь **подставляет установщик** (`lib/paths.js`), Git Bash обязателен.
-- `explorer.fileNesting.enabled: true`, `expand: false` + `explorer.fileNesting.patterns` (с 16.11.2026): под `package.json` — lock-файлы, `pnpm-workspace.yaml`, `.npmrc`, `.nvmrc`; под `tsconfig.json` — `tsconfig.*.json`; под `vite.config.*` — configs `vitest`, `eslint`, `prettier`, `postcss`, `tailwind` и `.oxlintrc.json`; под `.env` — `.env.*`. `index.html` остаётся на виду. Личные шаблоны сохраняются (объект сливается, `MERGED_SETTINGS`).
+- `explorer.fileNesting.enabled: true`, `expand: false` + `explorer.fileNesting.patterns` (обновлено в 3.14.0): под `package.json` — lock-файлы, `pnpm-workspace.yaml`, `.npmrc`, `.nvmrc`; под `tsconfig.json` — `tsconfig.*.json`; под `vite.config.*` и `next.config.*` — configs `vitest`, `eslint`, `prettier`, `postcss`, `tailwind`, `next-env.d.ts`, `.oxlintrc.json`; под `.env` — `.env.*`. `index.html` остаётся на виду. Личные шаблоны сохраняются (объект сливается, `MERGED_SETTINGS`).
 - `files.trimTrailingWhitespace`, `files.insertFinalNewline`, `files.trimFinalNewlines: true` — при сохранении нет пробелов в конце строк и ровно один перевод строки в конце файла; в Markdown хвостовые пробелы остаются.
 - `explorer.confirmDelete/confirmDragAndDrop/confirmPasteNative: false` — без лишних подтверждений; `decorations.colors/badges: false` (и `workbench.editor.decorations.colors/badges: false` для вкладок: имя файла с ошибкой не красится в красный) — чистое дерево файлов.
 
@@ -131,7 +131,7 @@ GitHub main → scripts/bootstrap.ps1 (Windows 10/11)
 - Целостность IDE: любой патч `workbench.html` вызывает «installation appears to be corrupt», а у Antigravity в этом уведомлении нет кнопки «Don't Show Again». По явному разрешению пользователя Stability (`syncIntegrity`) после патча переписывает **одну** запись `checksums["vs/code/electron-browser/workbench/workbench.html"]` в `product.json` IDE: только если рядом есть `workbench.html.jelly-cursor-backup` или в файле есть блок `workstation-ui`, форматирование и остальные суммы не меняются. Проверено на копии IDE 2.6.0: предупреждения нет. Команда `installDomPatch` ждёт закрытия своего сообщения, поэтому Stability ждёт сам файл, а не команду. IDE хэширует файлы один раз за сессию, когда запуск завершён, то есть в момент активации расширений `onStartupFinished`. Поэтому Stability 1.3.22 ставит патч только через 60 секунд (`scheduleJellyPatch`), иначе проверка видит новый файл со старой суммой и предупреждение появляется в этой сессии. Jelly записывает свои настройки внутрь внедрённого скрипта, поэтому Stability 1.3.23 запоминает применённые настройки (`jellyCursor.appliedSettings` в globalState) и переустанавливает патч, когда они изменились.
 
 ### 3.12 Прочее
-- `files.associations` (.jsx/.tsx/.env), `files.watcherExclude` (dist, build, `.cache`, `.git/objects`, `.git/subtree-cache` — без `**/node_modules/**`, чтобы TypeScript использовал нативный `--canUseWatchEvents`), `search.exclude` (node_modules, dist, build, .git), `typescript.preferences.includePackageJsonAutoImports: "auto"`, `oxc.lint.run: "onSave"` — быстрый IntelliSense и автоимпорт без 12-секундных задержек и без потери подсказок.
+- `files.associations` (.jsx/.tsx/.env), `files.watcherExclude` (`.next`, `.turbo`, `coverage`, `dist`, `build`, `.cache`, `.git/objects`, `.git/subtree-cache` — без `**/node_modules/**`, чтобы TypeScript использовал нативный `--canUseWatchEvents`), `search.exclude` (`node_modules`, `.next`, `.turbo`, `coverage`, `dist`, `build`, `.git`), `typescript.preferences.includePackageJsonAutoImports: "auto"`, `oxc.lint.run: "onSave"` — быстрый IntelliSense и автоимпорт в Next.js, Node.js и React без 12-секундных задержек и без потери подсказок.
 - `extensions.autoUpdate/autoCheckUpdates: true` — gallery-расширения обновляются сами; local VSIX (Aster, Stability) обновляет установщик по SHA-pin.
 - `better-comments.tags`, `highlight-matching-tag.*`, `gutterpreview.*` — настройка соответствующих gallery-расширений.
 - `calmTypeScript.*` — настройки собственного расширения Calm TypeScript (тихий режим, мягкий пульс печати (alpha ≤ 0.14), подсветка строки курсора на 0,3 с после ручного сохранения Ctrl+S — `savePulse`, автосохранение не мигает). Само расширение ничего не сохраняет: автосохранение 1 с делает IDE (`files.autoSave: afterDelay`), поэтому Format On Save не срабатывает во время набора.
@@ -151,9 +151,9 @@ GitHub main → scripts/bootstrap.ps1 (Windows 10/11)
 ## 5. config/extensions.json — каталог 26 расширений
 
 - `source: gallery` + `trackLatest: true` — ставится latest compatible через официальный CLI (без пинования версий — версия записывается после установки).
-- `source: local-vsix` — собственные расширения с SHA-256 pin в `manifest.json`: `workstation.aster-appearance` (1.8.0, 11 палитр без повторов с общим набором из 22 ролей кода — вместе с темами IDE в двух разделах «Тёмные» и «Светлые», каждый по яркости фона; тема ставится одним кликом, быстрые клики объединяются; 10 шрифтов, 7 начертаний, толщина кнопками − / +, яркость/контраст с живым примером кода, шрифт интерфейса без перезапуска), `workstation.stability-helper` (1.3.30 — применяет профиль без 2-секундных пауз Extension Host, чинит known vendor issues через maintenance, защищает Undo от зависшего `antigravity.inlineDiffCanUndo`, возвращает интерфейсный блок после обновления IDE; если профиль уже применён, а managed-значение снова стоит по умолчанию, возвращает его один раз за запрос), `workstation.calm-typescript`, `workstation.git-branch-panel`.
-- Live Server (`ritwickdey.liveserver`) и авто-импорт-провайдеры **намеренно отсутствуют** — встроенный TypeScript владеет импортами.
-- С 16.11.2026 добавлены Pretty TypeScript Errors, ESLint, Live Preview (`ms-vscode.live-server`; установщик выбирает версию, совместимую с engine 1.107) и Vitest. Настройки им не нужны: ESLint проверяет только установленным в проекте ESLint с его config и не форматирует (`eslint.format.enable` по умолчанию `false`, `defaultFormatter` остаётся Prettier), Vitest активируется только в проекте с Vitest.
+- `source: local-vsix` — собственные расширения с SHA-256 pin в `manifest.json`: `workstation.aster-appearance` (1.9.0, 11 палитр + 10 шрифтов + встроенные офлайн-скриншоты инструкции), `workstation.stability-helper` (1.4.0 — применяет профиль без пауз Extension Host, чинит known vendor issues через maintenance, защищает Undo от зависшего `antigravity.inlineDiffCanUndo`, возвращает интерфейсный блок после обновления IDE и добавляет необязательные команды `Configure AI API Key` / `Test AI Connection` через `SecretStorage`), `workstation.calm-typescript` (3.5.0), `workstation.git-branch-panel` (1.9.0 — Pull Requests, Local/Remote/Both удаление веток, подсказка commit по `Tab`, incoming/outgoing/upstream статус).
+- Live Server (`ritwickdey.liveserver`), авто-импорт-провайдеры и `anteprimorac.html-end-tag-labels` **намеренно отсутствуют** — встроенный TypeScript владеет импортами, а закрывающие теги подсвечивает Highlight Matching Tag и переименовывает `editor.linkedEditing`.
+- С 16.11.2026 добавлены Pretty TypeScript Errors, ESLint, Live Preview (`ms-vscode.live-server`) и Vitest; с 3.14.0 добавлены `Prisma.prisma` (схемы `schema.prisma` в Next.js/Node.js) и `redhat.vscode-yaml` (YAML + JSON Schema для Docker Compose, GitHub Actions, OpenAPI) — оба активируются только на своих типах файлов с нулевой нагрузкой на `.js/.ts/.tsx`.
 - Каждый entry содержит описание и категорию; состав поддерживается тестами (`test-verified-extension-install`, `test-clean-extensions`).
 
 ## 6. Темы Aster Atelier — generated, руками не править

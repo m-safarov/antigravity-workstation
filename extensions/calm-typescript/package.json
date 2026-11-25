@@ -2,7 +2,7 @@
   "name": "calm-typescript",
   "displayName": "Calm TypeScript",
   "publisher": "workstation",
-  "version": "3.4.1",
+  "version": "3.5.0",
   "description": "Спокойные ошибки JS/TS, плавный курсор и мягкая подсветка после Ctrl+S.",
   "license": "MIT",
   "engines": {
@@ -54,7 +54,7 @@
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/safarovmurod/antigravity-workstation.git",
+    "url": "https://github.com/m-safarov/antigravity-workstation.git",
     "directory": "extensions/calm-typescript"
   }
 }

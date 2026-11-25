@@ -6,7 +6,7 @@ const { spawnSync } = require('node:child_process');
 const { TARGETS, digest, patchSource, runMaintenance } = require('../../extensions/workstation-stability/maintenance.cjs');
 const root = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'stability-maintenance-'));
 process.on('exit', () => fs.rmSync(root, { recursive: true, force: true }));
-const snapshots = ["class Decorations {\n    parse(input) {\n        const plugins = [];\n        const ast = babelParser.parse(input.getText(), {\n            plugins,\n        });\n        return ast;\n    }\n    update() {\n        if (!this.activeEditor) { return; }\n    }\n    dispose() {\n        this.activeEditor = undefined;\n    }\n}\n", `async function provide(context, config) {
+const snapshots = [`async function provide(context, config) {
 const path = "fixture/path-m";
 const childrenOfPath = yield file_utills_1.getChildrenOfPath(path, config.showHiddenFiles, config.filesExclude);
 return [...childrenOfPath.map((child) => createCompletionItem_1.createPathCompletionItem(child, config, context)),];
@@ -70,7 +70,7 @@ check('Default status is read-only and creates no backup', () => {
   assert.equal(fs.existsSync(data.backupDir), false);
 });
 
-check('Repair patches exactly four known originals and validates final hashes', () => {
+check('Repair patches exactly two known originals and validates final hashes', () => {
   const data = fixture();
   const result = runMaintenance({ ...data, repair: true });
   assert.equal(result.changed, true);
@@ -108,11 +108,11 @@ check('Same-version reinstall of known original is repaired using existing verif
 
 check('Unknown future version is reported and never patched', () => {
   const data = fixture([TARGETS[0].id]);
-  const manifestFile = path.join(path.dirname(path.dirname(data.files[TARGETS[0].id])), 'package.json');
+  const manifestFile = path.join(data.extensionsDir, data.entries[0].relativeLocation, 'package.json');
   const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
-  manifest.version = '2.0.0';
+  manifest.version = '9.0.0';
   fs.writeFileSync(manifestFile, JSON.stringify(manifest));
-  data.entries[0].version = '2.0.0';
+  data.entries[0].version = '9.0.0';
   saveIndex(data);
   const result = runMaintenance({ ...data, repair: true });
   assert.equal(find(result).reason, 'unknown_version');
@@ -148,12 +148,14 @@ check('Import Cost parses only its generated entry as JavaScript auto in CommonJ
 check('Active install index is used; obsolete known folder is not blindly patched', () => {
   const data = fixture([TARGETS[0].id]);
   const oldFile = data.files[TARGETS[0].id];
-  const newLocation = TARGETS[0].id + '-2.0.0-universal';
+  const newLocation = TARGETS[0].id + '-9.0.0-universal';
   const newDirectory = path.join(data.extensionsDir, newLocation);
-  fs.mkdirSync(path.join(newDirectory, 'out'), { recursive: true });
-  fs.writeFileSync(path.join(newDirectory, TARGETS[0].file), snapshots[0]);
-  fs.writeFileSync(path.join(newDirectory, 'package.json'), JSON.stringify({ publisher: 'anteprimorac', name: 'html-end-tag-labels', version: '2.0.0' }));
-  data.entries[0] = { identifier: { id: TARGETS[0].id }, version: '2.0.0', relativeLocation: newLocation };
+  const newTargetFile = path.join(newDirectory, TARGETS[0].file);
+  fs.mkdirSync(path.dirname(newTargetFile), { recursive: true });
+  fs.writeFileSync(newTargetFile, snapshots[0]);
+  const split = TARGETS[0].id.indexOf('.');
+  fs.writeFileSync(path.join(newDirectory, 'package.json'), JSON.stringify({ publisher: TARGETS[0].id.slice(0, split), name: TARGETS[0].id.slice(split + 1), version: '9.0.0' }));
+  data.entries[0] = { identifier: { id: TARGETS[0].id }, version: '9.0.0', relativeLocation: newLocation };
   saveIndex(data);
   const result = runMaintenance({ ...data, repair: true });
   assert.equal(find(result).reason, 'unknown_version');
@@ -180,8 +182,8 @@ check('Duplicate active target entries require review', () => {
 
 check('Manifest identity mismatch is rejected', () => {
   const data = fixture([TARGETS[0].id]);
-  const manifestFile = path.join(path.dirname(path.dirname(data.files[TARGETS[0].id])), 'package.json');
-  fs.writeFileSync(manifestFile, JSON.stringify({ publisher: 'other', name: 'extension', version: '1.0.0' }));
+  const manifestFile = path.join(data.extensionsDir, data.entries[0].relativeLocation, 'package.json');
+  fs.writeFileSync(manifestFile, JSON.stringify({ publisher: 'other', name: 'extension', version: TARGETS[0].version }));
   const result = runMaintenance({ ...data, repair: true });
   assert.equal(find(result).reason, 'manifest_id_mismatch');
   assert.equal(fs.existsSync(data.backupDir), false);

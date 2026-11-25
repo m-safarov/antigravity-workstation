@@ -306,7 +306,8 @@ test('A newer installed package is reused only when its engine and native archit
   fs.mkdirSync(path.join(extensionsDir, location), { recursive: true });
   const target = { version: '1.107.0', platform: 'win32-x64' };
   fs.writeFileSync(path.join(extensionsDir, location, 'extension.js'), 'exports.activate=()=>{};');
-  const artifact = fs.readFileSync(new URL('../extensions/calm-typescript/calm-typescript-3.4.1.vsix', import.meta.url));
+  const calmVersion = require('../extensions/calm-typescript/package.json').version;
+  const artifact = fs.readFileSync(new URL(`../extensions/calm-typescript/calm-typescript-${calmVersion}.vsix`, import.meta.url));
   for (const [engine, platform, keep] of [['^1.100.0', 'win32-x64', true], ['^1.120.0', 'win32-x64', false], ['^1.100.0', 'win32-arm64', false]]) {
     fs.writeFileSync(path.join(extensionsDir, location, 'package.json'), JSON.stringify({ publisher: 'workstation', name: 'calm-typescript', version: '8.0.0', main: './extension.js', engines: { vscode: engine } }));
     fs.writeFileSync(path.join(extensionsDir, 'extensions.json'), JSON.stringify([{ identifier: { id: 'workstation.calm-typescript' }, version: '8.0.0', relativeLocation: location, metadata: { targetPlatform: platform, source: 'gallery' } }]));
@@ -314,9 +315,9 @@ test('A newer installed package is reused only when its engine and native archit
     const result = installExtension(cli, 'workstation.calm-typescript', { trackLatest: true, target, extensionsDir, platform: 'linux', log() {},
       listInstalled: () => [{ id: 'workstation.calm-typescript', version: current }],
       run(file, args) {
-        if (args[1] === '--metadata') return { status: 0, stdout: JSON.stringify({ version: '3.4.1' }) };
+        if (args[1] === '--metadata') return { status: 0, stdout: JSON.stringify({ version: calmVersion }) };
         if (file === process.execPath) { fs.writeFileSync(args[3], artifact); return { status: 0 }; }
-        installs++; current = '3.4.1'; return { status: 0 };
+        installs++; current = calmVersion; return { status: 0 };
       } });
     assert.equal(result.success, true, JSON.stringify(result));
     assert.equal(result.skipped === true, keep, engine + '/' + platform);

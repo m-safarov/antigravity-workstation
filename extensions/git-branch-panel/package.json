@@ -2,7 +2,7 @@
   "name": "git-branch-panel",
   "displayName": "Git Branch Panel",
   "description": "Панели Проводника. GitHub: создать репозиторий и подключить его к GitHub, Commit, Push, Pull и ветки от имени владельца репозитория; каждая команда git видна в терминале Git Bash. npm-скрипты: npm run dev и другие скрипты package.json одним щелчком в терминале со ссылкой на сервер.",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "publisher": "workstation",
   "engines": {
     "vscode": "^1.80.0"
@@ -27,6 +27,7 @@
     "src/git-errors.js",
     "src/git-state.js",
     "src/github-api.js",
+    "src/commit-suggest.js",
     "src/identity.js",
     "src/npm-scripts.js",
     "src/panel-provider.js",
@@ -37,6 +38,7 @@
     "src/actions/commit-push.js",
     "src/actions/merge.js",
     "src/actions/branches.js",
+    "src/actions/pull-requests.js",
     "src/actions/repository.js",
     "README.md",
     "icon.png",
@@ -146,7 +148,7 @@
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/safarovmurod/antigravity-workstation.git",
+    "url": "https://github.com/m-safarov/antigravity-workstation.git",
     "directory": "extensions/git-branch-panel"
   }
 }

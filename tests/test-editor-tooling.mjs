@@ -85,8 +85,13 @@ test('Installation persists library IntelliSense, manual formatting and autosave
     assert.equal(settings['emmet.showExpandedAbbreviation'], 'always');
     assert.equal(settings['emmet.triggerExpansionOnTab'], true);
     assert.equal(settings['reactSnippets.settings.importReactOnTop'], false);
-    assert.equal(settings['htmlEndTagLabels.labelColor'], '#8b949e99');
-    assert.equal(settings['workbench.colorCustomizations']['htmlEndTagLabels.labelColor'], '#8b949e99');
+    assert.equal(Object.hasOwn(settings, 'htmlEndTagLabels.labelColor'), false, 'Retired HTML End Tag Labels setting must stay absent');
+    assert.equal(Object.hasOwn(settings, 'htmlEndTagLabels.labelPrefix'), false);
+    assert.equal(Object.hasOwn(settings['workbench.colorCustomizations'], 'htmlEndTagLabels.labelColor'), false);
+    assert.deepEqual(settings['tailwindCSS.classFunctions'], ['clsx', 'cn', 'cva', 'twMerge']);
+    assert.equal(settings['files.watcherExclude']['**/.next/**'], true);
+    assert.equal(settings['search.exclude']['**/.next'], true);
+    assert.match(settings['explorer.fileNesting.patterns']['next.config.*'], /next-env\.d\.ts/);
     for (const language of ['javascript', 'typescript']) assert.equal(settings[language + '.validate.enable'], true);
     assert.equal(settings['workbench.colorCustomizations']['editorError.foreground'], '#ef4444b3');
     assert.equal(settings['prettier.useEditorConfig'], true);
@@ -168,13 +173,14 @@ test('Every requested gallery tool participates in the latest-compatible install
         log() {},
     });
     assert.deepEqual(result.failures, []);
-    for (const id of ['vincaslt.highlight-matching-tag', 'anteprimorac.html-end-tag-labels',
+    for (const id of ['vincaslt.highlight-matching-tag', 'prisma.prisma', 'redhat.vscode-yaml',
         'editorconfig.editorconfig', 'esbenp.prettier-vscode']) {
         const request = calls.find(item => item.id === id);
         assert.ok(request, id + ' reaches the installer');
         assert.equal(request.options.trackLatest, true);
         assert.equal(request.options.version, undefined);
     }
+    assert.ok(!catalog.some(item => item.id.toLowerCase() === 'anteprimorac.html-end-tag-labels'), 'Retired gray closing-tag label extension must not be installed');
     assert.ok(!catalog.some(item => item.id.toLowerCase() === 'ritwickdey.liveserver'));
     assert.ok(!catalog.some(item => item.id.toLowerCase() === 'mikestead.dotenv'), 'Built-in dotenv handles .env files');
     assert.ok(catalog.filter(item => item.source === 'gallery').every(item => item.trackLatest && !item.version));
@@ -258,7 +264,11 @@ test('The profile uses two spaces, clean files, smart Enter, linked tag editing,
   assert.equal(settings['editor.linkedEditing'], true, 'The IDE renames paired HTML and JSX tags itself');
   assert.equal(Object.keys(settings).some(key => key.startsWith('auto-rename-tag.')), false);
   assert.equal(catalog.some(item => item.id === 'formulahendry.auto-rename-tag'), false);
-  for (const id of ['wix.vscode-import-cost', 'anteprimorac.html-end-tag-labels', 'christian-kohler.npm-intellisense']) assert.ok(catalog.some(item => item.id === id), id);
+  assert.equal(catalog.some(item => item.id === 'anteprimorac.html-end-tag-labels'), false);
+  assert.equal(Object.keys(settings).some(key => key.startsWith('htmlEndTagLabels.')), false);
+  for (const id of ['wix.vscode-import-cost', 'vincaslt.highlight-matching-tag', 'christian-kohler.npm-intellisense', 'Prisma.prisma', 'redhat.vscode-yaml']) assert.ok(catalog.some(item => item.id === id), id);
+  assert.deepEqual(settings['tailwindCSS.classFunctions'], ['clsx', 'cn', 'cva', 'twMerge']);
+  assert.equal(settings['highlight-matching-tag.enabled'], true);
   assert.equal(settings['editor.guides.indentation'], false, 'Indent guides stay off');
   for (const key of ['files.trimTrailingWhitespace', 'files.insertFinalNewline', 'files.trimFinalNewlines']) assert.equal(settings[key], true, key);
   assert.equal(settings['[markdown]']['files.trimTrailingWhitespace'], false, 'Markdown keeps its two-space line breaks');
@@ -287,6 +297,7 @@ test('The profile uses two spaces, clean files, smart Enter, linked tag editing,
     }
     for (const suffix of ['Background', 'BackgroundLight', 'MessageBackground', 'RangeBackground']) assert.equal(colors['errorLens.' + severity + suffix], '#00000000');
   }
-  assert.equal(settings['htmlEndTagLabels.labelColor'], colors['htmlEndTagLabels.labelColor']);
-  assert.ok(alpha(settings['htmlEndTagLabels.labelColor']) > 0.4 && alpha(settings['htmlEndTagLabels.labelColor']) < 0.8, 'End-tag labels are visible but soft');
+  assert.equal(Object.hasOwn(colors, 'htmlEndTagLabels.labelColor'), false, 'Retired HTML End Tag Labels color is removed from workbench.colorCustomizations');
+  assert.match(nesting['next.config.*'], /next-env\.d\.ts/);
+  assert.match(nesting['vite.config.*'], /vitest\.config\.\*/);
 });

@@ -7,10 +7,12 @@ const { PanelError, explainError } = require('./git-errors');
 const { RepositoryIdentities, writeLocalIdentity, hasGitIdentity, readGitUserName } = require('./identity');
 const { renderHtml } = require('./webview-html');
 const { setLanguage, tr } = require('./text');
+const { suggestCommitMessage } = require('./commit-suggest');
 const commitPush = require('./actions/commit-push');
 const merge = require('./actions/merge');
 const branches = require('./actions/branches');
 const repository = require('./actions/repository');
+const pullRequests = require('./actions/pull-requests');
 
 const REFRESH_DELAY_MS = 300;
 
@@ -37,6 +39,7 @@ const ACTIONS = {
   fetch: merge.fetchChanges,
   initRepository: repository.initRepository,
   connectGitHub: repository.connectGitHub,
+  createPullRequest: pullRequests.createPullRequest,
   signIn,
 };
 
@@ -55,6 +58,10 @@ class GithubPanelProvider {
     this.refreshTimer = null;
     this.collecting = null;
     this.refreshAgain = false;
+    // Monotonic tokens drop stale async reads so older responses never overwrite newer state.
+    this.stateGeneration = 0;
+    this.suggestGeneration = 0;
+    this.githubApiOptions = {};
   }
 
   resolveWebviewView(view) {
@@ -80,18 +87,48 @@ class GithubPanelProvider {
   dispose() {
     clearTimeout(this.refreshTimer);
     this.refreshTimer = null;
+    this.stateGeneration++;
+    this.suggestGeneration++;
     this.disposeView();
     this.view = null;
   }
 
+  async handleSuggestCommit(message) {
+    const seq = ++this.suggestGeneration;
+    const requestId = message?.requestId ?? seq;
+    const cwd = this.workspaceRootOrNull();
+    if (!cwd) {
+      this.post({ type: 'commitSuggestion', requestId, suggestion: '', source: 'none' });
+      return;
+    }
+    try {
+      const state = await collectState(cwd);
+      if (seq !== this.suggestGeneration || cwd !== this.workspaceRootOrNull()) return;
+      if (!state.isRepo || state.error) {
+        this.post({ type: 'commitSuggestion', requestId, suggestion: '', source: 'none' });
+        return;
+      }
+      const result = await suggestCommitMessage(this, cwd, state, message?.files);
+      if (seq !== this.suggestGeneration || cwd !== this.workspaceRootOrNull()) return;
+      this.post({ type: 'commitSuggestion', requestId, suggestion: result.suggestion, source: result.source, files: result.files });
+    } catch {
+      if (seq === this.suggestGeneration) {
+        this.post({ type: 'commitSuggestion', requestId, suggestion: '', source: 'none' });
+      }
+    }
+  }
+
   async handleMessage(message) {
     const command = message?.command;
+    if (command === 'suggestCommit') return this.handleSuggestCommit(message);
     if (command === 'ready' || command === 'refresh') return this.sendState();
     const action = Object.hasOwn(ACTIONS, command) ? ACTIONS[command] : null;
     // The webview locks its buttons when it sends a command; fresh state unlocks
     // them. A running action sends that state itself when it ends.
     if (!action || this.busy) return this.sendState();
     this.busy = true;
+    this.stateGeneration++;
+    this.suggestGeneration++;
     try {
       await action(this, message);
     } catch (error) {
@@ -134,13 +171,18 @@ class GithubPanelProvider {
   }
 
   async collectAndPost() {
+    const gen = ++this.stateGeneration;
+    const cwd = this.workspaceRootOrNull();
     try {
-      const state = await collectState(this.workspaceRootOrNull());
+      const state = await collectState(cwd);
+      if (gen !== this.stateGeneration || cwd !== this.workspaceRootOrNull()) return;
       state.busy = this.busy;
       this.post({ type: 'state', state });
-      await this.postAuthor(state, await this.syncIdentity(state));
+      const identity = await this.syncIdentity(state);
+      if (gen !== this.stateGeneration || cwd !== this.workspaceRootOrNull()) return;
+      await this.postAuthor(state, identity);
     } catch (error) {
-      this.showError(error);
+      if (gen === this.stateGeneration) this.showError(error);
     }
   }
 

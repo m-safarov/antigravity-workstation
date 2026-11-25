@@ -33,10 +33,17 @@ async function commitFiles(panel, cwd, state, files, message) {
   if (state.changedFiles.every(item => files.includes(item.file))) {
     await runGit(['add', '-A'], cwd, VISIBLE);
     await runGit(['commit', '-m', message], cwd, VISIBLE);
-    return;
+  } else {
+    await runGit(['add', '-A', '--', ...paths], cwd, VISIBLE);
+    await runGit(['commit', '--only', '-m', message, '--', ...paths], cwd, VISIBLE);
   }
-  await runGit(['add', '-A', '--', ...paths], cwd, VISIBLE);
-  await runGit(['commit', '--only', '-m', message, '--', ...paths], cwd, VISIBLE);
+  // Verify the resulting commit exists in HEAD (non-empty SHA in real repos).
+  try {
+    const sha = await runGit(['rev-parse', '--short', 'HEAD'], cwd);
+    return sha.trim();
+  } catch {
+    throw new PanelError(tr('Commit не подтвердился в HEAD.', 'The commit could not be verified at HEAD.'));
+  }
 }
 
 async function commit(panel, request) {
@@ -44,16 +51,29 @@ async function commit(panel, request) {
   const state = await loadReadyState(cwd);
   const message = typeof request.message === 'string' ? request.message.trim() : '';
   if (!message) throw new PanelError(tr('Напиши сообщение commit.', 'Write a commit message.'));
-  await commitFiles(panel, cwd, state, request.files, message);
-  panel.notice('ok', tr('Commit создан.', 'Commit created.'), { clear: 'commitMessage' });
+  const sha = await commitFiles(panel, cwd, state, request.files, message);
+  const suffix = sha ? ` (${sha})` : '';
+  panel.notice('ok', tr(`Commit создан${suffix}.`, `Commit created${suffix}.`), { clear: 'commitMessage' });
 }
 
 async function pushCurrentBranch(panel, cwd, branch) {
   const upstream = await runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], cwd).catch(() => '');
-  const args = upstream === `origin/${branch}` ? ['push', 'origin', branch] : ['push', '-u', 'origin', branch];
-  panel.progress(`Push ${branch}…`);
+  const trimmed = upstream.trim();
+  let remote = 'origin';
+  let targetBranch = branch;
+  let args;
+  if (trimmed && trimmed.includes('/')) {
+    const slash = trimmed.indexOf('/');
+    remote = trimmed.slice(0, slash);
+    targetBranch = trimmed.slice(slash + 1);
+    args = targetBranch === branch ? ['push', remote, branch] : ['push', remote, `HEAD:refs/heads/${targetBranch}`];
+  } else {
+    args = ['push', '-u', 'origin', branch];
+  }
+  const dest = `${remote}/${targetBranch}`;
+  panel.progress(`Push ${branch} → ${dest}…`);
   await runGit(args, cwd, VISIBLE);
-  panel.notice('ok', tr(`Отправлено в GitHub: ${branch}.`, `Pushed to GitHub: ${branch}.`));
+  panel.notice('ok', tr(`Отправлено в ${dest}.`, `Pushed to ${dest}.`));
 }
 
 async function push(panel) {
@@ -73,7 +93,7 @@ async function listCommits(cwd, args) {
 async function findForkPoint(cwd, state) {
   const defaultIsRemote = state.branches.some(branch => branch.name === state.defaultBranch && branch.isRemote);
   let ref = null;
-  if (state.remoteBranchExists) ref = `refs/remotes/origin/${state.branch}`;
+  if (state.remoteBranchExists) ref = `refs/remotes/${state.upstreamRemote || 'origin'}/${state.upstreamBranch || state.branch}`;
   else if (defaultIsRemote) ref = `refs/remotes/origin/${state.defaultBranch}`;
   if (!ref) return null;
   return runGit(['merge-base', 'HEAD', ref], cwd).catch(() => null);

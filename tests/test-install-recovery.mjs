@@ -12,7 +12,8 @@ const { installExtension, installGalleryExtensions, archiveStaleExtensionDirs } 
 const { ensureAgentBrowser } = require('../lib/installer');
 const { findBrowserRuntime } = require('../lib/browser-runtime');
 const { readVsixManifest, downloadExtension } = require('../scripts/install-gallery-extension.cjs');
-const archive = fs.readFileSync(new URL('../extensions/calm-typescript/calm-typescript-3.4.1.vsix', import.meta.url));
+const calmVersion = require('../extensions/calm-typescript/package.json').version;
+const archive = fs.readFileSync(new URL(`../extensions/calm-typescript/calm-typescript-${calmVersion}.vsix`, import.meta.url));
 const catalog = require('../config/extensions.json');
 
 test('Bundled Calm update repairs stale installed Details README even when code/version already match', t => {
@@ -48,11 +49,11 @@ test('Default gallery installation excludes removed extensions and installs ever
     log(line) { logs.push(line); },
   });
   assert.deepEqual(result, { failures: [] });
-  assert.equal(calls.length, 20);
+  assert.equal(calls.length, 21);
   for (const id of ['meta.pyrefly', 'ms-python.python', 'ms-python.debugpy', 'ms-python.vscode-python-envs', 'shopify.ruby-lsp',
     'github.vscode-github-actions', 'golang.go', 'vscjava.vscode-gradle',
     'akintomiwa-fisayo.icon-classes', 'fogio.jetbrains-product-icon-theme',
-    'ms-azuretools.vscode-containers', 'llvm-vs-code-extensions.vscode-clangd', 'ms-azuretools.vscode-docker', 'mikestead.dotenv']) {
+    'ms-azuretools.vscode-containers', 'llvm-vs-code-extensions.vscode-clangd', 'ms-azuretools.vscode-docker', 'mikestead.dotenv', 'anteprimorac.html-end-tag-labels']) {
     assert.ok(!calls.some(call => call.id === id), id + ' must not be requested');
   }
   assert.deepEqual(calls, catalog.filter(ext => ext.source === 'gallery')
@@ -270,15 +271,15 @@ test('Browser readiness must return a true page result before the navigation che
 
 test('Official VSIX downloads validate manifest identity, version, CRC and HTTPS redirects before saving', async t => {
   const f = fixture(t), file = path.join(f.base, 'download.vsix');
-  assert.equal(readVsixManifest(archive, 'workstation.calm-typescript', '3.4.1').version, '3.4.1');
+  assert.equal(readVsixManifest(archive, 'workstation.calm-typescript', calmVersion).version, calmVersion);
   let requests = 0;
-  const result = await downloadExtension('workstation.calm-typescript', '3.4.1', file, async (url, options) => {
+  const result = await downloadExtension('workstation.calm-typescript', calmVersion, file, async (url, options) => {
     assert.equal(url.protocol, 'https:'); assert.equal(options.redirect, 'manual');
     return ++requests === 1 ? new Response(null, { status: 302, headers: { location: 'https://workstation.gallery.vsassets.io/package.vsix' } }) : new Response(archive);
   });
-  assert.equal(result.version, '3.4.1'); assert.equal(requests, 2);
+  assert.equal(result.version, calmVersion); assert.equal(requests, 2);
   assert.deepEqual(fs.readFileSync(file), archive);
-  assert.throws(() => readVsixManifest(archive, 'other.extension', '3.4.1'), /identity or version mismatch/);
+  assert.throws(() => readVsixManifest(archive, 'other.extension', calmVersion), /identity or version mismatch/);
   assert.throws(() => readVsixManifest(archive, 'workstation.calm-typescript', '3.1.1'), /identity or version mismatch/);
   const corrupt = Buffer.from(archive), name = corrupt.indexOf(Buffer.from('extension/package.json'), corrupt.readUInt32LE(corrupt.length - 6));
   assert.ok(name > 46); corrupt[name - 46 + 16] ^= 1;
@@ -295,7 +296,7 @@ test('HTTP errors, HTML, truncated ZIPs and untrusted redirects cannot create an
     [new Response(null, { status: 302, headers: { location: 'http://marketplace.visualstudio.com/insecure' } }), /Unsupported Marketplace redirect/],
     [new Response(null, { status: 302, headers: { location: 'https://untrusted.invalid/package' } }), /Unsupported Marketplace redirect/]
   ]) {
-    await assert.rejects(downloadExtension('workstation.calm-typescript', '3.4.1', file, async () => response), message);
+    await assert.rejects(downloadExtension('workstation.calm-typescript', calmVersion, file, async () => response), message);
     assert.equal(fs.existsSync(file), false);
   }
 });
@@ -303,11 +304,11 @@ test('HTTP errors, HTML, truncated ZIPs and untrusted redirects cannot create an
 test('Interrupted streamed VSIX downloads remove only their own partial file and preserve an existing package', async t => {
   const f = fixture(t), file = path.join(f.base, 'interrupted.vsix');
   async function* interrupted() { yield archive.subarray(0, 100); throw new Error('connection interrupted'); }
-  await assert.rejects(downloadExtension('workstation.calm-typescript', '3.4.1', file,
+  await assert.rejects(downloadExtension('workstation.calm-typescript', calmVersion, file,
     async () => ({ ok: true, status: 200, body: interrupted() })), /connection interrupted/);
   assert.equal(fs.existsSync(file), false);
   fs.writeFileSync(file, 'existing package');
-  await assert.rejects(downloadExtension('workstation.calm-typescript', '3.4.1', file, async () => new Response(archive)), /EEXIST/);
+  await assert.rejects(downloadExtension('workstation.calm-typescript', calmVersion, file, async () => new Response(archive)), /EEXIST/);
   assert.equal(fs.readFileSync(file, 'utf8'), 'existing package');
 });
 
@@ -326,8 +327,8 @@ test('A 96 MiB streamed VSIX is verified under a 32 MiB JS heap without bufferin
 test('Gallery failure uses a validated official VSIX and requires actual CLI registration', t => {
   const f = fixture(t), cli = path.join(f.base, 'editor'); put(cli);
   let registered = false, artifact, downloadOptions;
-  const result = installExtension(cli, 'workstation.calm-typescript', { version: '3.4.1', marketplaceFallback: true, log() {},
-    listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: '3.4.1' }] : [],
+  const result = installExtension(cli, 'workstation.calm-typescript', { version: calmVersion, marketplaceFallback: true, log() {},
+    listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: calmVersion }] : [],
     run(file, args, options) {
       if (file === process.execPath) { artifact = args.at(-1); downloadOptions = options; put(artifact, archive); return { status: 0 }; }
       if (args[1] === artifact) { registered = true; return { status: 0 }; }
@@ -345,9 +346,9 @@ test('Compatible gallery version is accepted only with an explicit per-extension
     let registered = false;
     const result = installExtension(cli, 'workstation.calm-typescript', { version: '3.0.0', allowCompatibleVersion, log() {},
       run(_file, args) { if (args[1] === 'workstation.calm-typescript') { registered = true; return { status: 0 }; } return { status: 1 }; },
-      listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: '3.4.1' }] : [] });
+      listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: calmVersion }] : [] });
     assert.equal(result.success, allowCompatibleVersion);
-    if (allowCompatibleVersion) { assert.equal(result.version, '3.4.1'); assert.equal(result.exact, false); }
+    if (allowCompatibleVersion) { assert.equal(result.version, calmVersion); assert.equal(result.exact, false); }
   }
 });
 
@@ -355,7 +356,7 @@ test('Wrong downloaded identity and unregistered VSIX installation both remain f
   const f = fixture(t), cli = path.join(f.base, 'editor'); put(cli);
   for (const id of ['other.extension', 'workstation.calm-typescript']) {
     let artifactInstalls = 0, artifact;
-    const result = installExtension(cli, id, { version: '3.4.1', marketplaceFallback: true, log() {}, listInstalled: () => [],
+    const result = installExtension(cli, id, { version: calmVersion, marketplaceFallback: true, log() {}, listInstalled: () => [],
       run(file, args) {
         if (file === process.execPath) { artifact = args.at(-1); put(artifact, archive); return { status: 0 }; }
         if (args[1] === artifact) { artifactInstalls++; return { status: 0 }; }
@@ -389,11 +390,11 @@ test('Latest-tracked extensions resolve the Marketplace latest and install only 
         put(artifactPath, archive);
         return { status: 0 };
       }
-      if (args.includes(artifactPath)) { registered = '3.4.1'; installCalls++; return { status: 0 }; }
+      if (args.includes(artifactPath)) { registered = calmVersion; installCalls++; return { status: 0 }; }
       return { status: 1 };
     } });
   assert.equal(result.success, true);
-  assert.equal(result.version, '3.4.1');
+  assert.equal(result.version, calmVersion);
   assert.equal(result.skipped, undefined);
   assert.equal(installCalls, 1, 'The newer artifact is installed exactly once');
   assert.equal(downloadArgs.at(-2), 'latest');
@@ -403,7 +404,7 @@ test('Latest-tracked extensions skip the install when the registered version is 
   const f = fixture(t), cli = path.join(f.base, 'editor'); put(cli);
   let installCalls = 0;
   const result = installExtension(cli, 'workstation.calm-typescript', { trackLatest: true, log() {},
-    listInstalled: () => [{ id: 'workstation.calm-typescript', version: '3.4.1' }],
+    listInstalled: () => [{ id: 'workstation.calm-typescript', version: calmVersion }],
     run(file, args) {
       if (file === process.execPath) { put(args.at(-1), archive); return { status: 0 }; }
       installCalls++;
@@ -411,7 +412,7 @@ test('Latest-tracked extensions skip the install when the registered version is 
     } });
   assert.equal(result.success, true);
   assert.equal(result.skipped, true);
-  assert.equal(result.version, '3.4.1');
+  assert.equal(result.version, calmVersion);
   assert.equal(installCalls, 0, 'The gallery install is skipped when the latest is already registered');
 });
 
@@ -443,7 +444,7 @@ test('Old version directories of a managed extension are archived, never duplica
 
 test('Latest update never downgrades a newer release, prerelease or build metadata version', t => {
   const f = fixture(t), cli = path.join(f.base, 'editor'); put(cli);
-  for (const version of ['3.10.0', '4.0.0-beta.1', '3.4.1+local']) {
+  for (const version of ['3.10.0', '4.0.0-beta.1', `${calmVersion}+local`]) {
     let installs = 0, artifact;
     const result = installExtension(cli, 'workstation.calm-typescript', { trackLatest: true, log() {},
       listInstalled: () => [{ id: 'workstation.calm-typescript', version }],
@@ -458,11 +459,11 @@ test('Latest update never downgrades a newer release, prerelease or build metada
 
 test('A stable latest release replaces its older prerelease and verifies Windows CMD registration', t => {
   const f = fixture(t), cli = path.join(f.base, 'Editor With Spaces', 'editor.cmd'); put(cli);
-  let current = '3.4.1-beta.9', command, artifact;
+  let current = `${calmVersion}-beta.9`, command, artifact;
   const result = installExtension(cli, 'workstation.calm-typescript', { trackLatest: true, platform: 'win32', log() {},
     listInstalled: () => [{ id: 'workstation.calm-typescript', version: current }],
     run(file, args) { assert.equal(file, process.execPath); artifact = args.at(-1); put(artifact, archive); return { status: 0 }; },
-    exec(value, options) { command = value; assert.equal(options.timeout, 180000); current = '3.4.1'; } });
+    exec(value, options) { command = value; assert.equal(options.timeout, 180000); current = calmVersion; } });
   assert.equal(result.success, true);
   assert.equal(command, `"${cli}" --install-extension "${artifact}" --force`);
   assert.equal(fs.existsSync(artifact), false);
@@ -502,7 +503,7 @@ test('A transient latest-package CLI crash retries the verified artifact once an
       registered = true;
     };
     const result = installExtension(cli, 'workstation.calm-typescript', { trackLatest: true, platform, log() {},
-      listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: '3.4.1' }] : [],
+      listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: calmVersion }] : [],
       run(file, args) {
         if (file === process.execPath) {
           downloads++; artifact = args.at(-1); put(artifact, archive); return { status: 0 };
@@ -522,7 +523,7 @@ test('Three failed CLI attempts stay a failure even when the expected version ap
   const f = fixture(t), cli = path.join(f.base, 'editor'); put(cli);
   let downloads = 0, installs = 0;
   const result = installExtension(cli, 'workstation.calm-typescript', { trackLatest: true, log() {},
-    listInstalled: () => installs ? [{ id: 'workstation.calm-typescript', version: '3.4.1' }] : [],
+    listInstalled: () => installs ? [{ id: 'workstation.calm-typescript', version: calmVersion }] : [],
     run(file, args) {
       if (file === process.execPath) { downloads++; put(args.at(-1), archive); return { status: 0 }; }
       installs++; return { status: 134 };
@@ -589,7 +590,7 @@ test('A transient latest download retries its partial file before installing the
   const f = fixture(t), cli = path.join(f.base, 'editor'); put(cli);
   let downloads = 0, registered = false, artifact;
   const result = installExtension(cli, 'workstation.calm-typescript', { trackLatest: true, log() {},
-    listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: '3.4.1' }] : [],
+    listInstalled: () => registered ? [{ id: 'workstation.calm-typescript', version: calmVersion }] : [],
     run(file, args) {
       if (file === process.execPath) {
         artifact = args.at(-1); downloads++;

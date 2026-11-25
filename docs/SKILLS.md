@@ -1,12 +1,12 @@
 # Skills, правила и агент
 
-Установка кладёт в `~/.gemini` только то, что нужно для работы с frontend-проектами. Ничего лишнего: чем меньше контекста, тем быстрее отвечает агент.
+Установка кладёт в `~/.gemini` только то, что нужно для работы с Next.js, Node.js и React-проектами. Ничего лишнего: чем меньше контекста, тем быстрее отвечает агент.
 
 | Что | Куда ставится | Зачем |
 | --- | --- | --- |
 | [GEMINI.md](../rules/GEMINI.template.md) | `~/.gemini/GEMINI.md` | Главные правила: язык, scope задачи, простой код, проверка |
-| Правила design и full-stack | `~/.gemini/config/rules/` | Подключаются только для задач по дизайну или backend |
-| [workstation-frontend-mentor](../skills/workstation-frontend-mentor/SKILL.md) | `~/.gemini/config/skills/` | Модули: state, API, формы, routing, MUI/Tailwind, проверка |
+| Правила design и full-stack | `~/.gemini/config/rules/` | Подключаются только для задач по дизайну или full-stack (Next.js App Router, Node.js, Prisma, API) |
+| [workstation-frontend-mentor](../skills/workstation-frontend-mentor/SKILL.md) | `~/.gemini/config/skills/` | Модули: state, API, формы, Next.js/React routing, Node.js/Prisma backend, MUI/Tailwind, проверка |
 | [workstation-practice](../skills/workstation-practice/SKILL.md) | там же | Учебные задачи |
 | [in-chat-screenshot-to-code](../skills/in-chat-screenshot-to-code/SKILL.md) | там же | Вёрстка по screenshot. Источник: [provenance](upstream/IN-CHAT-SCREENSHOT-TO-CODE-PROVENANCE.md) |
 | [agent-browser](../skills/agent-browser/SKILL.md) | там же | Проверка страницы в браузере |

@@ -244,13 +244,15 @@ test('personal editor visual preferences survive setup without replacing false v
 
 test('Upgrade delivers new managed appearance keys while personal values stay verbatim', () => {
   const current = {
+    'htmlEndTagLabels.labelPrefix': '/',
+    'htmlEndTagLabels.labelColor': '#8b949e99',
     'workbench.colorCustomizations': {
       'errorLens.errorForeground': '#ff000080',
       'errorLens.errorBackground': '#00000000',
       // Near-invisible colors an earlier setup wrote, not personal choices.
       'editorWarning.foreground': '#fbbf2426',
       'errorLens.hintForegroundLight': '#94a3b833',
-      'htmlEndTagLabels.labelColor': '#00000000',
+      'htmlEndTagLabels.labelColor': '#8b949e99',
     },
     'workbench.settings.applyToAllProfiles': ['personal.setting', 'window.zoomLevel'],
     'editor.fontFamily': 'Personal Mono',
@@ -259,9 +261,14 @@ test('Upgrade delivers new managed appearance keys while personal values stay ve
   const merged = mergeSettings(current, managed);
   const customizations = merged['workbench.colorCustomizations'];
   assert.equal(customizations['errorLens.errorForeground'], '#ff000080', 'personal errorLens value preserved');
-  for (const key of ['editorWarning.foreground', 'errorLens.hintForegroundLight', 'htmlEndTagLabels.labelColor']) {
+  for (const key of ['editorWarning.foreground', 'errorLens.hintForegroundLight']) {
     assert.equal(customizations[key], managed['workbench.colorCustomizations'][key], key + ' moves to the visible profile color');
   }
+  assert.equal(Object.hasOwn(merged, 'htmlEndTagLabels.labelPrefix'), false, 'retired HTML End Tag Labels prefix leaves on upgrade');
+  assert.equal(Object.hasOwn(merged, 'htmlEndTagLabels.labelColor'), false, 'retired HTML End Tag Labels color leaves on upgrade');
+  assert.equal(Object.hasOwn(customizations, 'htmlEndTagLabels.labelColor'), false, 'retired HTML End Tag Labels color customization leaves on upgrade');
+  const legacyZero = mergeSettings({ 'workbench.colorCustomizations': { 'htmlEndTagLabels.labelColor': '#00000000' } }, managed);
+  assert.equal(Object.hasOwn(legacyZero['workbench.colorCustomizations'], 'htmlEndTagLabels.labelColor'), false, 'older hidden #00000000 end-tag color also leaves on upgrade');
   assert.equal(customizations['errorLens.errorBackgroundLight'], '#00000000', 'new managed transparent keys reach the upgrade');
   assert.equal(customizations['errorLens.warningRangeBackground'], '#00000000', 'new managed range keys reach the upgrade');
   const shared = merged['workbench.settings.applyToAllProfiles'];
@@ -334,4 +341,52 @@ test('Retired setup shortcuts leave both merge directions while personal shortcu
     assert.ok(merged.some(binding => binding.command === 'personal.search'));
     assert.equal(merged.filter(binding => binding.command === 'editor.action.formatDocument').length, 2);
   }
+});
+
+test('Auto-approve workflow persists full-stack grants while preserving explicit denials and ignoring workspace files', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'workstation-perms-boundary-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const customRoots = { userProfile: path.join(root, 'Owner'), gitBashPath: process.execPath };
+  const env = require('../lib/paths').getEnvironmentPaths(customRoots);
+  // Seed personal explicit denials and an unrelated untrusted workspace with a hostile .vscode/settings.json
+  fs.mkdirSync(path.dirname(env.settingsJson), { recursive: true });
+  fs.writeFileSync(env.settingsJson, JSON.stringify({
+    'chat.tools.terminal.autoApprove': { 'rm -rf': false, 'git push --force': false },
+    'personal.orgPolicy': 'keep',
+  }));
+  const antigravityFile = path.join(env.geminiDir, 'antigravity/settings.json');
+  fs.mkdirSync(path.dirname(antigravityFile), { recursive: true });
+  fs.writeFileSync(antigravityFile, JSON.stringify({
+    permissions: { allow: ['command(git status)'], deny: ['command(rm -rf *)', 'write_file(/etc/*)'] },
+  }));
+  const untrustedWorkspace = path.join(root, 'untrusted-repo', '.vscode');
+  fs.mkdirSync(untrustedWorkspace, { recursive: true });
+  fs.writeFileSync(path.join(untrustedWorkspace, 'settings.json'), JSON.stringify({
+    'permissions': { allow: ['dangerous_override(*)'] },
+    'chat.tools.terminal.autoApprove': { 'rm -rf': true },
+  }));
+
+  const opts = { customRoots, autoApprove: true, applyProfile: true, quietCompletion: true, skipExtensions: true, skipAgentBrowser: true, skipFont: true, log() {} };
+  const first = require('../lib/installer').runInstaller(opts);
+  assert.equal(first.success, true, first.failures?.join('; '));
+
+  const settings = JSON.parse(fs.readFileSync(env.settingsJson, 'utf8'));
+  assert.equal(settings['chat.tools.terminal.autoApprove']['/.*/'], true);
+  assert.equal(settings['chat.tools.terminal.autoApprove']['rm -rf'], false, 'explicit terminal denial must survive --auto-approve');
+  assert.equal(settings['chat.tools.terminal.autoApprove']['git push --force'], false);
+  assert.equal(settings['personal.orgPolicy'], 'keep');
+
+  const agentSettings = JSON.parse(fs.readFileSync(antigravityFile, 'utf8'));
+  for (const grant of ['command(*)', 'read_file(*)', 'write_file(*)', 'read_url(*)', 'unsandboxed(*)', 'mcp(*)']) {
+    assert.ok(agentSettings.permissions.allow.includes(grant), grant + ' granted for full-stack automation');
+  }
+  assert.deepEqual(agentSettings.permissions.deny, ['command(rm -rf *)', 'write_file(/etc/*)'], 'explicit agent denials stay intact');
+  assert.equal(agentSettings.permissions.allow.includes('dangerous_override(*)'), false, 'untrusted workspace settings cannot expand global permissions');
+
+  // Repeat upgrade preserves everything identically without duplicating grants
+  const second = require('../lib/installer').runInstaller(opts);
+  assert.equal(second.success, true, second.failures?.join('; '));
+  const afterSecond = JSON.parse(fs.readFileSync(antigravityFile, 'utf8'));
+  assert.deepEqual(afterSecond.permissions.allow, agentSettings.permissions.allow);
+  assert.deepEqual(afterSecond.permissions.deny, agentSettings.permissions.deny);
 });

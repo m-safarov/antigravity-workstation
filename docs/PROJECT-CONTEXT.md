@@ -4,17 +4,17 @@
 сессия (человек или AI) за 5 минут понимает, что это за проект, что уже сделано,
 какие настройки зачем стоят и где лежат ограничения. Подробности — в ссылках.
 
-Последнее обновление: 23 ноября 2026, setup **3.13.0**, Aster Atelier **1.8.1**, Git Branch Panel **1.8.2**,
-Calm TypeScript **3.4.1**, Workstation Stability **1.3.31**,
+Последнее обновление: 26 ноября 2026, setup **3.14.0**, Aster Atelier **1.9.0**, Git Branch Panel **1.9.0**,
+Calm TypeScript **3.5.0**, Workstation Stability **1.4.0**,
 поддерживаемые IDE — **Antigravity IDE 2.8.0, 2.7.0 и 2.6.0**.
 
 ## 1. Что это за проект
 
 `antigravity-workstation` — установщик готового рабочего профиля для
-**Antigravity IDE** (IDE Google на базе VS Code) под Windows. Одна команда в
-Windows PowerShell скачивает свежий `main` с GitHub и ставит:
+**Antigravity IDE** (IDE Google на базе VS Code) под Windows для Next.js, Node.js и React-разработки. Одна команда в
+Windows PowerShell скачивает фиксированную ревизию `main` из `m-safarov/antigravity-workstation` и ставит:
 
-- настройки редактора (`config/settings.json`, 284 ключа), сочетания клавиш, `argv.json`;
+- настройки редактора (`config/settings.json`, 283 ключа), сочетания клавиш, `argv.json`;
 - расширения (Prettier, Error Lens, Tailwind, сниппеты React и др.) и 4 своих
   расширения из `extensions/`: **Aster Atelier** (темы и шрифты), **Workstation
   Stability Helper** (применяет профиль внутри IDE), **Calm TypeScript**,
@@ -203,6 +203,7 @@ GitHub): скрипты из `package.json` (корень или папки пе
 | 3.11.1 / 1.8.0 | Git Branch Panel 1.8.1: команда, прерванная сигналом (exit 130 — Ctrl+C от Git Bash) до ответа git, повторяется в фоне вместо ошибки «git switch: exit code 130» |
 | 3.12.0 / 1.8.0 | Ускорение TS/JS IntelliSense и автоимпорта (Workstation Stability 1.3.30: убран 2 с фриз Extension Host и 600+ предупреждений в `profile.cjs`; `files.watcherExclude` без `**/node_modules/**` → `--canUseWatchEvents`; `includePackageJsonAutoImports: "auto"`; `oxc.lint.run: "onSave"`), фикс `antigravity.inlineDiff.undo not found` (`inline-diff-guard.cjs` + fallback `ctrl+z`/`ctrl+y`), правила PowerShell vs Git Bash, preflight всех VSIX/шрифтов, автооткат профиля при сбое, проверка 1 активной версии расширения в Doctor, удалён `scripts/migrate-aster-profile.cjs` |
 | 3.13.0 / 1.8.1 | Поддержка **Antigravity IDE 2.8.0** (`2.8.0-6733682917113856`, x64 и ARM64) вместе с 2.7.0 и 2.6.0 при 100% сохранении `config/settings.json` (284 ключа) и стилей; выведены устаревшие дубликаты, которые 2.8.0 делает сам (`workstation-workflow`, `project-coding-rules`, `agents/workstation-verifier.md`, `history-and-verification.md`, `mikestead.dotenv`, setup-owned MCP `sequential-thinking`); оптимизация скорости в Workstation Stability **1.3.31** (`profile.cjs`, `workbench-ui.cjs`, `jelly-patch.cjs`, `repair-chat.cjs`, `react-snippets.cjs`), Calm TypeScript **3.4.1** и Git Branch Panel **1.8.2**; `oxlint` доведён до 0 ошибок и 0 предупреждений (было 48) |
+| 3.14.0 / 1.9.0 | Профессиональный профиль **Next.js + Node.js + React**: добавлены `Prisma.prisma` и `redhat.vscode-yaml`, `tailwindCSS.classFunctions`, `next.config.*` nesting, `.next`/`.turbo`/`coverage` excludes; выведен `anteprimorac.html-end-tag-labels` (серые Tailwind-подписи закрывающих тегов) с автоочисткой настроек `htmlEndTagLabels.*`; обновлён `scripts/bootstrap.ps1` (`m-safarov/antigravity-workstation`, единая фиксация 40-символьного commit SHA на весь запуск, защищённый staging + автоочистка временных архивов, потоковая загрузка с реальным прогрессом и retry/backoff, фирменный баннер `MANCHO SETING ANTIGRAVITI`, классификация версий IDE `tested`/`recognized`/`unknown`); единый источник полноты профиля `lib/profile-inventory.js` (Installer + Doctor) и чистый `--json`; необязательный локальный AI-помощник (`Workstation Stability` **1.4.0**: `Configure AI API Key` в `SecretStorage`, `Test AI Connection`, `lib/ai-recovery.js` строго по allowlist); командный **Git Branch Panel** **1.9.0** (upstream/incoming-outgoing, Pull Requests с выбором `head`/`base`, безопасное удаление веток Local/Remote/Both с проверкой прав GitHub/protection/worktree, diff-подсказка коммита по `Tab`, защита от гонок `stateGeneration`); ускорена проверка native-схемы в `lib/native-compatibility.js` в 38×; офлайн-визуалы Details в **Aster Atelier** **1.9.0** и **Calm TypeScript** **3.5.0** |
 
 Все версии проверены GitHub Actions (Setup checks, Native Windows IDE smoke,
 Aster actual Antigravity appearance, Verify Aster VSIX build).

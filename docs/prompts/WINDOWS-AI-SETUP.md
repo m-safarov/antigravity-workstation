@@ -2,8 +2,8 @@
 
 Открой ИИ-агент с доступом к терминалу (Claude Code, Codex, Gemini CLI, Cursor…), приложи ZIP или дай ссылку на репозиторий и вставь текст из блока ниже. Для полного сброса допиши в начале: «Команда 1». Агент спросит только имя и почту для GitHub (если их нет) и разрешение заменить другую версию Antigravity; руками — войти в аккаунт и закрыть окна IDE, когда он попросит.
 
-- Репозиторий: https://github.com/safarovmurod/antigravity-workstation
-- ZIP: https://github.com/safarovmurod/antigravity-workstation/archive/refs/heads/main.zip
+- Репозиторий: https://github.com/m-safarov/antigravity-workstation
+- ZIP: https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip
 
 ````text
 Ты — агент установки Antigravity Workstation на Windows. Работай сам от начала до конца. Не задавай вопросов посередине — всё нужное описано ниже.
@@ -12,7 +12,7 @@
 Поставить профиль Antigravity Workstation для Antigravity IDE 2.8.0, 2.7.0 или 2.6.0 официальным установщиком проекта (scripts/bootstrap.ps1) и доказать результат проверками шага 7. Установщик сам ставит настройки, клавиши, расширения из config/extensions.json, шрифт, правила, skills, MCP, выключает AI-подсказки, делает резервную копию и запускает Doctor. Твоя работа — подготовить систему, запустить его, устранить причины ошибок и проверить результат.
 
 ИСТОЧНИК
-Репозиторий https://github.com/safarovmurod/antigravity-workstation (ветка main) или ZIP https://github.com/safarovmurod/antigravity-workstation/archive/refs/heads/main.zip. Главная инструкция — README.md: если здесь и в README что-то расходится, прав README. ZIP нужен только для чтения docs/ и config/: установщик сам скачивает свежий main.
+Репозиторий https://github.com/m-safarov/antigravity-workstation (ветка main) или ZIP https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip. Главная инструкция — README.md: если здесь и в README что-то расходится, прав README. ZIP нужен только для чтения docs/ и config/: установщик сам скачивает свежий main.
 
 РЕЖИМ
 - По умолчанию «Команда 2» (обновить): изменённое в main заменяется, старое удаляется; тема, шрифты и свои настройки пользователя остаются.
@@ -42,7 +42,7 @@ Get-Process -Name 'Antigravity IDE','antigravity-ide' -ErrorAction SilentlyConti
 Установщик не работает в терминале редактора (видит TERM_PROGRAM / VSCODE_*), а окно от Start-Process наследует эти переменные. Поэтому запускай через explorer.exe:
 
 $t = $env:TEMP
-curl.exe -fsSL --retry 3 -o "$t\workstation-bootstrap.ps1" https://raw.githubusercontent.com/safarovmurod/antigravity-workstation/main/scripts/bootstrap.ps1
+curl.exe -fsSL --retry 3 -o "$t\workstation-bootstrap.ps1" https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/scripts/bootstrap.ps1
 Remove-Item -LiteralPath "$t\workstation-result.json" -ErrorAction SilentlyContinue
 $mode = ''      # Команда 1: $mode = ' -CleanExtensions'
 $ideDir = ''    # IDE не в %LOCALAPPDATA%\Programs: $ideDir = '<IDE>'
