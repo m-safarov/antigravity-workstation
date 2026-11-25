@@ -1,0 +1,11 @@
+name = "workstation-commit-ai"
+main = "worker.mjs"
+compatibility_date = "2026-01-01"
+
+[vars]
+GEMINI_MODEL = "gemini-3.5-flash-lite"
+RATE_LIMIT_PER_MIN = "20"
+
+# NEVER put GEMINI_API_KEY in this file!
+# Set it once as an encrypted Cloudflare Worker Secret:
+#   npx wrangler secret put GEMINI_API_KEY

@@ -194,11 +194,26 @@ async function countAheadBehind(cwd, branch, refs, remote, upstreamInfo) {
   return { ahead: ahead || 0, behind: behind || 0 };
 }
 
+function computeDiffStamp(root, changedFiles) {
+  if (!root || !Array.isArray(changedFiles) || !changedFiles.length) return '';
+  const parts = [];
+  for (const item of changedFiles.slice(0, 20)) {
+    if (!item?.file || item.secret) continue;
+    try {
+      const stat = fs.lstatSync(path.join(root, item.file));
+      parts.push(`${item.file}:${item.status}:${stat.size}:${Math.trunc(stat.mtimeMs)}`);
+    } catch {
+      parts.push(`${item.file}:${item.status}:0`);
+    }
+  }
+  return parts.join('|');
+}
+
 function emptyState(cwd) {
   return {
     cwd, root: null, gitDir: null, repoName: '', isRepo: false, branch: null, detached: false, headShort: '',
     remote: null, remotes: [], upstream: '', upstreamRemote: '', upstreamBranch: '', isGitHub: false,
-    defaultBranch: 'main', branches: [], remoteBranches: [], changedFiles: [], conflicts: [],
+    defaultBranch: 'main', branches: [], remoteBranches: [], changedFiles: [], diffStamp: '', conflicts: [],
     mergeInProgress: false, rebaseInProgress: false,
     hasCommits: false, remoteBranchExists: false, ahead: 0, behind: 0, error: null,
   };
@@ -254,6 +269,7 @@ async function collectState(cwd) {
   state.remoteBranches = remoteBranches;
   state.hasCommits = refs.local.has(state.branch);
   state.changedFiles = changedFiles;
+  state.diffStamp = computeDiffStamp(state.root, changedFiles);
   const upstreamInfo = state.hasCommits ? await readUpstream(cwd) : { upstream: '', upstreamRemote: '', upstreamBranch: '' };
   state.upstream = upstreamInfo.upstream;
   state.upstreamRemote = upstreamInfo.upstreamRemote;

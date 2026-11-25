@@ -86,7 +86,7 @@ function scheduleCommitSuggestion() {
     clearCommitSuggestion();
     return;
   }
-  const contextKey = JSON.stringify([state.root, state.branch, files, renderedFilesKey]);
+  const contextKey = JSON.stringify([state.root, state.branch, files, renderedFilesKey, state.diffStamp || '']);
   if (contextKey === lastSuggestionContextKey && activeSuggestion) {
     renderCommitSuggestion();
     return;

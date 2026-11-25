@@ -5,6 +5,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { handleCommitSuggestRequest, createRateLimiter } from '../services/commit-ai-proxy/proxy-core.mjs';
 
 const require = createRequire(import.meta.url);
 const ai = require('../extensions/workstation-stability/ai-assistant.cjs');
@@ -321,4 +322,135 @@ test('Bounded recovery handles transient download, corrupt archive, permanent 40
   assert.equal(rAllowlisted.usedAi, true);
   assert.equal(rAllowlisted.aiStatus, 'proposal_accepted');
   assert.equal(repairedTarget, 'settings.json');
+});
+
+test('Shared commit AI proxy keeps GEMINI_API_KEY strictly server-side, enforces rate limits/redaction, and integrates cleanly with workstationStability.ai.proxyUrl', async (t) => {
+  const serverKey = ['AQ', 'ServerOnlySecretKey9988776655'].join('.');
+  let lastUpstreamCall = null;
+  const mockFetch = async (url, opts) => {
+    lastUpstreamCall = { url, headers: opts.headers, body: JSON.parse(opts.body) };
+    return {
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify({
+          candidates: [{ content: { parts: [{ text: '```text\nfeat(auth): add session cookie guard\n```' }] } }],
+        });
+      },
+    };
+  };
+
+  // 1. Health endpoint reports status without exposing secret
+  const health = await handleCommitSuggestRequest({
+    method: 'GET',
+    pathname: '/health',
+    env: { GEMINI_API_KEY: serverKey, GEMINI_MODEL: 'gemini-3.5-flash-lite' },
+    fetchImpl: mockFetch,
+  });
+  assert.equal(health.status, 200);
+  assert.equal(health.body.includes(serverKey), false);
+  assert.equal(JSON.parse(health.body).configured, true);
+
+  // 2. Proxy core enforces rate limits, size limits, secret redaction, and commit-only system prompt
+  const limiter = createRateLimiter(2);
+  const proxyEnv = { GEMINI_API_KEY: serverKey, GEMINI_MODEL: 'gemini-3.5-flash-lite' };
+  const clientSecret = 'sk-client-secret-token-1234567890';
+
+  const r1 = await handleCommitSuggestRequest({
+    method: 'POST',
+    pathname: '/suggest',
+    bodyText: JSON.stringify({ userPrompt: `Files:\nM auth.ts\n+const k = "${clientSecret}";`, maxTokens: 500 }),
+    clientIp: '198.51.100.10',
+    env: proxyEnv,
+    fetchImpl: mockFetch,
+    rateLimiter: limiter,
+  });
+  assert.equal(r1.status, 200);
+  assert.equal(JSON.parse(r1.body).text, 'feat(auth): add session cookie guard');
+  assert.equal(lastUpstreamCall.headers['x-goog-api-key'], serverKey);
+  assert.equal(lastUpstreamCall.body.generationConfig.maxOutputTokens, 64, 'proxy must clamp maxOutputTokens to <=64');
+  assert.equal(JSON.stringify(lastUpstreamCall.body).includes(clientSecret), false, 'proxy must redact incoming secrets');
+  assert.match(lastUpstreamCall.body.systemInstruction.parts[0].text, /conventional commit/i);
+
+  // Second request allowed, third hits 429 rate limit
+  const r2 = await handleCommitSuggestRequest({
+    method: 'POST', pathname: '/suggest', bodyText: JSON.stringify({ userPrompt: 'Files:\nM a.ts\n+export const x = 1;' }),
+    clientIp: '198.51.100.10', env: proxyEnv, fetchImpl: mockFetch, rateLimiter: limiter,
+  });
+  assert.equal(r2.status, 200);
+  const r3 = await handleCommitSuggestRequest({
+    method: 'POST', pathname: '/suggest', bodyText: JSON.stringify({ userPrompt: 'Files:\nM a.ts\n+export const x = 2;' }),
+    clientIp: '198.51.100.10', env: proxyEnv, fetchImpl: mockFetch, rateLimiter: limiter,
+  });
+  assert.equal(r3.status, 429);
+
+  // Oversized payload rejected with 413
+  const rBig = await handleCommitSuggestRequest({
+    method: 'POST', pathname: '/suggest', bodyText: 'x'.repeat(20000),
+    clientIp: '198.51.100.11', env: proxyEnv, fetchImpl: mockFetch, rateLimiter: limiter,
+  });
+  assert.equal(rBig.status, 413);
+
+  // Missing server key returns 503 cleanly
+  const rNoKey = await handleCommitSuggestRequest({
+    method: 'POST', pathname: '/suggest', bodyText: JSON.stringify({ userPrompt: 'Files:\nM a.ts' }),
+    clientIp: '198.51.100.12', env: {}, fetchImpl: mockFetch, rateLimiter: limiter,
+  });
+  assert.equal(rNoKey.status, 503);
+
+  // 3. Full loopback HTTP integration: client has ZERO API key, only ai.proxyUrl set
+  let receivedClientHeaders = null;
+  const liveLimiter = createRateLimiter(20);
+  const proxyServer = http.createServer((req, res) => {
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', async () => {
+      receivedClientHeaders = req.headers;
+      const out = await handleCommitSuggestRequest({
+        method: req.method,
+        pathname: req.url,
+        headers: req.headers,
+        bodyText: Buffer.concat(chunks).toString('utf8'),
+        clientIp: '127.0.0.1',
+        env: proxyEnv,
+        fetchImpl: mockFetch,
+        rateLimiter: liveLimiter,
+      });
+      res.writeHead(out.status, out.headers);
+      res.end(out.body);
+    });
+  });
+  await new Promise(resolve => proxyServer.listen(0, '127.0.0.1', resolve));
+  t.after(() => proxyServer.close());
+  const proxyUrl = `http://127.0.0.1:${proxyServer.address().port}/suggest`;
+
+  const ideProxy = createMockIde({ settings: { 'ai.proxyUrl': proxyUrl } });
+  const genRes = await ai.generateText(
+    ideProxy.vscode, ideProxy.context, ideProxy.output,
+    { userPrompt: 'Files:\nM auth.ts\n+if (!session) return null;', allowWhenKeyConfigured: true, allowProxy: true },
+    { env: {}, envFile: null },
+  );
+  assert.equal(genRes.ok, true);
+  assert.equal(genRes.provider, 'proxy');
+  assert.equal(genRes.text, 'feat(auth): add session cookie guard');
+  assert.equal(receivedClientHeaders['x-goog-api-key'], undefined, 'client must never hold or send upstream Gemini API key');
+  assert.equal(receivedClientHeaders.authorization, undefined);
+
+  // testAiConnection also verifies proxyUrl cleanly when no personal key is configured
+  const testRes = await ai.testAiConnection(ideProxy.vscode, ideProxy.context, ideProxy.output, { env: {}, envFile: null });
+  assert.equal(testRes.ok, true);
+  assert.equal(testRes.keySource, 'proxy');
+
+  // Explicit ai.enabled: false still blocks proxy calls cleanly
+  const ideProxyDisabled = createMockIde({
+    settings: { 'ai.enabled': false, 'ai.proxyUrl': proxyUrl },
+    inspected: { 'ai.enabled': { globalValue: false } },
+  });
+  const blockedRes = await ai.generateText(
+    ideProxyDisabled.vscode, ideProxyDisabled.context, ideProxyDisabled.output,
+    { userPrompt: 'Files:\nM a.ts', allowWhenKeyConfigured: true, allowProxy: true },
+    { env: {}, envFile: null },
+  );
+  assert.equal(blockedRes.ok, false);
+  assert.equal(blockedRes.status, 'disabled');
 });

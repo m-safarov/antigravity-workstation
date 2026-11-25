@@ -3,7 +3,7 @@
   "displayName": "Workstation Stability",
   "description": "Применяет профиль редактора и проверяет конфликты настроек.",
   "publisher": "workstation",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "engines": {
     "vscode": "^1.107.0"
   },
@@ -61,6 +61,12 @@
           "default": "gemini-3.5-flash-lite",
           "scope": "application",
           "description": "Model identifier used by optional local AI assistance (API key comes from IDE SecretStorage or private ~/.gemini/config/workstation-setup/.env)."
+        },
+        "workstationStability.ai.proxyUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "Optional HTTPS proxy URL (e.g. a Cloudflare Worker or Vercel route from services/commit-ai-proxy) for shared commit-message AI suggestions when no personal API key is configured. The upstream API key stays strictly on the server."
         }
       }
     },

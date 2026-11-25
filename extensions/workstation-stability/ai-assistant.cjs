@@ -11,6 +11,7 @@ const SECRET_KEY = 'workstationStability.aiApiKey';
 const DEFAULT_PROVIDER = 'gemini';
 const DEFAULT_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+const DEFAULT_PROXY_URL = '';
 const ALLOWED_PROVIDERS = new Set(['gemini', 'openai-compatible']);
 // SHA-256 of the bracketed example literal from older local config docs (only rejected when still wrapped in [...]).
 const BRACKETED_PLACEHOLDER_SHA256 = 'd60d2e1944677c592222013c0a49146c6e0891ec3384b866810598816f0f14c7';
@@ -164,7 +165,8 @@ function readAiSettings(vscode) {
   const provider = ALLOWED_PROVIDERS.has(rawProvider) ? rawProvider : DEFAULT_PROVIDER;
   const endpoint = String(config?.get?.('ai.endpoint', DEFAULT_ENDPOINT) || DEFAULT_ENDPOINT).trim() || DEFAULT_ENDPOINT;
   const model = String(config?.get?.('ai.model', DEFAULT_MODEL) || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
-  return { enabled, provider, endpoint, model };
+  const proxyUrl = String(config?.get?.('ai.proxyUrl', DEFAULT_PROXY_URL) || DEFAULT_PROXY_URL).trim();
+  return { enabled, provider, endpoint, model, proxyUrl };
 }
 
 function defaultHttpRequest(urlString, options) {
@@ -356,6 +358,90 @@ async function performProviderCall({ provider, endpoint, model, apiKey, systemPr
   };
 }
 
+async function performProxyCall({ proxyUrl, userPrompt, maxTokens = 64, timeoutMs = 10000, request = defaultHttpRequest }) {
+  const checked = validateEndpoint(proxyUrl);
+  if (!checked.valid) {
+    return { ok: false, status: 'connection_failure', message: checked.reason };
+  }
+  const safeMaxTokens = Math.max(8, Math.min(Number(maxTokens) || 64, 64));
+  const payload = JSON.stringify({
+    task: 'commit-suggest',
+    userPrompt: redactSecrets(userPrompt || '', [], 5500),
+    maxTokens: safeMaxTokens,
+  });
+  let response;
+  try {
+    response = await request(checked.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+      body: payload,
+      timeoutMs,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      status: 'connection_failure',
+      message: 'Proxy connection failed: ' + redactSecrets(error?.message || error?.code || 'network error', [], 180),
+    };
+  }
+  let parsed = null;
+  try {
+    parsed = JSON.parse(response.body || '{}');
+  } catch {
+    parsed = null;
+  }
+  if (response.statusCode === 429) {
+    return {
+      ok: false,
+      status: 'rate_limited',
+      httpStatus: 429,
+      message: redactSecrets(parsed?.error || 'AI proxy rate limit reached (HTTP 429).', [], 180),
+    };
+  }
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    return {
+      ok: false,
+      status: 'connection_failure',
+      httpStatus: response.statusCode,
+      message: redactSecrets(parsed?.error || `AI proxy returned HTTP ${response.statusCode}.`, [], 180),
+    };
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return {
+      ok: false,
+      status: 'connection_failure',
+      httpStatus: response.statusCode,
+      message: 'AI proxy returned an unexpected non-JSON response.',
+    };
+  }
+  const text = typeof parsed.text === 'string'
+    ? parsed.text.trim()
+    : typeof parsed.suggestion === 'string'
+      ? parsed.suggestion.trim()
+      : extractTextFromResponse('gemini', parsed);
+  if (!text) {
+    return {
+      ok: false,
+      status: 'connection_failure',
+      httpStatus: response.statusCode,
+      message: 'AI proxy returned an empty suggestion.',
+    };
+  }
+  const model = typeof parsed.model === 'string' && parsed.model.trim() ? parsed.model.trim() : DEFAULT_MODEL;
+  return {
+    ok: true,
+    status: 'ok',
+    httpStatus: response.statusCode,
+    text: redactSecrets(text, [], 120),
+    provider: 'proxy',
+    model,
+    message: `AI proxy connection verified (${model}).`,
+  };
+}
+
 async function configureAiApiKey(vscode, context, output) {
   if (!context?.secrets || typeof context.secrets.get !== 'function') {
     const result = { action: 'unavailable', saved: false, message: 'IDE SecretStorage is unavailable in this environment.' };
@@ -413,22 +499,36 @@ async function testAiConnection(vscode, context, output, options = {}) {
   const settings = readAiSettings(vscode);
   const resolved = await resolveApiKey(context, options);
   const apiKey = resolved.apiKey;
-  const result = await performProviderCall({
-    provider: settings.provider,
-    endpoint: settings.endpoint,
-    model: settings.model,
-    apiKey,
-    userPrompt: 'Reply with OK.',
-    maxTokens: 4,
-    timeoutMs: options.timeoutMs || 12000,
-    request: options.request || defaultHttpRequest,
-  });
+  const proxyUrl = normalizeSecretInput(options.proxyUrl !== undefined ? options.proxyUrl : settings.proxyUrl);
+  let result;
+  let source = resolved.source;
+  if (!isUsableApiKey(apiKey) && proxyUrl) {
+    source = 'proxy';
+    result = await performProxyCall({
+      proxyUrl,
+      userPrompt: 'Files:\nM app.tsx\n\nDiff excerpt:\n+export const ok = true;',
+      maxTokens: 24,
+      timeoutMs: options.timeoutMs || 12000,
+      request: options.request || defaultHttpRequest,
+    });
+  } else {
+    result = await performProviderCall({
+      provider: settings.provider,
+      endpoint: settings.endpoint,
+      model: settings.model,
+      apiKey,
+      userPrompt: 'Reply with OK.',
+      maxTokens: 4,
+      timeoutMs: options.timeoutMs || 12000,
+      request: options.request || defaultHttpRequest,
+    });
+  }
   output?.appendLine('AI connection test: ' + JSON.stringify({
     ok: result.ok,
     status: result.status,
-    source: resolved.source,
-    provider: settings.provider,
-    model: settings.model,
+    source,
+    provider: result.provider || settings.provider,
+    model: result.model || settings.model,
     httpStatus: result.httpStatus || null,
     message: result.message,
   }));
@@ -437,35 +537,55 @@ async function testAiConnection(vscode, context, output, options = {}) {
   } else {
     await vscode.window.showWarningMessage(result.message);
   }
-  return { ...result, keySource: resolved.source };
+  return { ...result, keySource: source };
 }
 
 async function generateText(vscode, context, output, payload = {}, options = {}) {
   const settings = readAiSettings(vscode);
-  const resolved = await resolveApiKey(context, options);
-  const apiKey = resolved.apiKey;
-  const allowWithKey = payload?.allowWhenKeyConfigured === true && !isExplicitlyDisabled(vscode) && isUsableApiKey(apiKey);
-  if (!settings.enabled && !options.ignoreEnabled && !allowWithKey) {
+  const explicitDisabled = isExplicitlyDisabled(vscode);
+  if (explicitDisabled && !options.ignoreEnabled) {
     return { ok: false, status: 'disabled', message: 'Optional local AI assistance is disabled.' };
   }
-  if (!isUsableApiKey(apiKey)) {
-    return { ok: false, status: 'missing_key', message: 'AI API key is not configured.' };
+  const resolved = await resolveApiKey(context, options);
+  const apiKey = resolved.apiKey;
+  const proxyUrl = normalizeSecretInput(options.proxyUrl !== undefined ? options.proxyUrl : settings.proxyUrl);
+
+  const hasUsableKey = isUsableApiKey(apiKey);
+  const allowWithKey = payload?.allowWhenKeyConfigured === true && hasUsableKey;
+  if (hasUsableKey && (settings.enabled || options.ignoreEnabled || allowWithKey)) {
+    const safeSystem = redactSecrets(payload.systemPrompt || '', [apiKey], 2000);
+    const safeUser = redactSecrets(payload.userPrompt || '', [apiKey], 8000);
+    const result = await performProviderCall({
+      provider: settings.provider,
+      endpoint: settings.endpoint,
+      model: settings.model,
+      apiKey,
+      systemPrompt: safeSystem,
+      userPrompt: safeUser,
+      maxTokens: Math.min(Number(payload.maxTokens) || 96, 256),
+      timeoutMs: Math.min(Number(payload.timeoutMs) || options.timeoutMs || 10000, 15000),
+      request: options.request || defaultHttpRequest,
+    });
+    output?.appendLine('AI text request: ' + JSON.stringify({ ok: result.ok, status: result.status, source: resolved.source, provider: settings.provider, model: settings.model }));
+    return result;
   }
-  const safeSystem = redactSecrets(payload.systemPrompt || '', [apiKey], 2000);
-  const safeUser = redactSecrets(payload.userPrompt || '', [apiKey], 8000);
-  const result = await performProviderCall({
-    provider: settings.provider,
-    endpoint: settings.endpoint,
-    model: settings.model,
-    apiKey,
-    systemPrompt: safeSystem,
-    userPrompt: safeUser,
-    maxTokens: Math.min(Number(payload.maxTokens) || 96, 256),
-    timeoutMs: Math.min(Number(payload.timeoutMs) || options.timeoutMs || 10000, 15000),
-    request: options.request || defaultHttpRequest,
-  });
-  output?.appendLine('AI text request: ' + JSON.stringify({ ok: result.ok, status: result.status, source: resolved.source, provider: settings.provider, model: settings.model }));
-  return result;
+
+  if (payload?.allowProxy === true && proxyUrl) {
+    const result = await performProxyCall({
+      proxyUrl,
+      userPrompt: payload.userPrompt || '',
+      maxTokens: Math.min(Number(payload.maxTokens) || 64, 64),
+      timeoutMs: Math.min(Number(payload.timeoutMs) || options.timeoutMs || 8000, 12000),
+      request: options.request || defaultHttpRequest,
+    });
+    output?.appendLine('AI text request: ' + JSON.stringify({ ok: result.ok, status: result.status, source: 'proxy', provider: 'proxy', model: result.model || settings.model }));
+    return result;
+  }
+
+  if (!settings.enabled && !options.ignoreEnabled && !payload?.allowWhenKeyConfigured) {
+    return { ok: false, status: 'disabled', message: 'Optional local AI assistance is disabled.' };
+  }
+  return { ok: false, status: 'missing_key', message: 'AI API key is not configured.' };
 }
 
 function registerAiCommands(vscode, context, output, options = {}) {
@@ -481,6 +601,7 @@ module.exports = {
   DEFAULT_PROVIDER,
   DEFAULT_ENDPOINT,
   DEFAULT_MODEL,
+  DEFAULT_PROXY_URL,
   ENV_KEY_NAMES,
   PLACEHOLDER_KEY_SHA256: BRACKETED_PLACEHOLDER_SHA256,
   defaultPrivateEnvFile,
@@ -495,6 +616,7 @@ module.exports = {
   buildProviderRequest,
   classifyHttpFailure,
   performProviderCall,
+  performProxyCall,
   configureAiApiKey,
   testAiConnection,
   generateText,

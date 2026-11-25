@@ -186,16 +186,16 @@
   {
     "id": "workstation.git-branch-panel",
     "name": "Git Branch Panel",
-    "version": "1.9.1",
-    "description": "GitHub panel: repository and upstream tracking status, commit selected files with Tab diff-derived AI/local commit suggestions, push without force, multi-remote explicit pull, Pull Requests with selectable head/base, safe local/remote/both branch deletion with permission, protection and worktree checks, and npm scripts runner.",
+    "version": "1.9.2",
+    "description": "GitHub panel: repository and upstream tracking status, commit selected files with live diff-aware Tab commit suggestions (local analyzer + optional AI), push without force, multi-remote explicit pull, Pull Requests with selectable head/base, safe local/remote/both branch deletion with permission, protection and worktree checks, and npm scripts runner.",
     "category": "Other",
     "source": "local-vsix"
   },
   {
     "id": "workstation.stability-helper",
     "name": "Workstation Stability",
-    "version": "1.4.1",
-    "description": "Applies and verifies managed settings in the active IDE profile, restores audited extension fixes, and provides optional local AI API key SecretStorage, private user .env support, and connection-test commands.",
+    "version": "1.4.2",
+    "description": "Applies and verifies managed settings in the active IDE profile, restores audited extension fixes, and provides optional local AI API key SecretStorage, private user .env support, shared server proxyUrl support, and connection-test commands.",
     "category": "Other",
     "source": "local-vsix"
   },

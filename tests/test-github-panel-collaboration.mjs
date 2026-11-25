@@ -13,7 +13,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const panelRoot = path.join(root, 'extensions', 'git-branch-panel');
 const { GithubPanelProvider } = require(path.join(panelRoot, 'src/panel-provider.js'));
 const { renderHtml, ENGLISH } = require(path.join(panelRoot, 'src/webview-html.js'));
-const { suggestCommitMessage, redactDiffText } = require(path.join(panelRoot, 'src/commit-suggest.js'));
+const { suggestCommitMessage, redactDiffText, readSafeDiffForFiles } = require(path.join(panelRoot, 'src/commit-suggest.js'));
 
 const ACCOUNT = { id: '583231', label: 'octocat' };
 
@@ -357,6 +357,26 @@ test('Commit suggestion derives from actual diff, redacts secrets, uses optional
   ctx.handleCommitKeydown({ key: 'Tab', preventDefault() { preventedSecond = true; } });
   assert.equal(preventedSecond, false, 'normal Tab navigation preserved when no suggestion is active');
 
+  // Editing the same checked file updates diffStamp -> webview requests a fresh commit suggestion automatically
+  doc.getElementById('commitMessage').value = '';
+  const suggestCountBefore = posted.filter(m => m.command === 'suggestCommit').length;
+  messageHandler({
+    data: {
+      type: 'state',
+      state: {
+        root: f.devA, isRepo: true, branch: 'main', repoName: 'acme/next-app', remote: 'https://github.com/acme/next-app.git',
+        isGitHub: true, defaultBranch: 'main', upstream: 'origin/main', upstreamRemote: 'origin', upstreamBranch: 'main',
+        branches: [{ name: 'main', isLocal: true, isRemote: true, isCurrent: true, isDefault: true }],
+        changedFiles: [{ file: 'src-auth.ts', status: '??', secret: false }],
+        diffStamp: 'src-auth.ts:??:220:1700000002000',
+        conflicts: [], mergeInProgress: false, rebaseInProgress: false, hasCommits: true, remoteBranchExists: true, ahead: 0, behind: 0, error: null,
+      },
+    },
+  });
+  const suggestReqsAfter = posted.filter(m => m.command === 'suggestCommit');
+  assert.equal(suggestReqsAfter.length, suggestCountBefore + 1, 'diffStamp change must re-request commit suggestion for same checked file');
+  assert.ok(suggestReqsAfter.at(-1).requestId > req.requestId);
+
   // Compact extension attribution footer with inline SVG icon exists separately from commit author line
   const html = renderHtml();
   assert.match(html, /<footer class="ext-footer"[\s\S]*<svg[\s\S]*Antigravity Workstation \(m-safarov\)/);
@@ -388,4 +408,99 @@ test('Commit suggestion derives from actual diff, redacts secrets, uses optional
   doc.getElementById('pullButton').listeners.click();
   const pullMsg = posted.filter(m => m.command === 'pullBranch').at(-1);
   assert.deepEqual({ sourceRemote: pullMsg.sourceRemote, sourceBranch: pullMsg.sourceBranch }, { sourceRemote: 'upstream', sourceBranch: 'release' });
+});
+
+test('Local offline diff-aware commit suggestions produce distinct, specific messages across real change types without any API key', async t => {
+  const f = makeTeamFixture(t);
+  const panel = createPanel(f.devA);
+  const write = (rel, content) => {
+    const full = path.join(f.devA, rel);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, content);
+  };
+
+  // Seed baseline tracked files for modification scenarios
+  write('package.json', '{\n  "name": "demo-app",\n  "version": "1.0.0",\n  "dependencies": {\n    "react": "^19.0.0"\n  }\n}\n');
+  write('components/PriceBadge.tsx', 'export function PriceBadge({ price }: { price: number }) {\n  return (\n    <span className="px-2 py-1 bg-slate-100">{price}</span>\n  );\n}\n');
+  write('lib/pricing.ts', [
+    'export function parseDiscount(raw: string) {',
+    '  const num = Number(raw);',
+    '  const pct = num / 100;',
+    '  return pct;',
+    '}',
+    '',
+  ].join('\n'));
+  write('docs/DEPLOY.md', '# Deploy\n\nInitial notes.\n');
+  git(f.devA, 'add', '.');
+  git(f.devA, 'commit', '-m', 'chore: seed files for diff-aware commit tests');
+
+  // 1. New Next.js App Router POST handler
+  write('app/api/orders/route.ts', 'export async function POST(req: Request) {\n  const body = await req.json();\n  return Response.json({ id: body.id }, { status: 201 });\n}\n');
+  const s1 = await suggestCommitMessage(panel.provider, f.devA, {
+    changedFiles: [{ file: 'app/api/orders/route.ts', status: '??', secret: false }],
+  }, ['app/api/orders/route.ts']);
+  assert.equal(s1.source, 'local');
+  assert.equal(s1.suggestion, 'feat(api/orders): add POST handler');
+
+  // 2. New 1-line React component with className (must be feat component, NOT style-only)
+  write('components/StatusPill.tsx', 'export const StatusPill: React.FC = () => <span className="px-2 py-1 rounded">OK</span>;\n');
+  const s2 = await suggestCommitMessage(panel.provider, f.devA, {
+    changedFiles: [{ file: 'components/StatusPill.tsx', status: '??', secret: false }],
+  }, ['components/StatusPill.tsx']);
+  assert.equal(s2.suggestion, 'feat(components): add StatusPill component');
+
+  // 3. New Prisma model
+  write('prisma/schema.prisma', 'model Invoice {\n  id String @id @default(cuid())\n  total Int\n}\n');
+  const s3 = await suggestCommitMessage(panel.provider, f.devA, {
+    changedFiles: [{ file: 'prisma/schema.prisma', status: '??', secret: false }],
+  }, ['prisma/schema.prisma']);
+  assert.equal(s3.suggestion, 'feat(prisma): add Invoice model');
+
+  // 4. package.json adding dependency
+  write('package.json', '{\n  "name": "demo-app",\n  "version": "1.0.0",\n  "dependencies": {\n    "react": "^19.0.0",\n    "zod": "^3.24.0"\n  }\n}\n');
+  const s4 = await suggestCommitMessage(panel.provider, f.devA, {
+    changedFiles: [{ file: 'package.json', status: ' M', secret: false }],
+  }, ['package.json']);
+  assert.equal(s4.suggestion, 'chore(deps): add zod');
+
+  // 5. Tailwind-only styling edit on existing component
+  write('components/PriceBadge.tsx', 'export function PriceBadge({ price }: { price: number }) {\n  return (\n    <span className="px-3 py-1.5 bg-emerald-600 text-white rounded-md">{price}</span>\n  );\n}\n');
+  const s5 = await suggestCommitMessage(panel.provider, f.devA, {
+    changedFiles: [{ file: 'components/PriceBadge.tsx', status: ' M', secret: false }],
+  }, ['components/PriceBadge.tsx']);
+  assert.equal(s5.suggestion, 'style(components): update styling in PriceBadge.tsx');
+
+  // 6. Bug-fix guard inside existing function (hunk context detects parseDiscount + fix signal)
+  write('lib/pricing.ts', [
+    'export function parseDiscount(raw: string) {',
+    '  if (!raw) return null;',
+    '  const num = Number(raw);',
+    '  const pct = num / 100;',
+    '  return pct;',
+    '}',
+    '',
+  ].join('\n'));
+  const s6 = await suggestCommitMessage(panel.provider, f.devA, {
+    changedFiles: [{ file: 'lib/pricing.ts', status: ' M', secret: false }],
+  }, ['lib/pricing.ts']);
+  assert.equal(s6.suggestion, 'fix(lib): guard edge cases in parseDiscount');
+
+  // 7. Markdown docs heading addition
+  write('docs/DEPLOY.md', '# Deploy\n\nInitial notes.\n\n## Production Checklist\n\nVerify env vars.\n');
+  const s7 = await suggestCommitMessage(panel.provider, f.devA, {
+    changedFiles: [{ file: 'docs/DEPLOY.md', status: ' M', secret: false }],
+  }, ['docs/DEPLOY.md']);
+  assert.equal(s7.suggestion, 'docs(docs): document Production Checklist');
+
+  // All 7 suggestions must be distinct and within 72 chars
+  const all = [s1, s2, s3, s4, s5, s6, s7].map(item => item.suggestion);
+  assert.equal(new Set(all).size, 7, `expected 7 distinct suggestions, got: ${JSON.stringify(all)}`);
+  for (const line of all) assert.ok(line.length > 8 && line.length <= 72, `invalid length: ${line}`);
+
+  // Untracked file preview redacts Google/OpenAI keys before analysis or AI prompt
+  const syntheticKey = ['AQ', 'TestFakeKeyValue1234567890'].join('.');
+  write('lib/leak-check.ts', `export const cfg = { key: "${syntheticKey}" };\n`);
+  const safePreview = await readSafeDiffForFiles(f.devA, ['lib/leak-check.ts'], new Map([['lib/leak-check.ts', '??']]));
+  assert.equal(safePreview.diff.includes(syntheticKey), false);
+  assert.ok(safePreview.diff.includes('[REDACTED]'));
 });

@@ -7,7 +7,7 @@
 
 Готовый профессиональный профиль **Antigravity IDE** для разработки на **Next.js, Node.js, React, TypeScript и Tailwind CSS** на Windows одной командой: чистые настройки редактора, проверенные расширения, темы и шрифты **Aster Atelier**, командная панель **GitHub** (Pull, Push, PR, ветки, Tab-подсказка commit), панель **npm-скриптов**, правила агента без лишних вопросов и встроенный `Doctor`. AI-подсказки в коде выключены, обычный IntelliSense и автоимпорт работают быстро. Перед любыми изменениями создаётся резервная копия.
 
-Версия **3.15.0**. Репозиторий: https://github.com/m-safarov/antigravity-workstation · [Скачать ZIP](https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip)
+Версия **3.15.1**. Репозиторий: https://github.com/m-safarov/antigravity-workstation · [Скачать ZIP](https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip)
 
 ### Совместимость версий Antigravity IDE (любая версия)
 
@@ -140,10 +140,10 @@ git config --global user.email "почта@пример.com"
 | [Windows](docs/prompts/WINDOWS-AI-SETUP.md) ([скачать](https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/docs/prompts/WINDOWS-AI-SETUP.md)) | Любой ИИ-агент с терминалом ставит профиль теми же командами КОД 1 и КОД 2 |
 | [macOS](docs/prompts/MAC-AI-SETUP.md) ([скачать](https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/docs/prompts/MAC-AI-SETUP.md)) | Mac: агент переносит тот же профиль скриптом проекта |
 
-## Что нового в 3.15.0
+## Что нового в 3.15.1
 
+- **Умная diff-аналитика подсказки commit по `Tab` для всех (GitHub Panel 1.9.2) + серверный AI-прокси (Stability 1.4.2):** локальный анализатор без API-ключа читает реальные изменения в `git diff` и новых файлах (функции из hunk/context, React/Next.js компоненты, `route.ts` GET/POST, `schema.prisma`, зависимости `package.json`, Tailwind-стили, guard/error-фиксы, тесты и заголовки docs) и обновляет подсказку при каждом сохранении файла (`diffStamp`). Для командного или общего AI с полностью скрытым ключом на сервере добавлен готовый шаблон [`services/commit-ai-proxy/`](services/commit-ai-proxy/README.md) (Cloudflare Workers / Vercel) и настройка `workstationStability.ai.proxyUrl`.
 - **Официальная поддержка Antigravity IDE 2.9.0 (`2.9.0-4671306730438656`) + универсальная совместимость с любыми версиями IDE:** 2.9.0 добавлена в проверенный каталог (x64 и ARM64) и Windows CI smoke; будущие релизы автоматически проходят криптографическую проверку встроенной схемы `unified_state_sync.proto` (`schema-verified`), а при изменении формата `state.vscdb` безопасно устанавливается весь портативный профиль (`portable-fallback`) без остановки.
-- **Обновлённый AI-помощник и GitHub Panel 1.9.1 / Stability 1.4.1:** актуальная модель по умолчанию `gemini-3.5-flash-lite`, поддержка личного локального `%USERPROFILE%\.gemini\config\workstation-setup\.env` вне Git рядом с `SecretStorage` для подсказок commit по `Tab` в панели GitHub (и шаблон `.env.example`), выбор веток с нескольких remote в Pull и адаптивная ширина строки прогресса в узких терминалах.
-- **Профессиональный стек Next.js + Node.js (из 3.14.0):** `Prisma.prisma`, `redhat.vscode-yaml`, `tailwindCSS.classFunctions`, file nesting для `next.config.*`, удаление серых закрывающих подписей `anteprimorac.html-end-tag-labels`, надёжный установщик `MANCHO SETING ANTIGRAVITI` с staging-проверкой и очисткой, и офлайн-руководства Aster Atelier 1.9.0 / Calm TypeScript 3.5.0.
+- **Обновлённый AI-помощник и мульти-remote Pull:** актуальная модель по умолчанию `gemini-3.5-flash-lite`, шаблон `.env.example`, выбор веток с нескольких remote в Pull и адаптивная ширина строки прогресса в узких терминалах.
 
 [Все настройки](docs/SETTINGS-GUIDE.md) · [Расширения](docs/EXTENSIONS.md) · [Skills](docs/SKILLS.md) · [Как вернуть AI-подсказки](docs/AI-COMPLETION.md) · [Совместимость ПК](docs/HARDWARE-COMPATIBILITY.md) · [Восстановление через чат](docs/CHAT-REPAIR.md)
