@@ -250,7 +250,7 @@ test('GitHub Panel installation receives the resolved D: CLI and C: extension di
   assert.equal(result.success, true);
 });
 
-test('README has exactly two Windows PowerShell commands for IDE 2.8.0/2.7.0/2.6.0 and both turn AI suggestions off', () => {
+test('README has exactly two Windows PowerShell commands for IDE 2.9.0/2.8.0/2.7.0/2.6.0+ and both turn AI suggestions off', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   const entry = fs.readFileSync(path.join(repoRoot, 'bin/workstation-setup.js'), 'utf8');
   const bootstrap = fs.readFileSync(path.join(repoRoot, 'scripts/bootstrap.ps1'), 'utf8');
@@ -258,7 +258,8 @@ test('README has exactly two Windows PowerShell commands for IDE 2.8.0/2.7.0/2.6
   assert.match(entry, /quietCompletion:\s*false/);
   assert.equal([...readme.matchAll(/^```powershell$/gm)].length, 2, 'README offers exactly commands 1 and 2');
   assert.match(readme, /Windows PowerShell/);
-  assert.match(readme, /Antigravity IDE 2\.8\.0/);
+  assert.match(readme, /Antigravity IDE 2\.9\.0/);
+  assert.match(readme, /2\.8\.0/);
   assert.match(readme, /2\.7\.0/);
   assert.match(readme, /2\.6\.0/);
   assert.doesNotMatch(readme, /2\.5\.5|2\.5\.2|2\.1\.1|более новая|QuietCompletion|## 3\./);
@@ -273,8 +274,8 @@ test('README has exactly two Windows PowerShell commands for IDE 2.8.0/2.7.0/2.6
     assert.match(command, /finally \{ Remove-Item -LiteralPath \$file/);
     assert.doesNotMatch(command, /-(?:AutoApprove|QuietCompletion|RulesOnly)\b/i);
   }
-  // Both modes disable AI suggestions, let the agent work without asking and require Windows PowerShell with the IDE closed.
-  assert.match(bootstrap, /'install', '--quiet-completion', '--auto-approve'/);
+  // Both modes disable AI suggestions, let the agent work without asking, support future IDE fallback and require Windows PowerShell with the IDE closed.
+  assert.match(bootstrap, /'install', '--quiet-completion', '--auto-approve', '--allow-portable-fallback'/);
   // Command 1 starts from an empty profile; command 2 sets every profile value again and keeps personal appearance.
   assert.match(bootstrap, /if \(\$CleanExtensions\) \{ '--clean-extensions', '--reset-profile' \} else \{ '--apply-profile' \}/);
   assert.match(bootstrap, /TERM_PROGRAM/);
@@ -370,15 +371,15 @@ test('A running Antigravity is named with its PID and path, and only an interact
   assert.match(host.slice(0, host.indexOf('\n}\n')), /\[Console\]::IsInputRedirected[\s\S]*'\^-noni'/);
 });
 
-test('Bootstrap, README and the native catalog name the same IDE 2.8.0, 2.7.0 and 2.6.0 official installers', () => {
+test('Bootstrap, README and the native catalog name the same IDE 2.9.0, 2.8.0, 2.7.0 and 2.6.0 official installers', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   const bootstrap = fs.readFileSync(path.join(repoRoot, 'scripts/bootstrap.ps1'), 'utf8');
   const catalog = JSON.parse(fs.readFileSync(path.join(repoRoot, 'config/native-compatibility.json'), 'utf8'));
-  assert.match(bootstrap, /\$IdeVersions = @\('2\.8\.0', '2\.7\.0', '2\.6\.0'\)/);
+  assert.match(bootstrap, /\$IdeVersions = @\('2\.9\.0', '2\.8\.0', '2\.7\.0', '2\.6\.0'\)/);
   const template = bootstrap.match(/\$IdeDownload = '([^']+)'/)[1];
-  assert.deepEqual([...new Set(catalog.builds.map(build => build.ideVersion))].sort(), ['2.6.0', '2.7.0', '2.8.0']);
+  assert.deepEqual([...new Set(catalog.builds.map(build => build.ideVersion))].sort(), ['2.6.0', '2.7.0', '2.8.0', '2.9.0']);
   for (const build of catalog.builds) {
-    if (build.ideVersion === '2.8.0') assert.equal(template.replace('{0}', build.architecture), build.source.installerUrl, 'Bootstrap recommends the newest audited installer');
+    if (build.ideVersion === '2.9.0') assert.equal(template.replace('{0}', build.architecture), build.source.installerUrl, 'Bootstrap recommends the newest audited installer');
     assert.ok(readme.includes(build.source.installerUrl), 'README links the official ' + build.architecture + ' installer');
   }
   assert.equal(/[^\x00-\x7f]/.test(bootstrap), false, 'Windows PowerShell 5.1 needs an ASCII-only bootstrap');

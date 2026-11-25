@@ -361,4 +361,31 @@ test('Commit suggestion derives from actual diff, redacts secrets, uses optional
   const html = renderHtml();
   assert.match(html, /<footer class="ext-footer"[\s\S]*<svg[\s\S]*Antigravity Workstation \(m-safarov\)/);
   assert.match(html, /id="authorLine"/);
+
+  // Multi-remote pullSource includes secondary remotes (upstream/release) and sends explicit sourceRemote + sourceBranch
+  messageHandler({
+    data: {
+      type: 'state',
+      state: {
+        root: f.devA, isRepo: true, branch: 'main', repoName: 'acme/next-app', remote: 'https://github.com/acme/next-app.git',
+        remotes: ['origin', 'upstream'],
+        isGitHub: true, defaultBranch: 'main', upstream: 'origin/main', upstreamRemote: 'origin', upstreamBranch: 'main',
+        branches: [{ name: 'main', isLocal: true, isRemote: true, isCurrent: true, isDefault: true }],
+        remoteBranches: [
+          { remote: 'origin', branch: 'main', ref: 'origin/main' },
+          { remote: 'upstream', branch: 'release', ref: 'upstream/release' },
+        ],
+        changedFiles: [], conflicts: [], mergeInProgress: false, rebaseInProgress: false, hasCommits: true, remoteBranchExists: true, ahead: 0, behind: 0, error: null,
+      },
+    },
+  });
+  const pullSelect = doc.getElementById('pullSource');
+  assert.equal(pullSelect.children.length, 2);
+  assert.equal(pullSelect.children[1].textContent, 'upstream/release');
+  pullSelect.value = pullSelect.children[1].value;
+  pullSelect.listeners.change();
+  assert.equal(doc.getElementById('pullSummary').textContent, 'upstream/release → main');
+  doc.getElementById('pullButton').listeners.click();
+  const pullMsg = posted.filter(m => m.command === 'pullBranch').at(-1);
+  assert.deepEqual({ sourceRemote: pullMsg.sourceRemote, sourceBranch: pullMsg.sourceBranch }, { sourceRemote: 'upstream', sourceBranch: 'release' });
 });

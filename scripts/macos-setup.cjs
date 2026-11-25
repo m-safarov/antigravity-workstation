@@ -27,7 +27,7 @@ const { fullReset } = require('../lib/full-reset');
 
 const repo = path.resolve(__dirname, '..');
 // Same audited versions as the Windows setup (lib/native-compatibility.js).
-const IDE_VERSIONS = ['2.8.0', '2.7.0', '2.6.0'];
+const IDE_VERSIONS = ['2.9.0', '2.8.0', '2.7.0', '2.6.0'];
 // The README modes always manage AI suggestions and the 1-second Auto Save (lib/installer.js).
 const QUIET_MANAGED_KEYS = new Set(['editor.inlineSuggest.enabled', 'files.autoSave', 'files.autoSaveDelay']);
 const WINDOWS_ONLY = ['terminal.integrated.profiles.windows', 'terminal.integrated.defaultProfile.windows'];
@@ -48,6 +48,7 @@ function parseArgs(argv) {
     else if (arg === '--home') options.home = value();
     else if (arg === '--no-launch') options.launch = false;
     else if (arg === '--allow-other-version') options.allowOtherVersion = true;
+    else if (arg === '--strict-version') options.strictVersion = true;
     else throw new Error('Unknown option: ' + arg);
   }
   return options;
@@ -141,7 +142,13 @@ function run(options = {}) {
   const live = !options.home;
   const paths = macPaths(home, app);
   const ideVersion = String(paths.product.ideVersion || '');
-  if (!IDE_VERSIONS.includes(ideVersion) && !options.allowOtherVersion) throw new Error('Antigravity ' + IDE_VERSIONS.join(' or ') + ' is required; this app is ' + (ideVersion || 'unknown') + '. Nothing was changed.');
+  const ideVersionTier = IDE_VERSIONS.includes(ideVersion) ? 'tested' : 'untested';
+  if (ideVersionTier !== 'tested' && options.strictVersion && !options.allowOtherVersion) {
+    throw new Error('Antigravity ' + IDE_VERSIONS.join(' or ') + ' is required; this app is ' + (ideVersion || 'unknown') + '. Nothing was changed.');
+  }
+  if (ideVersionTier !== 'tested') {
+    log('Note: Antigravity ' + (ideVersion || 'unknown') + ' is outside the tested list (' + IDE_VERSIONS.join(', ') + '); applying portable profile with compatibility checks.');
+  }
   if (live && ideRunning(app)) throw new Error('Quit Antigravity first (Cmd+Q on every window); nothing was changed.');
   const nodeExe = options.node || process.execPath;
   const setupVersion = readJsonFile(path.join(repo, 'package.json')).version;
@@ -236,7 +243,7 @@ function run(options = {}) {
   const skills = fs.readdirSync(skillsDir).filter(name => /^[a-z0-9][a-z0-9-]*$/.test(name) && exists(path.join(skillsDir, name, 'SKILL.md'))).sort();
   fs.writeFileSync(path.join(paths.configDir, 'skill-inventory.json'), json({ skills }));
 
-  return { ideVersion, mode, app, cli: paths.cli, userDir: paths.userDir, extensionsDir: paths.extensionsDir, stateDb: paths.stateDb,
+  return { ideVersion, ideVersionTier, mode, app, cli: paths.cli, userDir: paths.userDir, extensionsDir: paths.extensionsDir, stateDb: paths.stateDb,
     workbench: paths.workbench, resetBackup, backup: exists(backup) ? backup : null, written,
     payload: { changed: payload.changed.length, removed: payload.removed, preserved: payload.preserved, backup: payload.backup } };
 }

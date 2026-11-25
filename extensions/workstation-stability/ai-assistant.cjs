@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const crypto = require('node:crypto');
 const http = require('node:http');
 const https = require('node:https');
@@ -7,30 +10,110 @@ const https = require('node:https');
 const SECRET_KEY = 'workstationStability.aiApiKey';
 const DEFAULT_PROVIDER = 'gemini';
 const DEFAULT_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 const ALLOWED_PROVIDERS = new Set(['gemini', 'openai-compatible']);
-// SHA-256 of the documented README placeholder value (unwrapped from optional [...]).
-const PLACEHOLDER_KEY_SHA256 = 'd60d2e1944677c592222013c0a49146c6e0891ec3384b866810598816f0f14c7';
+// SHA-256 of the bracketed example literal from older local config docs (only rejected when still wrapped in [...]).
+const BRACKETED_PLACEHOLDER_SHA256 = 'd60d2e1944677c592222013c0a49146c6e0891ec3384b866810598816f0f14c7';
+const ENV_KEY_NAMES = Object.freeze(['WORKSTATION_AI_API_KEY', 'GEMINI_API_KEY']);
+
+function defaultPrivateEnvFile() {
+  return path.join(os.homedir(), '.gemini', 'config', 'workstation-setup', '.env');
+}
 
 function normalizeSecretInput(value) {
   if (typeof value !== 'string') return '';
   return value.trim();
 }
 
-function unwrapPlaceholderCandidate(value) {
+function isPlaceholderApiKey(value) {
   const trimmed = normalizeSecretInput(value);
-  if (trimmed.startsWith('[') && trimmed.endsWith(']') && trimmed.length > 2) {
-    return trimmed.slice(1, -1).trim();
+  if (!trimmed) return false;
+  const isBracketed = trimmed.startsWith('[') && trimmed.endsWith(']') && trimmed.length > 2;
+  const candidate = isBracketed ? trimmed.slice(1, -1).trim() : trimmed;
+  if (!candidate) return true;
+  if (/^<[^>]+>$/.test(candidate) || /^YOUR_[A-Z0-9_]+$/i.test(candidate) || /^PLACEHOLDER/i.test(candidate)) return true;
+  if (isBracketed) {
+    const digest = crypto.createHash('sha256').update(candidate, 'utf8').digest('hex');
+    if (digest === BRACKETED_PLACEHOLDER_SHA256) return true;
   }
-  return trimmed;
+  return false;
 }
 
-function isPlaceholderApiKey(value) {
-  const candidate = unwrapPlaceholderCandidate(value);
-  if (!candidate) return false;
-  if (/^<[^>]+>$/.test(candidate) || /^YOUR_[A-Z0-9_]+$/i.test(candidate)) return true;
-  const digest = crypto.createHash('sha256').update(candidate, 'utf8').digest('hex');
-  return digest === PLACEHOLDER_KEY_SHA256;
+function parseDotEnvKey(content, keyNames = ENV_KEY_NAMES) {
+  if (typeof content !== 'string' || !content) return '';
+  const map = new Map();
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).replace(/^export\s+/i, '').trim();
+    if (!keyNames.includes(key)) continue;
+    let val = line.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"') && val.length >= 2)
+      || (val.startsWith("'") && val.endsWith("'") && val.length >= 2)) {
+      val = val.slice(1, -1).trim();
+    }
+    if (val) map.set(key, val);
+  }
+  for (const key of keyNames) {
+    if (map.has(key)) return map.get(key);
+  }
+  return '';
+}
+
+function hasSymlinkComponent(targetPath) {
+  let current = path.resolve(targetPath);
+  for (let depth = 0; depth < 6; depth++) {
+    try {
+      if (fs.lstatSync(current).isSymbolicLink()) return true;
+    } catch (error) {
+      if (error.code !== 'ENOENT') return true;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return false;
+}
+
+function readPrivateEnvApiKey(options = {}) {
+  const envObj = options.env !== undefined ? options.env : process.env;
+  if (envObj && typeof envObj === 'object') {
+    for (const key of ENV_KEY_NAMES) {
+      const value = normalizeSecretInput(envObj[key]);
+      if (value) return { apiKey: value, source: 'env' };
+    }
+  }
+  const envFile = options.envFile !== undefined ? options.envFile : defaultPrivateEnvFile();
+  if (!envFile || typeof envFile !== 'string') return { apiKey: '', source: 'none' };
+  try {
+    if (hasSymlinkComponent(envFile)) return { apiKey: '', source: 'none' };
+    if (!fs.existsSync(envFile)) return { apiKey: '', source: 'none' };
+    const stat = fs.lstatSync(envFile);
+    if (!stat.isFile() || stat.size === 0 || stat.size > 8192) return { apiKey: '', source: 'none' };
+    const value = parseDotEnvKey(fs.readFileSync(envFile, 'utf8'));
+    if (value) return { apiKey: value, source: 'privateEnvFile' };
+  } catch {
+    // Ignore unreadable private env files and fall back cleanly.
+  }
+  return { apiKey: '', source: 'none' };
+}
+
+async function resolveApiKey(context, options = {}) {
+  const fromSecrets = context?.secrets?.get ? normalizeSecretInput(await context.secrets.get(SECRET_KEY)) : '';
+  if (fromSecrets) {
+    return { apiKey: fromSecrets, source: 'secretStorage' };
+  }
+  return readPrivateEnvApiKey(options);
+}
+
+function isExplicitlyDisabled(vscode) {
+  const config = vscode?.workspace?.getConfiguration ? vscode.workspace.getConfiguration('workstationStability') : null;
+  if (!config || typeof config.inspect !== 'function') return false;
+  const info = config.inspect('ai.enabled');
+  if (!info || typeof info !== 'object') return false;
+  return info.globalValue === false || info.workspaceValue === false || info.workspaceFolderValue === false;
 }
 
 function isUsableApiKey(value) {
@@ -328,7 +411,8 @@ async function configureAiApiKey(vscode, context, output) {
 
 async function testAiConnection(vscode, context, output, options = {}) {
   const settings = readAiSettings(vscode);
-  const apiKey = context?.secrets?.get ? await context.secrets.get(SECRET_KEY) : '';
+  const resolved = await resolveApiKey(context, options);
+  const apiKey = resolved.apiKey;
   const result = await performProviderCall({
     provider: settings.provider,
     endpoint: settings.endpoint,
@@ -342,6 +426,7 @@ async function testAiConnection(vscode, context, output, options = {}) {
   output?.appendLine('AI connection test: ' + JSON.stringify({
     ok: result.ok,
     status: result.status,
+    source: resolved.source,
     provider: settings.provider,
     model: settings.model,
     httpStatus: result.httpStatus || null,
@@ -352,15 +437,17 @@ async function testAiConnection(vscode, context, output, options = {}) {
   } else {
     await vscode.window.showWarningMessage(result.message);
   }
-  return result;
+  return { ...result, keySource: resolved.source };
 }
 
 async function generateText(vscode, context, output, payload = {}, options = {}) {
   const settings = readAiSettings(vscode);
-  if (!settings.enabled && !options.ignoreEnabled) {
+  const resolved = await resolveApiKey(context, options);
+  const apiKey = resolved.apiKey;
+  const allowWithKey = payload?.allowWhenKeyConfigured === true && !isExplicitlyDisabled(vscode) && isUsableApiKey(apiKey);
+  if (!settings.enabled && !options.ignoreEnabled && !allowWithKey) {
     return { ok: false, status: 'disabled', message: 'Optional local AI assistance is disabled.' };
   }
-  const apiKey = context?.secrets?.get ? await context.secrets.get(SECRET_KEY) : '';
   if (!isUsableApiKey(apiKey)) {
     return { ok: false, status: 'missing_key', message: 'AI API key is not configured.' };
   }
@@ -377,7 +464,7 @@ async function generateText(vscode, context, output, payload = {}, options = {})
     timeoutMs: Math.min(Number(payload.timeoutMs) || options.timeoutMs || 10000, 15000),
     request: options.request || defaultHttpRequest,
   });
-  output?.appendLine('AI text request: ' + JSON.stringify({ ok: result.ok, status: result.status, provider: settings.provider, model: settings.model }));
+  output?.appendLine('AI text request: ' + JSON.stringify({ ok: result.ok, status: result.status, source: resolved.source, provider: settings.provider, model: settings.model }));
   return result;
 }
 
@@ -394,7 +481,12 @@ module.exports = {
   DEFAULT_PROVIDER,
   DEFAULT_ENDPOINT,
   DEFAULT_MODEL,
-  PLACEHOLDER_KEY_SHA256,
+  ENV_KEY_NAMES,
+  PLACEHOLDER_KEY_SHA256: BRACKETED_PLACEHOLDER_SHA256,
+  defaultPrivateEnvFile,
+  parseDotEnvKey,
+  readPrivateEnvApiKey,
+  resolveApiKey,
   isPlaceholderApiKey,
   isUsableApiKey,
   redactSecrets,

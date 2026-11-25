@@ -240,12 +240,22 @@ function updatePush(current) {
   byId('behindText').textContent = UI.behind + ': ' + current.behind;
 }
 
+function readSelectedPullSource(current) {
+  const select = byId('pullSource');
+  if (!select || !select.value) return { remote: '', branch: '' };
+  const raw = select.value;
+  const sep = raw.indexOf('\0');
+  if (sep > 0) {
+    return { remote: raw.slice(0, sep), branch: raw.slice(sep + 1) };
+  }
+  return { remote: (current && current.upstreamRemote) || 'origin', branch: raw };
+}
+
 function updatePullSummary(current) {
   const el = byId('pullSummary');
   if (!el || !current) return;
-  const source = byId('pullSource').value;
-  const remoteName = current.upstreamRemote || 'origin';
-  el.textContent = source ? (remoteName + '/' + source + ' → ' + current.branch) : '—';
+  const picked = readSelectedPullSource(current);
+  el.textContent = picked.branch ? (picked.remote + '/' + picked.branch + ' → ' + current.branch) : '—';
 }
 
 // Branches & Pull Requests
@@ -254,7 +264,7 @@ function fillBranchSelect(id, branches, fallback, keepPrevious, emptyOptionLabel
   const select = byId(id);
   if (!select) return;
   const previous = select.value;
-  const selected = keepPrevious && branches.some(branch => branch.name === previous) ? previous : fallback;
+  const selected = keepPrevious && branches.some(branch => (branch.value || branch.name) === previous) ? previous : fallback;
   select.innerHTML = '';
   if (emptyOptionLabel) {
     const emptyOpt = document.createElement('option');
@@ -265,20 +275,38 @@ function fillBranchSelect(id, branches, fallback, keepPrevious, emptyOptionLabel
   }
   for (const branch of branches) {
     const option = document.createElement('option');
-    option.value = branch.name;
-    option.textContent = branch.name + (branch.isCurrent ? ' (' + UI.active + ')' : '');
-    option.selected = branch.name === selected;
+    const value = branch.value || branch.name;
+    option.value = value;
+    option.textContent = branch.label || (branch.name + (branch.isCurrent ? ' (' + UI.active + ')' : ''));
+    option.selected = value === selected;
     select.appendChild(option);
   }
 }
 
 function updateBranchLists(current) {
   const remote = current.branches.filter(branch => branch.isRemote);
-  const upstreamBranch = current.upstreamBranch && remote.some(branch => branch.name === current.upstreamBranch) ? current.upstreamBranch : '';
-  const pullFallback = upstreamBranch || (remote.some(branch => branch.name === current.branch) ? current.branch : current.defaultBranch);
+  const remoteList = Array.isArray(current.remoteBranches) && current.remoteBranches.length
+    ? current.remoteBranches
+    : remote.map(branch => ({ remote: 'origin', branch: branch.name, ref: 'origin/' + branch.name }));
+  const uniqueRemotes = new Set(remoteList.map(item => item.remote));
+  const multiRemote = uniqueRemotes.size > 1;
+  const pullOptions = remoteList.map(item => ({
+    name: item.branch,
+    value: item.remote + '\0' + item.branch,
+    label: multiRemote ? item.ref : item.branch,
+    isCurrent: false,
+  }));
+  const defaultRemote = current.upstreamRemote || 'origin';
+  const upstreamKey = current.upstreamBranch ? (defaultRemote + '\0' + current.upstreamBranch) : '';
+  const currentKey = defaultRemote + '\0' + current.branch;
+  const fallbackKey = 'origin\0' + current.defaultBranch;
+  const pullFallback = pullOptions.some(opt => opt.value === upstreamKey) ? upstreamKey
+    : pullOptions.some(opt => opt.value === currentKey) ? currentKey
+    : pullOptions.some(opt => opt.value === fallbackKey) ? fallbackKey
+    : (pullOptions[0] ? pullOptions[0].value : '');
   fillBranchSelect('branchSelect', current.branches, current.branch, false);
   fillBranchSelect('newBranchBase', current.branches, current.branch, true);
-  fillBranchSelect('pullSource', remote, pullFallback, true);
+  fillBranchSelect('pullSource', pullOptions, pullFallback, true);
   updatePullSummary(current);
   // PR selectors: explicit choices; never silently force main when user chose another base.
   fillBranchSelect('prHead', remote, remote.some(b => b.name === current.branch) ? current.branch : '', true, UI.prSelectBranch);
@@ -501,7 +529,10 @@ function wireControls() {
   byId('newBranchName').addEventListener('keydown', event => { if (event.key === 'Enter') createBranch(); });
   byId('newBranchButton').addEventListener('click', createBranch);
   byId('pullSource').addEventListener('change', () => updatePullSummary(state));
-  byId('pullButton').addEventListener('click', () => runAction('pullBranch', { sourceBranch: byId('pullSource').value }));
+  byId('pullButton').addEventListener('click', () => {
+    const picked = readSelectedPullSource(state);
+    runAction('pullBranch', { sourceRemote: picked.remote, sourceBranch: picked.branch });
+  });
   byId('resolveButton').addEventListener('click', () => runAction('resolveConflicts', { resolutions: conflictChoices() }));
   byId('prHead').addEventListener('change', renderControls);
   byId('prBase').addEventListener('change', renderControls);

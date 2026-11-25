@@ -113,7 +113,37 @@ function rejectBeforeFirstWrite(f, expected) {
 }
 
 test('The production installer rejects an unknown version before lock, backup or settings writes', t => {
-  rejectBeforeFirstWrite(fixture(t, { version: '9.9.9' }), /Native setup preflight:.*Antigravity 9\.9\.9 is not supported; install Antigravity IDE 2\.8\.0 or 2\.7\.0 or 2\.6\.0.*no setup changes made/);
+  rejectBeforeFirstWrite(fixture(t, { version: '9.9.9' }), /Native setup preflight:.*Antigravity 9\.9\.9 is not supported; install Antigravity IDE 2\.9\.0 or 2\.8\.0 or 2\.7\.0 or 2\.6\.0.*no setup changes made/);
+});
+
+test('With allowPortableFallback, an unknown schema-changed IDE installs the portable profile safely while a tampered known build still rejects before any write', t => {
+  const f = fixture(t, { version: '9.9.9' });
+  const fakeBash = path.join(f.home, 'bash.exe');
+  fs.writeFileSync(fakeBash, 'fixture');
+  f.env.gitBashPath = fakeBash;
+  f.env.nodeExe = process.execPath;
+  f.env.geminiRulesDir = path.join(f.env.geminiConfigDir, 'rules');
+  f.env.geminiSkillsDir = path.join(f.env.geminiConfigDir, 'skills');
+  f.env.geminiScriptsDir = path.join(f.env.geminiDir, 'scripts');
+  f.env.antigravityStateDir = path.join(f.env.userProfile, '.antigravity');
+  const lines = [];
+  asProductionWindows(f.env, runInstaller => {
+    const res = runInstaller({ repoRoot, dryRun: true, skipExtensions: true, skipFont: true, skipAgentBrowser: true, autoApprove: true, allowPortableFallback: true, log: line => lines.push(line) });
+    assert.equal(res.dryRun, true);
+    assert.equal(res.success, true);
+    assert.equal(res.automation?.portableFallback, true);
+    assert.equal(res.automation?.skipped, true);
+  });
+  assert.ok(lines.some(line => /Installing full portable profile.*safely skipping direct state\.vscdb writes/.test(line)));
+
+  // A tampered known catalog version (BUNDLE_HASH_MISMATCH) MUST STILL reject even with allowPortableFallback.
+  const tampered = fixture(t, { version: '2.6.0' });
+  asProductionWindows(tampered.env, runInstaller => {
+    assert.throws(
+      () => runInstaller({ repoRoot, skipExtensions: true, skipFont: true, skipAgentBrowser: true, autoApprove: true, allowPortableFallback: true, log() {} }),
+      /Native setup preflight:.*Unaudited Antigravity build.*no setup changes made/
+    );
+  });
 });
 
 test('An ordinary install on an unaudited IDE version is not blocked by the native preflight', t => {

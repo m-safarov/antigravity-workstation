@@ -182,6 +182,9 @@ try {
     $ide255 = New-Ide '2.5.5'
     $ide270 = New-Ide '2.7.0'
     $ide280 = New-Ide '2.8.0'
+    $ide290 = New-Ide '2.9.0'
+    $ide300 = New-Ide '3.0.0'
+    $missingIde = Join-Path $testRoot 'Missing IDE Folder'
     $appData = Join-Path $testRoot 'AppData Roaming'
     $emptyAppData = Join-Path $testRoot 'AppData never started'
     [IO.Directory]::CreateDirectory((Join-Path $appData 'Antigravity IDE\User\globalStorage')) | Out-Null
@@ -220,7 +223,7 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
     Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -eq 2 -and $run.Calls[0].command -eq 'install' -and $run.Calls[1].command -eq 'doctor') 'Command 2 must install and then run Doctor' $run
     Assert-True ($run.Calls[0].args -notcontains '--clean-extensions' -and $run.Calls[0].args -notcontains '--reset-profile' -and $run.Calls[0].args -contains 'povilitel') 'Command 2 must keep other extensions and forward the name' $run
     Assert-True ($run.Calls[0].args -contains '--apply-profile') 'Command 2 must set every profile value again, not keep values of older setups' $run
-    Assert-True ($run.Calls[0].args -contains '--quiet-completion' -and $run.Calls[0].args -contains '--auto-approve') 'Command 2 must turn AI suggestions off and let the agent work without asking' $run
+    Assert-True ($run.Calls[0].args -contains '--quiet-completion' -and $run.Calls[0].args -contains '--auto-approve' -and $run.Calls[0].args -contains '--allow-portable-fallback') 'Command 2 must turn AI suggestions off, let the agent work without asking and enable future IDE fallback' $run
     Assert-True ($run.Calls[0].ide -eq $ide260 -and $run.Calls[1].ide -eq $ide260) 'Install and Doctor must use the checked IDE 2.6.0 folder' $run
     Assert-True ($run.Calls[0].gitBash -and (Test-Path -LiteralPath $run.Calls[0].gitBash -PathType Leaf) -and $run.Calls[1].gitBash -eq $run.Calls[0].gitBash) 'Install and Doctor must receive the verified Git Bash path' $run
     Assert-True ($run.Output -match [regex]::Escape($first) -and $run.Result.state -eq 'stages-complete') 'Command 2 must report the synced commit and result' $run
@@ -260,12 +263,18 @@ console.log(JSON.stringify({ queued: true, requestFile, prompt: 'Fixture repair 
     Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -eq 2 -and $run.Calls[0].command -eq 'install') 'Antigravity of another Windows session must not block this user' $run
     $run = Invoke-Scenario 'ide-terminal' -Terminal 'vscode'
     Assert-True ($run.Exit -eq 3 -and $run.Calls.Count -eq 0 -and $run.Output -match 'terminal of an editor') 'An editor terminal must pause and point to Windows PowerShell' $run
+    $run = Invoke-Scenario 'missing-ide' -Ide $missingIde
+    Assert-True ($run.Exit -eq 4 -and $run.Calls.Count -eq 0 -and $run.Result.state -eq 'ide-not-ready' -and $run.Output -match 'Antigravity IDE is not installed' -and $run.Output -match 'stable/2\.9\.0-') 'Missing IDE must stop with the official 2.9.0 download' $run
     $run = Invoke-Scenario 'old-ide' -Ide $ide255
-    Assert-True ($run.Exit -eq 4 -and $run.Calls.Count -eq 0 -and $run.Result.state -eq 'ide-not-ready' -and $run.Output -match 'supports only Antigravity IDE 2\.8\.0 or 2\.7\.0 or 2\.6\.0' -and $run.Output -match 'stable/2\.8\.0-') 'Another IDE version must stop with the official 2.8.0 download' $run
+    Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -ge 1 -and $run.Calls[0].ide -eq $ide255 -and $run.Output -match 'recognized older version' -and $run.Calls[0].args -contains '--allow-portable-fallback') 'Older recognized IDE 2.5.5 must be accepted with automatic fallback' $run
     $run = Invoke-Scenario 'ide-270' -Ide $ide270
     Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -ge 1 -and $run.Calls[0].ide -eq $ide270) 'IDE 2.7.0 must be accepted like 2.6.0' $run
     $run = Invoke-Scenario 'ide-280' -Ide $ide280
     Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -ge 1 -and $run.Calls[0].ide -eq $ide280) 'IDE 2.8.0 must be accepted like 2.7.0 and 2.6.0' $run
+    $run = Invoke-Scenario 'ide-290' -Ide $ide290
+    Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -ge 1 -and $run.Calls[0].ide -eq $ide290 -and $run.Output -match '2\.9\.0 \(tested\)') 'IDE 2.9.0 must be accepted as tested' $run
+    $run = Invoke-Scenario 'ide-300' -Ide $ide300
+    Assert-True ($run.Exit -eq 0 -and $run.Calls.Count -ge 1 -and $run.Calls[0].ide -eq $ide300 -and $run.Output -match 'newer/unlisted version' -and $run.Calls[0].args -contains '--allow-portable-fallback') 'Future unlisted IDE 3.0.0 must be accepted with automatic schema/portable compatibility' $run
     $run = Invoke-Scenario 'never-started' -AppData $emptyAppData
     Assert-True ($run.Exit -eq 4 -and $run.Calls.Count -eq 0 -and $run.Output -match 'never been started') 'An IDE that was never opened must stop before any change' $run
 

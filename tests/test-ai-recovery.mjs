@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -9,7 +12,7 @@ const recovery = require('../lib/ai-recovery');
 
 const EXACT_PLACEHOLDER = '[<YOUR_AI_API_KEY>]';
 
-function createMockIde({ settings = {}, persistedSecrets = new Map(), quickPickQueue = [], inputQueue = [] } = {}) {
+function createMockIde({ settings = {}, inspected = {}, persistedSecrets = new Map(), quickPickQueue = [], inputQueue = [] } = {}) {
   const infoMessages = [];
   const warningMessages = [];
   const outputLines = [];
@@ -29,6 +32,9 @@ function createMockIde({ settings = {}, persistedSecrets = new Map(), quickPickQ
         return {
           get(key, fallback) {
             return Object.hasOwn(settings, key) ? settings[key] : fallback;
+          },
+          inspect(key) {
+            return Object.hasOwn(inspected, key) ? inspected[key] : undefined;
           },
         };
       },
@@ -143,26 +149,26 @@ test('Test AI Connection distinguishes missing_key, rejected_credential, unavail
   const endpoint = `http://127.0.0.1:${port}/v1beta`;
   const apiKey = 'local-secret-xyz-999';
 
-  // 1. Missing key
-  const ideMissing = createMockIde({ settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-2.5-flash-lite' } });
-  const resMissing = await ai.testAiConnection(ideMissing.vscode, ideMissing.context, ideMissing.output);
+  // 1. Missing key (isolated from host env and user private .env)
+  const ideMissing = createMockIde({ settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-3.5-flash-lite' } });
+  const resMissing = await ai.testAiConnection(ideMissing.vscode, ideMissing.context, ideMissing.output, { env: {}, envFile: null });
   assert.equal(resMissing.ok, false);
   assert.equal(resMissing.status, 'missing_key');
 
   // 2. Placeholder key treated as missing_key
   const idePlaceholder = createMockIde({
-    settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-2.5-flash-lite' },
+    settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-3.5-flash-lite' },
     persistedSecrets: new Map([[ai.SECRET_KEY, EXACT_PLACEHOLDER]]),
   });
-  const resPlaceholder = await ai.testAiConnection(idePlaceholder.vscode, idePlaceholder.context, idePlaceholder.output);
+  const resPlaceholder = await ai.testAiConnection(idePlaceholder.vscode, idePlaceholder.context, idePlaceholder.output, { env: {}, envFile: null });
   assert.equal(resPlaceholder.ok, false);
   assert.equal(resPlaceholder.status, 'missing_key');
 
   // 3. Valid key -> ok, and key is passed via header, NOT URL query string
   mode = 'ok';
   const store = new Map([[ai.SECRET_KEY, apiKey]]);
-  const ideOk = createMockIde({ settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-2.5-flash-lite' }, persistedSecrets: store });
-  const resOk = await ai.testAiConnection(ideOk.vscode, ideOk.context, ideOk.output);
+  const ideOk = createMockIde({ settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-3.5-flash-lite' }, persistedSecrets: store });
+  const resOk = await ai.testAiConnection(ideOk.vscode, ideOk.context, ideOk.output, { env: {}, envFile: null });
   assert.equal(resOk.ok, true);
   assert.equal(resOk.status, 'ok');
   assert.equal(lastRequest.headers['x-goog-api-key'], apiKey);
@@ -171,7 +177,7 @@ test('Test AI Connection distinguishes missing_key, rejected_credential, unavail
 
   // 4. Rejected credential (401) -> redacted message
   mode = 'rejected';
-  const resRejected = await ai.testAiConnection(ideOk.vscode, ideOk.context, ideOk.output);
+  const resRejected = await ai.testAiConnection(ideOk.vscode, ideOk.context, ideOk.output, { env: {}, envFile: null });
   assert.equal(resRejected.ok, false);
   assert.equal(resRejected.status, 'rejected_credential');
   assert.equal(resRejected.message.includes(apiKey), false, 'provider error echoing secret must be redacted');
@@ -179,20 +185,47 @@ test('Test AI Connection distinguishes missing_key, rejected_credential, unavail
   // 5. Unavailable model (404)
   mode = 'bad_model';
   const ideBadModel = createMockIde({ settings: { 'ai.endpoint': endpoint, 'ai.model': 'missing-model' }, persistedSecrets: store });
-  const resBadModel = await ai.testAiConnection(ideBadModel.vscode, ideBadModel.context, ideBadModel.output);
+  const resBadModel = await ai.testAiConnection(ideBadModel.vscode, ideBadModel.context, ideBadModel.output, { env: {}, envFile: null });
   assert.equal(resBadModel.ok, false);
   assert.equal(resBadModel.status, 'unavailable_model');
 
   // 6. Connection failure (HTTP 503 + unreachable port)
   mode = 'server_err';
-  const res503 = await ai.testAiConnection(ideOk.vscode, ideOk.context, ideOk.output);
+  const res503 = await ai.testAiConnection(ideOk.vscode, ideOk.context, ideOk.output, { env: {}, envFile: null });
   assert.equal(res503.ok, false);
   assert.equal(res503.status, 'connection_failure');
 
-  const ideUnreachable = createMockIde({ settings: { 'ai.endpoint': 'http://127.0.0.1:1/v1beta', 'ai.model': 'gemini-2.5-flash-lite' }, persistedSecrets: store });
-  const resConn = await ai.testAiConnection(ideUnreachable.vscode, ideUnreachable.context, ideUnreachable.output, { timeoutMs: 1500 });
+  const ideUnreachable = createMockIde({ settings: { 'ai.endpoint': 'http://127.0.0.1:1/v1beta', 'ai.model': 'gemini-3.5-flash-lite' }, persistedSecrets: store });
+  const resConn = await ai.testAiConnection(ideUnreachable.vscode, ideUnreachable.context, ideUnreachable.output, { timeoutMs: 1500, env: {}, envFile: null });
   assert.equal(resConn.ok, false);
   assert.equal(resConn.status, 'connection_failure');
+
+  // 7. Private local .env fallback & allowWhenKeyConfigured for GitHub panel commit suggestions (with explicit disable guard)
+  mode = 'ok';
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'workstation-ai-env-'));
+  t.after(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+  const envFile = path.join(tmpDir, '.env');
+  fs.writeFileSync(envFile, '# private local key\nWORKSTATION_AI_API_KEY="local-env-file-key-778899"\n');
+  const ideEnvOnly = createMockIde({ settings: { 'ai.endpoint': endpoint, 'ai.model': 'gemini-3.5-flash-lite' } });
+  const resEnvTest = await ai.testAiConnection(ideEnvOnly.vscode, ideEnvOnly.context, ideEnvOnly.output, { env: {}, envFile });
+  assert.equal(resEnvTest.ok, true);
+  assert.equal(resEnvTest.keySource, 'privateEnvFile');
+  assert.equal(lastRequest.headers['x-goog-api-key'], 'local-env-file-key-778899');
+  assert.equal(ideEnvOnly.outputLines.join('\n').includes('local-env-file-key-778899'), false, 'env key must never be logged');
+
+  const resCommitAi = await ai.generateText(ideEnvOnly.vscode, ideEnvOnly.context, ideEnvOnly.output,
+    { userPrompt: 'Summarize diff', allowWhenKeyConfigured: true }, { env: {}, envFile });
+  assert.equal(resCommitAi.ok, true);
+
+  // Explicit user disable in settings must block AI calls even when a private .env key exists.
+  const ideDisabled = createMockIde({
+    settings: { 'ai.enabled': false, 'ai.endpoint': endpoint, 'ai.model': 'gemini-3.5-flash-lite' },
+    inspected: { 'ai.enabled': { globalValue: false } },
+  });
+  const resBlocked = await ai.generateText(ideDisabled.vscode, ideDisabled.context, ideDisabled.output,
+    { userPrompt: 'Summarize diff', allowWhenKeyConfigured: true }, { env: {}, envFile });
+  assert.equal(resBlocked.ok, false);
+  assert.equal(resBlocked.status, 'disabled');
 });
 
 test('Bounded recovery handles transient download, corrupt archive, permanent 404, external terminal without SecretStorage, and rejects unsafe AI proposals', async () => {

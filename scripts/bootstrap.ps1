@@ -5,7 +5,7 @@
 #   starts once on a new profile, then the profile is installed.
 # Mode 2: install or update; every profile setting is applied again, the user's theme, fonts, other settings and extensions stay.
 # Both modes turn AI inline suggestions off; ordinary IntelliSense, snippets and auto-import stay on.
-# Exit codes: 0 done, 2 repair task queued, 3 paused (IDE open or IDE terminal), 4 IDE 2.8.0/2.7.0/2.6.0 missing, other = failure.
+# Exit codes: 0 done, 2 repair task queued, 3 paused (IDE open or IDE terminal), 4 Antigravity IDE missing/uninitialized, other = failure.
 # Keep this file ASCII-only: Windows PowerShell 5.1 reads BOM-less scripts in the ANSI code page.
 param(
     [string]$Name = '',
@@ -26,10 +26,10 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $utf8 = New-Object Text.UTF8Encoding $false
 # Every audited IDE version (config/native-compatibility.json); the first one is the recommended download.
-$IdeVersions = @('2.8.0', '2.7.0', '2.6.0')
+$IdeVersions = @('2.9.0', '2.8.0', '2.7.0', '2.6.0')
 $IdeVersion = $IdeVersions[0]
 $RecognizedUntestedVersions = @('2.5.5', '2.5.2', '2.4.0', '2.3.0', '2.2.0', '2.1.1')
-$IdeDownload = 'https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.8.0-6733682917113856/windows-{0}/Antigravity%20IDE.exe'
+$IdeDownload = 'https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.9.0-4671306730438656/windows-{0}/Antigravity%20IDE.exe'
 # Match only Antigravity IDE; standalone Antigravity.exe is a separate app and must not be closed.
 $IdeNames = @('Antigravity IDE', 'antigravity-ide')
 # "Zakryt'? (Y/N)" in Cyrillic, built from code points to keep this file ASCII.
@@ -183,6 +183,8 @@ function Get-HttpStatusCode([Exception]$ErrorObj) {
 function Invoke-StreamDownload([string]$Url, [string]$Destination, [string]$ItemLabel, [int]$MaxAttempts = 3, [int]$TimeoutSeconds = 60) {
     Enable-Tls12
     $plain = -not (Test-ColorAllowed)
+    $termWidth = Get-TerminalWidth
+    $lineWidth = if ($termWidth -gt 2) { [Math]::Max(20, $termWidth - 2) } else { 78 }
     $part = $Destination + '.part'
     $permanentCodes = @(400, 401, 403, 404, 410, 451)
     for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
@@ -194,7 +196,7 @@ function Invoke-StreamDownload([string]$Url, [string]$Destination, [string]$Item
             $request.Timeout = $TimeoutSeconds * 1000
             $request.ReadWriteTimeout = $TimeoutSeconds * 1000
             $request.AllowAutoRedirect = $true
-            $request.UserAgent = 'antigravity-workstation-bootstrap/3.14'
+            $request.UserAgent = 'antigravity-workstation-bootstrap/3.15'
             $response = $request.GetResponse()
             $total = [long]$response.ContentLength
             $stream = $response.GetResponseStream()
@@ -226,7 +228,8 @@ function Invoke-StreamDownload([string]$Url, [string]$Destination, [string]$Item
                                 Write-Host $line
                             }
                         } else {
-                            [Console]::Write("`r" + $line.PadRight(78))
+                            $fit = if ($line.Length -gt $lineWidth) { $line.Substring(0, $lineWidth) } else { $line.PadRight($lineWidth) }
+                            [Console]::Write("`r" + $fit)
                         }
                     } else {
                         $line = ('  Downloading {0}: {1} elapsed {2}' -f $ItemLabel, (Format-ByteSize $bytesRead), (Format-Duration $elapsedSec))
@@ -236,7 +239,8 @@ function Invoke-StreamDownload([string]$Url, [string]$Destination, [string]$Item
                                 Write-Host $line
                             }
                         } else {
-                            [Console]::Write("`r" + $line.PadRight(78))
+                            $fit = if ($line.Length -gt $lineWidth) { $line.Substring(0, $lineWidth) } else { $line.PadRight($lineWidth) }
+                            [Console]::Write("`r" + $fit)
                         }
                     }
                 }
@@ -245,7 +249,7 @@ function Invoke-StreamDownload([string]$Url, [string]$Destination, [string]$Item
             $outStream.Close(); $outStream = $null
             $stream.Close(); $stream = $null
             $response.Close(); $response = $null
-            if (-not $plain) { [Console]::Write("`r" + (' ' * 78) + "`r") }
+            if (-not $plain) { [Console]::Write("`r" + (' ' * $lineWidth) + "`r") }
             if ($total -gt 0 -and $bytesRead -ne $total) {
                 throw "Incomplete download for ${ItemLabel}: received $bytesRead of $total bytes"
             }
@@ -264,7 +268,7 @@ function Invoke-StreamDownload([string]$Url, [string]$Destination, [string]$Item
             if ($outStream) { try { $outStream.Dispose() } catch { } }
             if ($stream) { try { $stream.Dispose() } catch { } }
             if ($response) { try { $response.Dispose() } catch { } }
-            if (-not $plain) { try { [Console]::Write("`r" + (' ' * 78) + "`r") } catch { } }
+            if (-not $plain) { try { [Console]::Write("`r" + (' ' * $lineWidth) + "`r") } catch { } }
             if (Test-Path -LiteralPath $part) { Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue }
             $status = Get-HttpStatusCode $_.Exception
             $errMsg = $_.Exception.Message
@@ -581,11 +585,10 @@ function Find-Ide {
 function Test-Ide {
     $ide = Find-Ide
     $download = $IdeDownload -f $script:arch
-    if (-not $ide -or $IdeVersions -notcontains $ide.Version) {
-        $tier = if ($ide) { Get-IdeVersionTier $ide.Version } else { 'unknown' }
-        $found = if ($ide) { "Antigravity $($ide.Version) (tier: $tier) is installed in $($ide.Root)." } else { 'Antigravity IDE was not found on any fixed drive.' }
-        if ($DryRun) { Write-Line "  [DRY-RUN] $found A real run stops here until Antigravity IDE $($IdeVersions -join ' or ') is installed." 'Yellow'; return $true }
-        Write-Box @("STOPPED: this setup supports only Antigravity IDE $($IdeVersions -join ' or '). Nothing was changed.", $found,
+    if (-not $ide) {
+        $found = 'Antigravity IDE was not found on any fixed drive.'
+        if ($DryRun) { Write-Line "  [DRY-RUN] $found A real run stops here until Antigravity IDE is installed." 'Yellow'; return $true }
+        Write-Box @('STOPPED: Antigravity IDE is not installed on this computer. Nothing was changed.', $found,
             "Install Antigravity IDE $IdeVersion ($($script:arch)): $download",
             'Installed in another folder? Put this line before the command:',
             "  `$env:ANTIGRAVITY_INSTALL_DIR = 'D:\Folder with Antigravity IDE.exe'") 'Yellow'
@@ -601,7 +604,14 @@ function Test-Ide {
     }
     # Every later step (install, Doctor, native AI-off) uses exactly this installation.
     $env:ANTIGRAVITY_INSTALL_DIR = $ide.Root
-    Write-Ok "Antigravity IDE $($ide.Version) (tested): $($ide.Root)"
+    $tier = Get-IdeVersionTier $ide.Version
+    if ($tier -eq 'tested') {
+        Write-Ok "Antigravity IDE $($ide.Version) (tested): $($ide.Root)"
+    } elseif ($tier -eq 'recognized') {
+        Write-Line "        NOTE  Antigravity IDE $($ide.Version) (recognized older version): $($ide.Root) - automatic schema/portable compatibility enabled." 'Yellow'
+    } else {
+        Write-Line "        NOTE  Antigravity IDE $($ide.Version) (newer/unlisted version): $($ide.Root) - checking embedded native schema; falling back to full portable profile if schema changed." 'Yellow'
+    }
     return $true
 }
 
@@ -654,7 +664,7 @@ function Resolve-PinnedRevision([string]$GitRemote, [string]$Branch, [bool]$UseG
                 $request.Method = 'GET'
                 $request.Timeout = 20000
                 $request.ReadWriteTimeout = 20000
-                $request.UserAgent = 'antigravity-workstation-bootstrap/3.14'
+                $request.UserAgent = 'antigravity-workstation-bootstrap/3.15'
                 $request.Accept = 'application/vnd.github+json'
                 $response = $request.GetResponse()
                 $reader = New-Object IO.StreamReader($response.GetResponseStream(), $utf8)
@@ -1052,8 +1062,9 @@ function Invoke-Bootstrap {
     Write-Step $next 'Install profile and turn AI suggestions off'
     if (-not (Test-ReadyToRun)) { return 3 }
     # --auto-approve lets the agent work without asking: terminal and artifact review Always Proceed, MCP Allow.
+    # --allow-portable-fallback lets newer/other IDE releases install the full portable profile safely if their native schema changed.
     # Command 2 (--apply-profile) sets every profile value again; the user's theme, fonts and settings outside the profile stay.
-    $arguments = @($entry, 'install', '--quiet-completion', '--auto-approve') + @(if ($CleanExtensions) { '--clean-extensions', '--reset-profile' } else { '--apply-profile' }) + @(if ($Name) { '--name', $Name })
+    $arguments = @($entry, 'install', '--quiet-completion', '--auto-approve', '--allow-portable-fallback') + @(if ($CleanExtensions) { '--clean-extensions', '--reset-profile' } else { '--apply-profile' }) + @(if ($Name) { '--name', $Name })
     $install = Invoke-Logged 'install' $arguments
     if ($install.Code -ne 0) {
         $repair = $install.Failure -match '(?m)^Setup incomplete:' -and $install.Failure -notmatch '(?im)^\s*Installation failed:'

@@ -18,6 +18,7 @@ function parseArgs(args) {
     skipPermissions: false,
     autoApprove: false,
     quietCompletion: false,
+    allowPortableFallback: false,
     applyProfile: false,
     resetProfile: false,
     confirmFullReset: false,
@@ -53,6 +54,8 @@ function parseArgs(args) {
       result.autoApprove = true;
     } else if (arg === '--quiet-completion') {
       result.quietCompletion = true;
+    } else if (arg === '--allow-portable-fallback') {
+      result.allowPortableFallback = true;
     } else if (arg === '--apply-profile') {
       result.applyProfile = true;
     } else if (arg === '--reset-profile') {
@@ -136,6 +139,7 @@ OPTIONS:
   --skip-font         Skip Windows font installation/registration
   --skip-permissions  Preserve approvals; recommended inside Antigravity terminal
   --auto-approve      Apply native automation, or queue it until the IDE closes
+  --allow-portable-fallback On an IDE version whose native protobuf schema differs, safely skip direct state.vscdb writes while installing the full portable profile
   --rules-only        Install/update current rules and guides without settings, MCP or extensions
   --extension-profile <full|lite> Select extensions to install (default full); existing extensions stay installed
   --json              Print machine-readable status
@@ -332,6 +336,7 @@ function main() {
           skipPermissions: opts.skipPermissions,
           autoApprove: opts.autoApprove,
           quietCompletion: opts.quietCompletion,
+          allowPortableFallback: opts.allowPortableFallback,
           applyProfile: opts.applyProfile,
           resetProfile: opts.resetProfile,
           rulesOnly: opts.rulesOnly,

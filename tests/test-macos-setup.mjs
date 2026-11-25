@@ -125,18 +125,22 @@ test('macOS mode 1 moves everything Antigravity keeps into one backup and instal
   assert.equal(fs.readFileSync(path.join(home, 'projects', 'shop', '.vscode', 'settings.json'), 'utf8'), '{"project":true}', 'project folders stay');
 });
 
-test('macOS setup refuses another IDE version unless the user allowed it, before any change', t => {
-  const { home, app, user } = fixture(t, '2.9.0');
+test('macOS setup accepts future IDE versions with honest untested tier and enforces strictVersion when explicitly requested', t => {
+  const { home, app, user } = fixture(t, '3.0.0');
   const before = fs.readFileSync(path.join(user, 'settings.json'), 'utf8');
-  assert.throws(() => run(options(home, app, '1')), /Antigravity 2\.8\.0 or 2\.7\.0 or 2\.6\.0 is required; this app is 2\.9\.0\. Nothing was changed/);
+  assert.throws(() => run({ ...options(home, app, '1'), strictVersion: true }), /Antigravity 2\.9\.0 or 2\.8\.0 or 2\.7\.0 or 2\.6\.0 is required; this app is 3\.0\.0\. Nothing was changed/);
   assert.equal(fs.readFileSync(path.join(user, 'settings.json'), 'utf8'), before);
   assert.ok(fs.existsSync(path.join(home, '.gemini', 'antigravity', 'conversations', 'chat.pb')));
-  assert.equal(run({ ...options(home, app, '2'), allowOtherVersion: true }).ideVersion, '2.9.0');
+  const accepted = run(options(home, app, '2'));
+  assert.equal(accepted.ideVersion, '3.0.0');
+  assert.equal(accepted.ideVersionTier, 'untested');
 });
 
-test('macOS setup accepts Antigravity IDE 2.8.0 and 2.7.0 like 2.6.0', t => {
-  for (const version of ['2.8.0', '2.7.0']) {
+test('macOS setup accepts Antigravity IDE 2.9.0, 2.8.0 and 2.7.0 as tested like 2.6.0', t => {
+  for (const version of ['2.9.0', '2.8.0', '2.7.0']) {
     const { home, app } = fixture(t, version);
-    assert.equal(run(options(home, app, '2')).ideVersion, version);
+    const result = run(options(home, app, '2'));
+    assert.equal(result.ideVersion, version);
+    assert.equal(result.ideVersionTier, 'tested');
   }
 });

@@ -115,15 +115,16 @@ async function suggestCommitMessage(panel, cwd, state, requestedFiles) {
 
   const fallback = deterministicSuggestion(safeFiles, diff, statusMap);
 
-  // Optional local AI assistance via workstation-stability (secrets never leave stability SecretStorage).
+  // Optional local AI assistance via workstation-stability (secrets stay in IDE SecretStorage or private user .env).
   if (panel?.vscode?.commands?.executeCommand) {
     try {
       const fileSummary = safeFiles.slice(0, 20).map(file => `${statusMap.get(file) || 'M'} ${file}`).join('\n');
       const aiResponse = await panel.vscode.commands.executeCommand('workstationStability.generateText', {
-        systemPrompt: 'Write ONE concise conventional commit subject line (<=72 chars) strictly describing the provided changed files and diff. No markdown, no quotes, no fabrication.',
+        systemPrompt: 'Write ONE concise conventional commit subject line (<=72 chars, e.g. feat(scope): summary or fix(scope): summary) strictly describing the provided changed files and diff. Plain text only: no markdown, no quotes, no fabrication.',
         userPrompt: `Files:\n${fileSummary}\n\nDiff excerpt:\n${diff || '(new or binary files only)'}`,
-        maxTokens: 48,
-        timeoutMs: 6000,
+        maxTokens: 64,
+        timeoutMs: 8000,
+        allowWhenKeyConfigured: true,
       });
       if (aiResponse && aiResponse.ok && aiResponse.text) {
         const line = cleanCommitLine(redactDiffText(aiResponse.text));

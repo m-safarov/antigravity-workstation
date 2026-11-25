@@ -22,7 +22,7 @@ function createZipArchive(sourceDir, zipFile) {
   return true;
 }
 
-function makeFakeFixtureDir(rootDir, version = '3.14.0', markerText = 'valid-v1') {
+function makeFakeFixtureDir(rootDir, version = '3.15.0', markerText = 'valid-v1') {
   const pkgDir = path.join(rootDir, 'antigravity-workstation-fixture');
   fs.mkdirSync(path.join(pkgDir, 'bin'), { recursive: true });
   fs.mkdirSync(path.join(pkgDir, 'scripts'), { recursive: true });
@@ -42,11 +42,11 @@ function makeFakeFixtureDir(rootDir, version = '3.14.0', markerText = 'valid-v1'
 }
 
 function makeFakeIde(rootDir) {
-  const ideDir = path.join(rootDir, 'IDE 2.8.0 (Кириллица и пробелы)');
+  const ideDir = path.join(rootDir, 'IDE 2.9.0 (Кириллица и пробелы)');
   fs.mkdirSync(path.join(ideDir, 'resources', 'app'), { recursive: true });
   fs.writeFileSync(path.join(ideDir, 'Antigravity IDE.exe'), 'fixture');
   fs.writeFileSync(path.join(ideDir, 'resources', 'app', 'product.json'), JSON.stringify({
-    ideVersion: '2.8.0',
+    ideVersion: '2.9.0',
     nameShort: 'Antigravity IDE',
   }));
   const appData = path.join(rootDir, 'AppData Тест');
@@ -102,7 +102,7 @@ test('Show-Banner renders wide ASCII art on wide TTY, single-line on narrow/NO_C
 test('bootstrap.ps1 streams known/unknown Content-Length archives, retries transient 503, fast-fails 404, rejects corrupt ZIP, handles Cyrillic+spaces paths and cleans staging', { skip: process.platform !== 'win32' }, async t => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'workstation-progress-Тест '));
   t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
-  const pkgDir = makeFakeFixtureDir(tmp, '3.14.0', 'good-release');
+  const pkgDir = makeFakeFixtureDir(tmp, '3.15.0', 'good-release');
   const zipFile = path.join(tmp, 'good.zip');
   createZipArchive(pkgDir, zipFile);
   const zipBytes = fs.readFileSync(zipFile);

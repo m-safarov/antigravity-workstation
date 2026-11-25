@@ -1,23 +1,24 @@
 # Antigravity Workstation
 
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square)
-![Antigravity IDE 2.8.0 · 2.7.0 · 2.6.0](https://img.shields.io/badge/Antigravity%20IDE-2.8.0%20%7C%202.7.0%20%7C%202.6.0-4285F4?style=flat-square)
+![Antigravity IDE 2.9.0 · 2.8.0 · 2.7.0 · 2.6.0+](https://img.shields.io/badge/Antigravity%20IDE-2.9.0%20%7C%202.8.0%20%7C%202.7.0%20%7C%202.6.0%2B-4285F4?style=flat-square)
 ![Next.js · Node.js · React · TS](https://img.shields.io/badge/Stack-Next.js%20%7C%20Node.js%20%7C%20React%20%7C%20TS-10B981?style=flat-square)
 ![x64 · ARM64](https://img.shields.io/badge/CPU-x64%20%7C%20ARM64-555?style=flat-square)
 
 Готовый профессиональный профиль **Antigravity IDE** для разработки на **Next.js, Node.js, React, TypeScript и Tailwind CSS** на Windows одной командой: чистые настройки редактора, проверенные расширения, темы и шрифты **Aster Atelier**, командная панель **GitHub** (Pull, Push, PR, ветки, Tab-подсказка commit), панель **npm-скриптов**, правила агента без лишних вопросов и встроенный `Doctor`. AI-подсказки в коде выключены, обычный IntelliSense и автоимпорт работают быстро. Перед любыми изменениями создаётся резервная копия.
 
-Версия **3.14.0**. Репозиторий: https://github.com/m-safarov/antigravity-workstation · [Скачать ZIP](https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip)
+Версия **3.15.0**. Репозиторий: https://github.com/m-safarov/antigravity-workstation · [Скачать ZIP](https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip)
 
-### Совместимость версий Antigravity IDE
+### Совместимость версий Antigravity IDE (любая версия)
 
 | Статус версии | Версии | Поведение установщика |
 | --- | --- | --- |
-| **Протестировано (`tested`)** | **2.8.0** (рекомендуется), **2.7.0**, **2.6.0** | Полная установка, native-автоматизация и проверка `Doctor` |
-| **Распознанные старые (`recognized`)** | Прежние релизы до 2.6.0 | Остановка до изменений с прямой ссылкой на 2.8.0 |
-| **Неизвестные / новые (`unknown`)** | Непроверенные будущие сборки | Безопасная остановка без предположений о совместимости |
+| **Протестировано (`tested`)** | **2.9.0** (рекомендуется), **2.8.0**, **2.7.0**, **2.6.0** | Полная установка, native-автоматизация (`state.vscdb`) и проверка `Doctor` |
+| **Проверка схемы (`schema-verified`)** | **Любые будущие и другие сборки** с неизменной встроенной схемой `unified_state_sync.proto` | Автоматическое криптографическое подтверждение SHA-256 схемы в `out/main.js` → полная установка **включая** native-автоматизацию и AI Tab OFF |
+| **Портативный режим (`portable-fallback`)** | Будущие сборки, где формат `state.vscdb` изменился, или старые распознанные версии (`recognized`) | Установка **всего портативного профиля** (настройки, клавиши, расширения, шрифты, правила, skills, MCP, браузер) с безопасным пропуском прямых записей в `state.vscdb` без риска повредить базу IDE |
 
 Официальные установщики с [antigravity.google/download](https://antigravity.google/download):
+- **2.9.0:** [x64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.9.0-4671306730438656/windows-x64/Antigravity%20IDE.exe) · [ARM64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.9.0-4671306730438656/windows-arm64/Antigravity%20IDE.exe)
 - **2.8.0:** [x64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.8.0-6733682917113856/windows-x64/Antigravity%20IDE.exe) · [ARM64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.8.0-6733682917113856/windows-arm64/Antigravity%20IDE.exe)
 - **2.7.0:** [x64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.7.0-4507555968450560/windows-x64/Antigravity%20IDE.exe) · [ARM64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.7.0-4507555968450560/windows-arm64/Antigravity%20IDE.exe)
 - **2.6.0:** [x64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.6.0-5526304964083712/windows-x64/Antigravity%20IDE.exe) · [ARM64](https://dl.google.com/edgedl/release2/j0qc3/antigravity/stable/2.6.0-5526304964083712/windows-arm64/Antigravity%20IDE.exe)
@@ -109,16 +110,16 @@ git config --global user.email "почта@пример.com"
    - `workstationStability.ai.enabled`: `true`
    - `workstationStability.ai.provider`: `"gemini"` (или `"openai-compatible"`)
    - `workstationStability.ai.endpoint`: `"https://generativelanguage.googleapis.com/v1beta"`
-   - `workstationStability.ai.model`: `"gemini-2.5-flash-lite"`
-   - Пример-плейсхолдер (только для документации — автоматически считается **незаданным**, никогда не коммитьте реальный ключ): `[<YOUR_AI_API_KEY>]` (сам ключ хранится только в `SecretStorage` IDE, не в `settings.json` и не в Git)
-2. Сохранение ключа в защищённое `SecretStorage` IDE:
-   - Нажмите **`Ctrl + Shift + P`** → **`Workstation: Configure AI API Key`**
-   - Вставьте ваш ключ в скрытое поле (или выберите замену / очистку; `Esc` сохраняет прежний ключ).
+   - `workstationStability.ai.model`: `"gemini-3.5-flash-lite"`
+   - Пример-плейсхолдер (только для документации и `.env.example` — автоматически считается **незаданным**, никогда не коммитьте реальный ключ в Git): `[<YOUR_AI_API_KEY>]`
+2. Сохранение ключа (выберите любой удобный локальный способ — ключ никогда не попадает в GitHub):
+   - **Способ A (IDE `SecretStorage`, рекомендуется):** нажмите **`Ctrl + Shift + P`** → **`Workstation: Configure AI API Key`** и вставьте ваш личный ключ в скрытое поле (поддерживается замена, очистка; `Esc` сохраняет прежний ключ).
+   - **Способ B (локальный личный `.env` вне Git):** создайте файл `%USERPROFILE%\.gemini\config\workstation-setup\.env` со строкой `WORKSTATION_AI_API_KEY=<ваш_ключ>` (см. шаблон [.env.example](.env.example)). Работает во всех проектах на компьютере, включая подсказки commit по `Tab` в панели **GitHub**, и не попадает в репозитории.
 3. Проверка соединения:
    - Нажмите **`Ctrl + Shift + P`** → **`Workstation: Test AI Connection`**
    - Расширение выполнит минимальный запрос и покажет короткий redacted-статус (отсутствующий ключ, отклонённый ключ, недоступная модель или сбой сети).
 
-> При запуске из внешнего терминала (вне IDE) `SecretStorage` недоступен — установщик использует безопасное детерминированное восстановление и никогда не сохраняет ключи на диск.
+> При запуске из внешнего терминала (вне IDE) `SecretStorage` недоступен — установщик использует безопасное детерминированное восстановление и никогда не сохраняет ключи в репозиторий.
 
 ## Если команда остановилась
 
@@ -126,7 +127,7 @@ git config --global user.email "почта@пример.com"
 | --- | --- |
 | `PAUSED: Antigravity is still running` | Окно покажет PID и путь и спросит **`Закрыть? (Y/N)`**. `Y` закроет окна и продолжит |
 | `PAUSED: this is the terminal of an editor` | Открой обычный **Windows PowerShell** из меню Пуск и запусти команду там |
-| `STOPPED: this setup supports only Antigravity IDE 2.8.0 or 2.7.0 or 2.6.0` | Установи Antigravity IDE 2.8.0 по ссылке выше и повтори |
+| `STOPPED: Antigravity IDE is not installed` | Установи Antigravity IDE 2.9.0 по ссылке выше и повтори |
 | `STOPPED: Antigravity has never been started` | Для КОДА 2: открой IDE один раз, войди в аккаунт, закрой окна и повтори |
 | `[SETUP FAILED]` | Временные файлы staging очищены, профиль откатывается из копии; текст диагностики уже в буфере для чата. Подробнее: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 
@@ -139,13 +140,10 @@ git config --global user.email "почта@пример.com"
 | [Windows](docs/prompts/WINDOWS-AI-SETUP.md) ([скачать](https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/docs/prompts/WINDOWS-AI-SETUP.md)) | Любой ИИ-агент с терминалом ставит профиль теми же командами КОД 1 и КОД 2 |
 | [macOS](docs/prompts/MAC-AI-SETUP.md) ([скачать](https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/docs/prompts/MAC-AI-SETUP.md)) | Mac: агент переносит тот же профиль скриптом проекта |
 
-## Что нового в 3.14.0
+## Что нового в 3.15.0
 
-- **Профессиональный стек Next.js + Node.js:** добавлены проверенные расширения `Prisma.prisma` и `redhat.vscode-yaml`, `tailwindCSS.classFunctions`, file nesting для `next.config.*` и исключения `.next`/`.turbo`/`coverage` при полном сохранении React/Vite/TS/Tailwind и личных настроек.
-- **Убраны серые закрывающие подписи Tailwind (`/.flex...`):** выведено из профиля расширение `anteprimorac.html-end-tag-labels` и его устаревшие ключи `htmlEndTagLabels.*` с автоматической очисткой при обновлении.
-- **Надёжный установщик `MANCHO SETING ANTIGRAVITI`:** переезд на `m-safarov/antigravity-workstation`, фиксация одного commit SHA, реальный потоковый прогресс скачивания (bytes/total/%/speed/ETA или bytes/elapsed без выдумывания), проверка в изолированной staging-папке, гарантированная очистка временных файлов, быстрый отказ на постоянных HTTP-ошибках и чистый JSON-вывод для `--json`.
-- **Командная Git Branch Panel 1.9.0:** точный `upstream`, Pull с явным источником/назначением, создание Pull Request (`head`/`base`), удаление веток (`local`/`remote`/`both`) с проверкой прав GitHub, branch protection и worktrees, одна подсказка commit по `Tab` из реального diff и компактная подпись расширения.
-- **Опциональная локальная ИИ-помощь (Workstation Stability 1.4.0):** команды `Configure AI API Key` (`SecretStorage`) и `Test AI Connection`, строгий allowlist безопасного восстановления без исполнения произвольных shell-команд.
-- **Визуальные руководства и оптимизация:** обновлённые офлайн-изображения для Aster Atelier 1.9.0 и Calm TypeScript 3.5.0 внутри VSIX; `inspectNativeCompatibility` ускорен в ~38 раз (~918 мс → ~24 мс).
+- **Официальная поддержка Antigravity IDE 2.9.0 (`2.9.0-4671306730438656`) + универсальная совместимость с любыми версиями IDE:** 2.9.0 добавлена в проверенный каталог (x64 и ARM64) и Windows CI smoke; будущие релизы автоматически проходят криптографическую проверку встроенной схемы `unified_state_sync.proto` (`schema-verified`), а при изменении формата `state.vscdb` безопасно устанавливается весь портативный профиль (`portable-fallback`) без остановки.
+- **Обновлённый AI-помощник и GitHub Panel 1.9.1 / Stability 1.4.1:** актуальная модель по умолчанию `gemini-3.5-flash-lite`, поддержка личного локального `%USERPROFILE%\.gemini\config\workstation-setup\.env` вне Git рядом с `SecretStorage` для подсказок commit по `Tab` в панели GitHub (и шаблон `.env.example`), выбор веток с нескольких remote в Pull и адаптивная ширина строки прогресса в узких терминалах.
+- **Профессиональный стек Next.js + Node.js (из 3.14.0):** `Prisma.prisma`, `redhat.vscode-yaml`, `tailwindCSS.classFunctions`, file nesting для `next.config.*`, удаление серых закрывающих подписей `anteprimorac.html-end-tag-labels`, надёжный установщик `MANCHO SETING ANTIGRAVITI` с staging-проверкой и очисткой, и офлайн-руководства Aster Atelier 1.9.0 / Calm TypeScript 3.5.0.
 
 [Все настройки](docs/SETTINGS-GUIDE.md) · [Расширения](docs/EXTENSIONS.md) · [Skills](docs/SKILLS.md) · [Как вернуть AI-подсказки](docs/AI-COMPLETION.md) · [Совместимость ПК](docs/HARDWARE-COMPATIBILITY.md) · [Восстановление через чат](docs/CHAT-REPAIR.md)
