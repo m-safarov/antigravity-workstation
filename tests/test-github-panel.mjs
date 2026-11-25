@@ -23,7 +23,7 @@ function git(cwd, ...args) {
 
 function repository(t, branch = 'main') {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'panel-state-'));
-  t.after(() => fs.rmSync(base, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
   const repo = path.join(base, 'repo');
   fs.mkdirSync(repo);
   git(repo, 'init', '-b', branch);
@@ -61,7 +61,7 @@ test('State works without origin, with a trunk default branch and outside a repo
   const trunk = repository(t, 'trunk');
   assert.equal((await state.collectState(trunk.repo)).defaultBranch, 'trunk');
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'panel-no-repo-'));
-  t.after(() => fs.rmSync(outside, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(outside, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
   const none = await state.collectState(outside);
   assert.equal(none.isRepo, false);
   assert.match(none.error, /Git/);
@@ -148,6 +148,7 @@ test('Activation registers both views, refresh commands, file watchers and accou
   const last = messages.filter(message => message.type === 'state').at(-1);
   assert.ok(last, 'a file change posts fresh state without pressing refresh');
   assert.ok(last.state.changedFiles.some(item => item.file === 'typed-in-editor.ts'));
+  provider.dispose();
   extension.deactivate();
   for (const item of subscriptions) item.dispose?.();
 });

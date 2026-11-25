@@ -664,3 +664,19 @@ test('Two browser timeouts fail without publishing new defaults', t => {
   assert.equal(opens, 2);
   assert.equal(fs.existsSync(path.join(f.envPaths.userProfile, '.agent-browser/config.json')), false);
 });
+
+test('A cold browser wait socket timeout (os error 10060) retries once before succeeding', t => {
+  const f = fixture(t), calls = []; let waits = 0;
+  put(path.join(f.envPaths.programFiles, 'Google/Chrome/Application/chrome.exe'), 'mock binary');
+  const run = browserStub(calls, command => {
+    if (command.includes(' wait --fn') && ++waits === 1) {
+      const error = new Error('Command failed: agent-browser wait');
+      error.stdout = Buffer.from(JSON.stringify({ success: false, error: 'Failed to read: connection timed out (os error 10060)' }));
+      throw error;
+    }
+  });
+  assert.equal(ensureAgentBrowser({ ...f, run }).verified, true);
+  assert.equal(waits, 2);
+  assert.equal(calls.filter(command => command.endsWith(' open about:blank')).length, 1);
+  assert.equal(calls.filter(command => command.endsWith(' close')).length, 2);
+});
