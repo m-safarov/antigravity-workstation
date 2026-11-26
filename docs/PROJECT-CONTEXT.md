@@ -4,7 +4,7 @@
 сессия (человек или AI) за 5 минут понимает, что это за проект, что уже сделано,
 какие настройки зачем стоят и где лежат ограничения. Подробности — в ссылках.
 
-Последнее обновление: 26 ноября 2026, setup **3.15.2**, Aster Atelier **1.9.0**, Git Branch Panel **1.9.2**,
+Последнее обновление: 26 ноября 2026, setup **3.15.3**, Aster Atelier **1.9.0**, Git Branch Panel **1.9.3**,
 Calm TypeScript **3.5.0**, Workstation Stability **1.4.3**,
 протестированные IDE — **Antigravity IDE 2.9.0, 2.8.0, 2.7.0 и 2.6.0** (плюс универсальная 3-уровневая поддержка любых будущих/других версий).
 
@@ -166,18 +166,28 @@ GitHub): скрипты из `package.json` (корень или папки пе
 — в описании и кнопкой «Открыть в браузере». Без shell integration через 3 с —
 `sendText`.
 
-- **Автор commit** (`src/identity.js`, `RepositoryIdentities.findAuthor`), по
-  порядку: 1) аккаунт редактора, если его логин совпадает с владельцем
-  `origin`; 2) запомненный автор этого проекта для этого владельца;
-  3) публичный профиль владельца (`api.github.com/users/<владелец>`, только
-  `type: User`); 4) владелец — организация: аккаунт редактора; 5) нет связи и
-  ничего не запомнено: `null`, остаётся имя из git config. Имя пишется только
-  в `git config --local` проекта с GitHub-`origin`. Проект без `origin` или на
-  другом сервере не изменяется никогда.
-- Пользователь просил именно так (14.11.2026): «от имени владельца
-  репозитория, не смешивать с другим человеком». Следствие: в клоне чужого
-  личного репозитория автором тоже будет его владелец; имя видно в строке
-  «Автор commits» вверху панели.
+- **Автор commit** (`src/identity.js`, `RepositoryIdentities.forRepository`) —
+  человек, который делает commit, по порядку: 1) аккаунт GitHub, в который
+  вошли в редакторе (`source: 'owner'`, если это владелец `origin`, иначе
+  `'account'` — collaborator или участник организации); 2) тот, кто входил в
+  этом проекте раньше (`workstationGithubPanel.repositoryAuthors`, только при
+  том же владельце `origin`); 3) никого нет: `null`, остаётся имя из git
+  config. Публичный профиль владельца больше не запрашивается. Имя пишется
+  только в `git config --local` проекта с GitHub-`origin` как
+  `<login> <id+login@users.noreply.github.com>`. Проект без `origin` или на
+  другом сервере не изменяется никогда. Имя видно в строке «Автор commits».
+- История: 14.11.2026 пользователь просил «от имени владельца репозитория, не
+  смешивать с другим человеком», и с 3.10.0 автором всегда был владелец.
+  26.11.2026 у пользователя появился collaborator: правило «всегда владелец»
+  записывало бы его работу на владельца. Решение пользователя: каждый — от
+  своего аккаунта GitHub. С 1.9.3 владелец — автор только своих commits;
+  владелец, угаданный ранними версиями (`workstationGithubPanel.repositoryIdentities`),
+  удаляется из `--local` config, когда никто не вошёл (`removeOwnerGuess`,
+  только точное совпадение с запомненной догадкой).
+- Серое имя без аватара в списке commits GitHub означает: почта commit не
+  добавлена в аккаунт GitHub. Это не ошибка панели — человек добавляет почту
+  на github.com/settings/emails (старые commits привяжутся сами) или входит в
+  GitHub в редакторе.
 - **Скорость:** чтения состояния идут параллельно (`collectState`); скрытая
   панель не обновляется; watcher пропускает `node_modules`, `.git/objects`,
   `.git/logs`, `*.lock`; опрос из webview раз в 20 с (раньше 5 с).
@@ -185,7 +195,7 @@ GitHub): скрипты из `package.json` (корень или папки пе
   `node scripts/package-git-panel.cjs` (пересобирает VSIX и `manifest.json`),
   удалить старый `.vsix`, обновить версию в `config/extensions.json`.
 - Тесты: `tests/test-github-panel*.mjs`, `tests/test-github-auth.mjs`
-  (в тестах владелец `origin` и аккаунт — `octocat`).
+  (в тестах владелец `origin` и аккаунт — `octocat`, collaborator — `monalisa`).
 
 ## 5. Журнал изменений (ноябрь 2026)
 
@@ -203,6 +213,7 @@ GitHub): скрипты из `package.json` (корень или папки пе
 | 3.12.0 / 1.8.0 | Ускорение TS/JS IntelliSense и автоимпорта (Workstation Stability 1.3.30: убран 2 с фриз Extension Host и 600+ предупреждений в `profile.cjs`; `files.watcherExclude` без `**/node_modules/**` → `--canUseWatchEvents`; `includePackageJsonAutoImports: "auto"`; `oxc.lint.run: "onSave"`), фикс `antigravity.inlineDiff.undo not found` (`inline-diff-guard.cjs` + fallback `ctrl+z`/`ctrl+y`), правила PowerShell vs Git Bash, preflight всех VSIX/шрифтов, автооткат профиля при сбое, проверка 1 активной версии расширения в Doctor, удалён `scripts/migrate-aster-profile.cjs` |
 | 3.13.0 / 1.8.1 | Поддержка **Antigravity IDE 2.8.0** (`2.8.0-6733682917113856`, x64 и ARM64) вместе с 2.7.0 и 2.6.0 при 100% сохранении `config/settings.json` (284 ключа) и стилей; выведены устаревшие дубликаты, которые 2.8.0 делает сам (`workstation-workflow`, `project-coding-rules`, `agents/workstation-verifier.md`, `history-and-verification.md`, `mikestead.dotenv`, setup-owned MCP `sequential-thinking`); оптимизация скорости в Workstation Stability **1.3.31** (`profile.cjs`, `workbench-ui.cjs`, `jelly-patch.cjs`, `repair-chat.cjs`, `react-snippets.cjs`), Calm TypeScript **3.4.1** и Git Branch Panel **1.8.2**; `oxlint` доведён до 0 ошибок и 0 предупреждений (было 48) |
 | 3.14.0 / 1.9.0 | Профессиональный профиль **Next.js + Node.js + React**: добавлены `Prisma.prisma` и `redhat.vscode-yaml`, `tailwindCSS.classFunctions`, `next.config.*` nesting, `.next`/`.turbo`/`coverage` excludes; выведен `anteprimorac.html-end-tag-labels` (серые Tailwind-подписи закрывающих тегов) с автоочисткой настроек `htmlEndTagLabels.*`; обновлён `scripts/bootstrap.ps1` (`m-safarov/antigravity-workstation`, единая фиксация 40-символьного commit SHA на весь запуск, защищённый staging + автоочистка временных архивов, потоковая загрузка с реальным прогрессом и retry/backoff, фирменный баннер `MANCHO SETING ANTIGRAVITI`, классификация версий IDE `tested`/`recognized`/`unknown`); единый источник полноты профиля `lib/profile-inventory.js` (Installer + Doctor) и чистый `--json`; необязательный локальный AI-помощник (`Workstation Stability` **1.4.0**: `Configure AI API Key` в `SecretStorage`, `Test AI Connection`, `lib/ai-recovery.js` строго по allowlist); командный **Git Branch Panel** **1.9.0** (upstream/incoming-outgoing, Pull Requests с выбором `head`/`base`, безопасное удаление веток Local/Remote/Both с проверкой прав GitHub/protection/worktree, diff-подсказка коммита по `Tab`, защита от гонок `stateGeneration`); ускорена проверка native-схемы в `lib/native-compatibility.js` в 38×; офлайн-визуалы Details в **Aster Atelier** **1.9.0** и **Calm TypeScript** **3.5.0** |
+| 3.15.3 / 1.9.0 | Git Branch Panel **1.9.3**: автор commit — вошедший в редакторе аккаунт GitHub (collaborator — от своего имени, владелец — только свои commits), без запроса публичного профиля владельца; догадка ранних версий о владельце удаляется из `--local` config (раздел 4a) |
 
 Все версии проверены GitHub Actions (Setup checks, Native Windows IDE smoke,
 Aster actual Antigravity appearance, Verify Aster VSIX build).

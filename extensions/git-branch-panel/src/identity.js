@@ -1,14 +1,16 @@
 'use strict';
 
-// Commits in a GitHub repository are authored as the owner of that repository
-// (the account in the origin address), with GitHub's private noreply address,
-// so a push never publishes a personal email (GitHub error GH007) and another
-// account signed in to the editor never becomes the author. The identity goes
-// into the repository's own config; the global git config is never changed,
-// and a project without a GitHub origin is never written to.
+// Every commit in a GitHub repository carries the person who makes it: the
+// GitHub account signed in to the editor, with that account's private noreply
+// address, so GitHub shows the person's profile and a push never publishes a
+// personal email (GitHub error GH007). The repository owner is the author only
+// when the owner is the one signed in; a collaborator is never written down as
+// the owner. Without a signed-in account the person who last signed in for
+// this repository is used, otherwise git's own user.name and user.email. The
+// identity goes into the repository's own config; the global git config is
+// never changed, and a project without a GitHub origin is never written to.
 const { runGit } = require('./git-runner');
 const { parseGitHubRemote } = require('./git-state');
-const { fetchPublicUser } = require('./github-api');
 
 const SIGN_IN_SCOPES = ['read:user', 'user:email'];
 // A silent lookup only finds a session created with exactly these scopes,
@@ -21,9 +23,10 @@ const KNOWN_SCOPE_SETS = [
   // Created by "Connect to GitHub" to make a new repository.
   ['repo'],
 ];
-const MEMORY_KEY = 'workstationGithubPanel.repositoryIdentities';
-const LOOKUP_TIMEOUT_MS = 8000;
-const LOOKUP_RETRY_MS = 5 * 60 * 1000;
+const MEMORY_KEY = 'workstationGithubPanel.repositoryAuthors';
+// Before 1.9.3 the owner's public profile became the author of every clone
+// and was remembered under this key, also on a collaborator's computer.
+const LEGACY_MEMORY_KEY = 'workstationGithubPanel.repositoryIdentities';
 
 const sameLogin = (left, right) => String(left || '').toLowerCase() === String(right || '').toLowerCase();
 
@@ -78,21 +81,20 @@ async function writeLocalIdentity(cwd, identity) {
   return true;
 }
 
-// Finds the author for a repository root and remembers it together with the
-// owner it belongs to, so a project keeps its own author offline and an
-// origin that moved to another owner never keeps the previous person.
+// Finds the person who commits in a repository root and remembers them
+// together with the owner of its origin, so a project keeps its author while
+// the editor is signed out and an origin that moved to another owner never
+// keeps the previous person.
 class RepositoryIdentities {
-  constructor(authentication, memory, lookupUser = owner => fetchPublicUser(owner, LOOKUP_TIMEOUT_MS)) {
+  constructor(authentication, memory) {
     this.authentication = authentication;
     this.memory = memory;
-    this.lookupUser = lookupUser;
     this.signedIn = undefined;
-    this.ownerLookups = new Map();
+    this.guessCleanups = new Map();
   }
 
   forgetSession() {
     this.signedIn = undefined;
-    this.ownerLookups.clear();
   }
 
   async currentAccount() {
@@ -122,41 +124,50 @@ class RepositoryIdentities {
     await this.memory?.update(MEMORY_KEY, saved);
   }
 
-  // The owner's public profile: { identity, answered }. identity is set only
-  // for a person; an organisation has no noreply address of its own.
-  async ownerProfile(owner) {
-    // GitHub's answer is kept; an unanswered lookup is retried a little later.
-    const cached = this.ownerLookups.get(owner);
-    if (cached && (cached.answered || Date.now() - cached.at < LOOKUP_RETRY_MS)) return cached;
-    const user = await this.lookupUser(owner).catch(() => null);
-    const identity = user?.type === 'User' ? identityFromSession({ account: { label: user.login, id: String(user.id) } }) : null;
-    const profile = { identity, answered: Boolean(user), at: Date.now() };
-    this.ownerLookups.set(owner, profile);
-    return profile;
-  }
-
   // The author for a repository on github.com, or null when git's own
-  // identity stays in use. source: 'owner' is the repository owner, 'account'
-  // is the editor account (the owner is an organisation).
+  // identity stays in use. source: 'owner' when the person owns the
+  // repository, 'account' for anyone else signed in (a collaborator or a
+  // member of the organisation).
   async forRepository(root, remote) {
     const owner = parseGitHubRemote(remote)?.owner;
     if (!owner) return null;
-    const found = await this.findAuthor(root, owner);
-    if (!found) return null;
-    await this.remember(root, owner, found.identity);
-    return { ...found.identity, source: found.source };
+    const person = await this.currentAccount() || this.remembered(root, owner);
+    if (!person) return null;
+    await this.remember(root, owner, person);
+    return { ...person, source: sameLogin(person.login, owner) ? 'owner' : 'account' };
   }
 
-  async findAuthor(root, owner) {
-    const account = await this.currentAccount();
-    if (account && sameLogin(account.login, owner)) return { identity: account, source: 'owner' };
-    const saved = this.remembered(root, owner);
-    if (saved && sameLogin(saved.login, owner)) return { identity: saved, source: 'owner' };
-    const profile = await this.ownerProfile(owner);
-    if (profile.identity) return { identity: profile.identity, source: 'owner' };
-    // An organisation cannot author commits: the editor account is the person.
-    const person = profile.answered ? account || saved : saved;
-    return person ? { identity: person, source: 'account' } : null;
+  // Removes the owner identity that an earlier version wrote into this
+  // repository's config by guessing, so the owner is not the author of
+  // someone else's commits. Only that exact identity is removed; any other
+  // local identity stays. Calls for one repository that overlap (activation,
+  // refresh and a commit) share one run. Resolves true when the repository
+  // config changed.
+  removeOwnerGuess(cwd, root, remote) {
+    if (!this.guessCleanups.has(root)) {
+      this.guessCleanups.set(root, this.cleanOwnerGuess(cwd, root, remote).finally(() => this.guessCleanups.delete(root)));
+    }
+    return this.guessCleanups.get(root);
+  }
+
+  async cleanOwnerGuess(cwd, root, remote) {
+    const entry = this.memory?.get(LEGACY_MEMORY_KEY, {})?.[root];
+    if (!entry) return false;
+    const owner = parseGitHubRemote(remote)?.owner;
+    const guess = owner && sameLogin(entry.owner, owner) && sameLogin(entry.login, owner)
+      ? identityFromSession({ account: { label: entry.login, id: entry.id } })
+      : null;
+    const local = guess ? await readLocalIdentity(cwd) : null;
+    const guessed = Boolean(guess) && local.name === guess.name && local.email === guess.email;
+    if (guessed) {
+      await runGit(['config', '--local', '--unset', 'user.name'], cwd);
+      await runGit(['config', '--local', '--unset', 'user.email'], cwd);
+    }
+    // The entry goes only after the config is clean, so a failed run is retried.
+    const rest = { ...this.memory?.get(LEGACY_MEMORY_KEY, {}) };
+    delete rest[root];
+    await this.memory?.update(LEGACY_MEMORY_KEY, rest);
+    return guessed;
   }
 }
 

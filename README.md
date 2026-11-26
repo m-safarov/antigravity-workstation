@@ -7,7 +7,7 @@
 
 Готовый профессиональный профиль **Antigravity IDE** для разработки на **Next.js, Node.js, React, TypeScript и Tailwind CSS** на Windows одной командой: чистые настройки редактора, проверенные расширения, темы и шрифты **Aster Atelier**, командная панель **GitHub** (Pull, Push, PR, ветки, Tab-подсказка commit), панель **npm-скриптов**, правила агента без лишних вопросов и встроенный `Doctor`. AI-подсказки в коде выключены, обычный IntelliSense и автоимпорт работают быстро. Перед любыми изменениями создаётся резервная копия.
 
-Версия **3.15.2**. Репозиторий: https://github.com/m-safarov/antigravity-workstation · [Скачать ZIP](https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip)
+Версия **3.15.3**. Репозиторий: https://github.com/m-safarov/antigravity-workstation · [Скачать ZIP](https://github.com/m-safarov/antigravity-workstation/archive/refs/heads/main.zip)
 
 ### Совместимость версий Antigravity IDE (любая версия)
 
@@ -140,8 +140,9 @@ git config --global user.email "почта@пример.com"
 | [Windows](docs/prompts/WINDOWS-AI-SETUP.md) ([скачать](https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/docs/prompts/WINDOWS-AI-SETUP.md)) | Любой ИИ-агент с терминалом ставит профиль теми же командами КОД 1 и КОД 2 |
 | [macOS](docs/prompts/MAC-AI-SETUP.md) ([скачать](https://raw.githubusercontent.com/m-safarov/antigravity-workstation/main/docs/prompts/MAC-AI-SETUP.md)) | Mac: агент переносит тот же профиль скриптом проекта |
 
-## Что нового в 3.15.2
+## Что нового в 3.15.3
 
+- **Автор commit — тот, кто его делает (GitHub Panel 1.9.3):** в командном репозитории commit получает аккаунт GitHub collaborator-а, который вошёл в редакторе, а не владельца репозитория; владелец — автор только своих commits. Без входа в GitHub остаётся собственный `git config` человека, а имя владельца, которое ранние версии подставляли в клон collaborator-а, удаляется. Если в GitHub имя автора серое и без аватара, почта этого commit не добавлена в аккаунт GitHub ([github.com/settings/emails](https://github.com/settings/emails)).
 - **AI-подсказки commit по `Tab` работают у всех из коробки (Stability 1.4.3 + GitHub Panel 1.9.2):** подключён защищённый Cloudflare Workers AI-прокси по умолчанию (`workstationStability.ai.proxyUrl`, модель `gemini-3.5-flash-lite`, upstream API-ключ полностью зашифрован на сервере Cloudflare и никогда не попадает в Git или на ПК пользователя; при офлайне или пустом `proxyUrl` работает умный локальный diff-анализатор с автообновлением `diffStamp` при каждом сохранении).
 - **Официальная поддержка Antigravity IDE 2.9.0 (`2.9.0-4671306730438656`) + универсальная совместимость с любыми версиями IDE:** 2.9.0 добавлена в проверенный каталог (x64 и ARM64) и Windows CI smoke; будущие релизы автоматически проходят криптографическую проверку встроенной схемы `unified_state_sync.proto` (`schema-verified`), а при изменении формата `state.vscdb` безопасно устанавливается весь портативный профиль (`portable-fallback`) без остановки.
 - **Обновлённый AI-помощник и мульти-remote Pull:** шаблон `.env.example`, исходники прокси [`services/commit-ai-proxy/`](services/commit-ai-proxy/README.md), выбор веток с нескольких remote в Pull и адаптивная ширина строки прогресса в узких терминалах.

@@ -126,7 +126,7 @@ function openPanel(t, repo, window, extra = {}) {
   const vscode = {
     env: { language: 'ru', shell: BASH },
     ThemeIcon: class { constructor(id) { this.id = id; } },
-    authentication: { async getSession(_id, scopes, options) { return { account: ACCOUNT, accessToken: 'test-token', scopes, options }; } },
+    authentication: { async getSession(_id, scopes, options) { return { account: extra.account || ACCOUNT, accessToken: 'test-token', scopes, options }; } },
     window,
     workspace: { workspaceFolders: [{ uri: { fsPath: repo } }], textDocuments: [],
       getConfiguration: () => ({ get: key => key === 'profiles.windows' ? { 'Git Bash': { path: BASH, args: ['--login', '-i'] } } : undefined }) },
@@ -135,7 +135,6 @@ function openPanel(t, repo, window, extra = {}) {
   configureGit({ executable: 'git', log: message => logs.push(message), terminal: (args, cwd, timeout) => terminal.run(args, cwd, extra.timeout || timeout) });
   t.after(() => { configureGit({ terminal: null, log: () => {} }); terminal.dispose(); });
   const provider = new GithubPanelProvider(vscode, { globalState: memento() }, message => logs.push(message));
-  provider.identities.lookupUser = async owner => ({ login: owner, id: 583231, type: 'User' });
   provider.resolveWebviewView({ webview: { postMessage: message => messages.push(message), onDidReceiveMessage: () => ({ dispose() {} }) } });
   return { provider, messages, prompts, inputs, logs, send: message => provider.handleMessage(message) };
 }
@@ -192,6 +191,26 @@ test('Commit and Push run visibly in one reused GitHub terminal; a tricky messag
   assert.equal(git(f.repo, 'config', '--local', 'user.email'), NOREPLY);
   assert.equal(fs.readFileSync(f.globalFile, 'utf8'), f.globalText, 'the global git config is never changed');
   assert.equal(lastState(h).ahead, 0);
+});
+
+test('In the owner\'s repository a collaborator\'s commits, from the panel and from a plain terminal, carry the collaborator\'s own GitHub account', async t => {
+  const f = fixture(t);
+  connectedRepository(f);
+  const collaborator = { id: '4242', label: 'monalisa' }, noreply = '4242+monalisa@users.noreply.github.com';
+  fs.writeFileSync(path.join(f.repo, 'a.txt'), 'a\n');
+  const window = fakeWindow(), h = openPanel(t, f.repo, window, { account: collaborator });
+  await h.send({ command: 'commit', message: 'collaborator change', files: ['a.txt'] });
+  assert.deepEqual(errors(h), []);
+  assert.equal(git(f.repo, 'log', '-1', '--format=%an <%ae> | %cn <%ce>'), `monalisa <${noreply}> | monalisa <${noreply}>`);
+  // A commit typed in the terminal, or made by an agent, reads the same repository config.
+  fs.writeFileSync(path.join(f.repo, 'b.txt'), 'b\n');
+  git(f.repo, 'add', 'b.txt');
+  git(f.repo, 'commit', '-m', 'terminal change');
+  assert.equal(git(f.repo, 'log', '-1', '--format=%an <%ae>'), `monalisa <${noreply}>`);
+  assert.doesNotMatch(git(f.repo, 'log', '--format=%an <%ae> %cn <%ce>'), /octocat|Someone Else/, 'neither the owner nor the global git name is used');
+  await h.send({ command: 'push' });
+  assert.equal(git(f.remote, 'log', '-1', '--format=%an <%ae>', 'main'), `monalisa <${noreply}>`);
+  assert.equal(fs.readFileSync(f.globalFile, 'utf8'), f.globalText, 'the global git config is never changed');
 });
 
 test('A failed command shows what git printed, the panel unlocks, and a terminal moved elsewhere goes back first', async t => {

@@ -2,7 +2,7 @@
   "name": "git-branch-panel",
   "displayName": "Git Branch Panel",
   "description": "Панели Проводника. GitHub: создать репозиторий и подключить его к GitHub, Commit, Push, Pull и ветки от имени владельца репозитория; каждая команда git видна в терминале Git Bash. npm-скрипты: npm run dev и другие скрипты package.json одним щелчком в терминале со ссылкой на сервер.",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "publisher": "workstation",
   "engines": {
     "vscode": "^1.80.0"

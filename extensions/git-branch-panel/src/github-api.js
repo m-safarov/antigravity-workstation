@@ -1,7 +1,7 @@
 'use strict';
 
-// GitHub REST API client used by the panel: public owner profile, repository
-// creation, repository metadata/permissions, branch protection, and Pull Requests.
+// GitHub REST API client used by the panel: repository creation, repository
+// metadata/permissions, branch protection, and Pull Requests.
 const http = require('http');
 const https = require('https');
 const { PanelError } = require('./git-errors');
@@ -34,12 +34,6 @@ function requestGitHub(method, apiPath, { token, body, timeout = TIMEOUT_MS, api
     request.on('error', reject);
     request.end(payload);
   });
-}
-
-// Public profile of a GitHub account, without a token, or null.
-function fetchPublicUser(owner, timeout, options = {}) {
-  return requestGitHub('GET', '/users/' + encodeURIComponent(owner), { timeout, apiBase: options.apiBase })
-    .then(response => response.status === 200 ? response.data : null, () => null);
 }
 
 // Repository metadata including default_branch and explicit GitHub permissions.
@@ -108,7 +102,6 @@ async function createRepository(token, name, isPrivate, options = {}) {
 
 module.exports = {
   requestGitHub,
-  fetchPublicUser,
   getRepositoryMeta,
   getBranchInfo,
   listOpenPullRequests,

@@ -157,7 +157,6 @@ test('A hidden panel does not read git until it is shown again', async t => {
   const { repo } = repository(t);
   const messages = [];
   const provider = new GithubPanelProvider({ env: { language: 'ru' }, authentication: { getSession: async () => undefined }, workspace: { workspaceFolders: [{ uri: { fsPath: repo } }] } });
-  provider.identities.lookupUser = async () => null;
   const view = { visible: false, webview: { postMessage: message => messages.push(message), onDidReceiveMessage: () => ({ dispose() {} }) } };
   provider.resolveWebviewView(view);
   provider.refresh();

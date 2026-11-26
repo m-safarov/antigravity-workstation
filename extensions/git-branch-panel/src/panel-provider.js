@@ -19,7 +19,6 @@ const REFRESH_DELAY_MS = 300;
 async function signIn(panel) {
   const identity = await panel.identities.signIn();
   if (!identity) throw new PanelError(tr('Не удалось войти в GitHub.', 'Could not sign in to GitHub.'));
-  panel.identities.ownerLookups.clear();
   panel.identityWritten.clear();
   panel.notice('ok', tr(`Вход в GitHub: ${identity.login}.`, `Signed in to GitHub: ${identity.login}.`));
 }
@@ -259,6 +258,7 @@ class GithubPanelProvider {
     if (!usesGitHubIdentity(state.remote)) return null;
     const identity = await this.identities.forRepository(state.root, state.remote);
     if (!identity) {
+      await this.removeOwnerGuess(cwd, state);
       if (await hasGitIdentity(cwd)) return null;
       throw new PanelError(tr('Нужно войти в GitHub.', 'Sign in to GitHub first.'), { action: 'signIn' });
     }
@@ -274,7 +274,11 @@ class GithubPanelProvider {
     if (!state.isRepo || !state.isGitHub) return null;
     try {
       const identity = await this.identities.forRepository(state.root, state.remote);
-      if (!identity || this.identityWritten.get(state.root) === identity.email) return identity;
+      if (!identity) {
+        await this.removeOwnerGuess(state.cwd, state);
+        return null;
+      }
+      if (this.identityWritten.get(state.root) === identity.email) return identity;
       if (await writeLocalIdentity(state.cwd, identity)) this.log(`${state.root}: user.name ${identity.name}, user.email ${identity.email}`);
       this.identityWritten.set(state.root, identity.email);
       return identity;
@@ -282,6 +286,14 @@ class GithubPanelProvider {
       this.log('Identity: ' + error.message);
       return null;
     }
+  }
+
+  // With nobody signed in, an owner identity that an earlier version guessed
+  // must not stay in the repository config: git's own identity applies.
+  async removeOwnerGuess(cwd, state) {
+    if (!await this.identities.removeOwnerGuess(cwd, state.root, state.remote)) return;
+    this.gitAuthor = null;
+    this.log(`${state.root}: removed the guessed owner user.name and user.email`);
   }
 
   async syncWorkspaceIdentity() {

@@ -401,8 +401,8 @@ function updateRepoProblem(current) {
   byId('startRow').hidden = current.isRepo || !current.cwd;
 }
 
-// Whose name the next commit carries: the repository owner, the editor
-// account (organisation repositories) or the name from git config.
+// Whose name the next commit carries: the GitHub account signed in to the
+// editor (marked when it owns the repository) or the name from git config.
 function showAuthor(author) {
   const line = byId('authorLine');
   line.hidden = !author;
