@@ -126,7 +126,7 @@ function openPanel(t, repo, window, extra = {}) {
   const vscode = {
     env: { language: 'ru', shell: BASH },
     ThemeIcon: class { constructor(id) { this.id = id; } },
-    authentication: { async getSession(_id, scopes, options) { return { account: extra.account || ACCOUNT, accessToken: 'test-token', scopes, options }; } },
+    authentication: { async getSession(_id, scopes, options) { return extra.account === null ? undefined : { account: extra.account || ACCOUNT, accessToken: 'test-token', scopes, options }; } },
     window,
     workspace: { workspaceFolders: [{ uri: { fsPath: repo } }], textDocuments: [],
       getConfiguration: () => ({ get: key => key === 'profiles.windows' ? { 'Git Bash': { path: BASH, args: ['--login', '-i'] } } : undefined }) },
@@ -210,6 +210,19 @@ test('In the owner\'s repository a collaborator\'s commits, from the panel and f
   assert.doesNotMatch(git(f.repo, 'log', '--format=%an <%ae> %cn <%ce>'), /octocat|Someone Else/, 'neither the owner nor the global git name is used');
   await h.send({ command: 'push' });
   assert.equal(git(f.remote, 'log', '-1', '--format=%an <%ae>', 'main'), `monalisa <${noreply}>`);
+  assert.equal(fs.readFileSync(f.globalFile, 'utf8'), f.globalText, 'the global git config is never changed');
+});
+
+test('Signed out, a Google address from the global git config never authors a commit in a GitHub repository', async t => {
+  const f = fixture(t);
+  connectedRepository(f);
+  fs.writeFileSync(path.join(f.repo, 'a.txt'), 'a\n');
+  const window = fakeWindow(), h = openPanel(t, f.repo, window, { account: null });
+  await h.send({ command: 'commit', message: 'signed out', files: ['a.txt'] });
+  assert.equal(errors(h).at(-1).action, 'signIn');
+  assert.match(errors(h).at(-1).details, /Someone Else <someone\.else@gmail\.com>/);
+  assert.throws(() => git(f.repo, 'rev-parse', '--verify', 'HEAD'), 'nothing is committed');
+  assert.equal(window.lines.some(line => line.startsWith('git commit')), false);
   assert.equal(fs.readFileSync(f.globalFile, 'utf8'), f.globalText, 'the global git config is never changed');
 });
 

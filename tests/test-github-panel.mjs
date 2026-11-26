@@ -21,6 +21,17 @@ function git(cwd, ...args) {
   return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
+// Polls until the condition holds instead of guessing how long git takes: a
+// fixed sleep failed on the slow Windows ARM64 runner under a full test run.
+async function waitFor(condition, timeoutMs = 20000) {
+  const end = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() > end) return false;
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
+  return true;
+}
+
 function repository(t, branch = 'main') {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'panel-state-'));
   t.after(() => fs.rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
@@ -144,10 +155,8 @@ test('Activation registers both views, refresh commands, file watchers and accou
   provider.resolveWebviewView({ webview: { postMessage: message => messages.push(message), onDidReceiveMessage: () => ({ dispose() {} }) } });
   fs.writeFileSync(path.join(repo, 'typed-in-editor.ts'), 'x');
   handlers.change();
-  await new Promise(resolve => setTimeout(resolve, 900));
-  const last = messages.filter(message => message.type === 'state').at(-1);
-  assert.ok(last, 'a file change posts fresh state without pressing refresh');
-  assert.ok(last.state.changedFiles.some(item => item.file === 'typed-in-editor.ts'));
+  const lastState = () => messages.filter(message => message.type === 'state').at(-1);
+  assert.ok(await waitFor(() => lastState()?.state.changedFiles.some(item => item.file === 'typed-in-editor.ts')), 'a file change posts fresh state without pressing refresh');
   provider.dispose();
   extension.deactivate();
   for (const item of subscriptions) item.dispose?.();
@@ -164,8 +173,7 @@ test('A hidden panel does not read git until it is shown again', async t => {
   assert.equal(messages.length, 0);
   view.visible = true;
   provider.refresh();
-  await new Promise(resolve => setTimeout(resolve, 900));
-  assert.ok(messages.some(message => message.type === 'state'));
+  assert.ok(await waitFor(() => messages.some(message => message.type === 'state')), 'a shown panel reads git and posts its state');
   provider.dispose();
 });
 

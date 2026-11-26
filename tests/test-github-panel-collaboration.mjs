@@ -408,6 +408,17 @@ test('Commit suggestion derives from actual diff, redacts secrets, uses optional
   doc.getElementById('pullButton').listeners.click();
   const pullMsg = posted.filter(m => m.command === 'pullBranch').at(-1);
   assert.deepEqual({ sourceRemote: pullMsg.sourceRemote, sourceBranch: pullMsg.sourceBranch }, { sourceRemote: 'upstream', sourceBranch: 'release' });
+
+  // The author line says when the next commit would not carry a GitHub account.
+  const authorLine = () => doc.getElementById('authorLine').textContent;
+  messageHandler({ data: { type: 'author', author: { name: 'Mona', source: 'git', github: false } } });
+  assert.equal(authorLine(), 'Commit author: Mona · not a GitHub account: sign in to GitHub');
+  messageHandler({ data: { type: 'author', author: { name: '', source: 'none', github: false } } });
+  assert.equal(authorLine(), 'Commit author: not set: sign in to GitHub');
+  messageHandler({ data: { type: 'author', author: { name: 'monalisa', source: 'account' } } });
+  assert.equal(authorLine(), 'Commit author: monalisa · editor account');
+  messageHandler({ data: { type: 'author', author: { name: '', source: 'none' } } });
+  assert.equal(authorLine(), 'Commit author: not set: connect a GitHub repository');
 });
 
 test('Local offline diff-aware commit suggestions produce distinct, specific messages across real change types without any API key', async t => {

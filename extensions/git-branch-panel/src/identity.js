@@ -6,9 +6,11 @@
 // personal email (GitHub error GH007). The repository owner is the author only
 // when the owner is the one signed in; a collaborator is never written down as
 // the owner. Without a signed-in account the person who last signed in for
-// this repository is used, otherwise git's own user.name and user.email. The
-// identity goes into the repository's own config; the global git config is
-// never changed, and a project without a GitHub origin is never written to.
+// this repository is used, otherwise git's own user.name and user.email, and
+// those only with a GitHub address: a Google account's Gmail would show a grey
+// name instead of the person. The identity goes into the repository's own
+// config; the global git config is never changed, and a project without a
+// GitHub origin is never written to.
 const { runGit } = require('./git-runner');
 const { parseGitHubRemote } = require('./git-state');
 
@@ -28,10 +30,20 @@ const MEMORY_KEY = 'workstationGithubPanel.repositoryAuthors';
 // and was remembered under this key, also on a collaborator's computer.
 const LEGACY_MEMORY_KEY = 'workstationGithubPanel.repositoryIdentities';
 
+// GitHub's private addresses: 12345+login@… and, for accounts from before
+// 2017, login@…. Each one belongs to exactly one GitHub account.
+const GITHUB_NOREPLY = /^(?:\d+\+)?[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?@users\.noreply\.github\.com$/i;
+
 const sameLogin = (left, right) => String(left || '').toLowerCase() === String(right || '').toLowerCase();
 
 function noreplyEmail(id, login) {
   return `${id}+${login}@users.noreply.github.com`;
+}
+
+// True for an address that always shows its GitHub account on a commit. Any
+// other address shows the account only if its owner added it on GitHub.
+function isGitHubEmail(email) {
+  return GITHUB_NOREPLY.test(String(email || '').trim());
 }
 
 // The editor's GitHub session reports the login as the account label and the
@@ -62,9 +74,10 @@ async function hasGitIdentity(cwd) {
   return Boolean(await read('user.name')) && Boolean(await read('user.email'));
 }
 
-// The author name plain `git commit` would use, or '' when none is set.
-async function readGitUserName(cwd) {
-  return runGit(['config', '--get', 'user.name'], cwd).catch(() => '');
+// The name and address plain `git commit` would use; '' for what is not set.
+async function readGitIdentity(cwd) {
+  const read = key => runGit(['config', '--get', key], cwd).catch(() => '');
+  return { name: await read('user.name'), email: await read('user.email') };
 }
 
 async function readLocalIdentity(cwd) {
@@ -173,8 +186,9 @@ class RepositoryIdentities {
 
 module.exports = {
   identityFromSession,
+  isGitHubEmail,
   writeLocalIdentity,
   hasGitIdentity,
-  readGitUserName,
+  readGitIdentity,
   RepositoryIdentities,
 };

@@ -19,7 +19,7 @@ const RUSSIAN = {
   abortRebase: 'Отменить rebase',
   deleteBranch: 'Удалить ветку', deleteScope: 'Область удаления', scopeBoth: 'Локально и в GitHub', scopeLocal: 'Только локально', scopeRemote: 'Только в GitHub', deleteButton: 'Удалить', noBranches: 'Нет веток для удаления', active: 'активная',
   fixAuthor: 'Исправить автора и отправить', signIn: 'Войти в GitHub',
-  author: 'Автор commits', authorOwner: 'владелец репозитория', authorAccount: 'аккаунт редактора', authorGit: 'из git config', authorNone: 'не задан: подключи репозиторий GitHub',
+  author: 'Автор commits', authorOwner: 'владелец репозитория', authorAccount: 'аккаунт редактора', authorGit: 'из git config', authorNotGitHub: 'не аккаунт GitHub: войди в GitHub', authorSignIn: 'не задан: войди в GitHub', authorNone: 'не задан: подключи репозиторий GitHub',
   extensionCredit: 'Расширение: Antigravity Workstation (m-safarov)',
 };
 
@@ -37,7 +37,7 @@ const ENGLISH = {
   abortRebase: 'Cancel rebase',
   deleteBranch: 'Delete branch', deleteScope: 'Delete scope', scopeBoth: 'Local and GitHub', scopeLocal: 'Local only', scopeRemote: 'GitHub only', deleteButton: 'Delete', noBranches: 'No branches to delete', active: 'active',
   fixAuthor: 'Fix author and push', signIn: 'Sign in to GitHub',
-  author: 'Commit author', authorOwner: 'repository owner', authorAccount: 'editor account', authorGit: 'from git config', authorNone: 'not set: connect a GitHub repository',
+  author: 'Commit author', authorOwner: 'repository owner', authorAccount: 'editor account', authorGit: 'from git config', authorNotGitHub: 'not a GitHub account: sign in to GitHub', authorSignIn: 'not set: sign in to GitHub', authorNone: 'not set: connect a GitHub repository',
   extensionCredit: 'Extension: Antigravity Workstation (m-safarov)',
 };
 

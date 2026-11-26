@@ -4,7 +4,7 @@ const path = require('path');
 const { GitError } = require('./git-runner');
 const { collectState, usesGitHubIdentity } = require('./git-state');
 const { PanelError, explainError } = require('./git-errors');
-const { RepositoryIdentities, writeLocalIdentity, hasGitIdentity, readGitUserName } = require('./identity');
+const { RepositoryIdentities, writeLocalIdentity, hasGitIdentity, readGitIdentity, isGitHubEmail } = require('./identity');
 const { renderHtml } = require('./webview-html');
 const { setLanguage, tr } = require('./text');
 const { suggestCommitMessage } = require('./commit-suggest');
@@ -15,6 +15,13 @@ const repository = require('./actions/repository');
 const pullRequests = require('./actions/pull-requests');
 
 const REFRESH_DELAY_MS = 300;
+
+// Why git's own name may not author a commit in a GitHub repository.
+function notGitHubDetails({ name, email }) {
+  if (!email) return '';
+  return tr(`В git сейчас: ${name} <${email}> — это не адрес GitHub. GitHub покажет такой commit серым именем без профиля, если эта почта не добавлена в твой аккаунт GitHub. После входа панель сама поставит адрес твоего аккаунта GitHub.`,
+    `git has: ${name} <${email}>, not a GitHub address. GitHub shows such a commit as a grey name without a profile unless this email is added to your GitHub account. After you sign in, the panel sets your GitHub account address.`);
+}
 
 async function signIn(panel) {
   const identity = await panel.identities.signIn();
@@ -49,6 +56,7 @@ class GithubPanelProvider {
     setLanguage(vscode.env?.language);
     this.identities = new RepositoryIdentities(vscode.authentication, context.globalState);
     this.identityWritten = new Map();
+    this.identityWarned = new Set();
     this.gitAuthor = null;
     this.postedAuthor = null;
     this.view = null;
@@ -235,8 +243,13 @@ class GithubPanelProvider {
     if (state.isRepo && !state.error) {
       if (identity) author = { name: identity.login, source: identity.source };
       else {
-        if (this.gitAuthor?.root !== state.root) this.gitAuthor = { root: state.root, name: await readGitUserName(state.cwd) };
+        if (this.gitAuthor?.root !== state.root) this.gitAuthor = { root: state.root, ...await readGitIdentity(state.cwd) };
         author = { name: this.gitAuthor.name, source: this.gitAuthor.name ? 'git' : 'none' };
+        // In a GitHub repository only a GitHub address shows the person.
+        if (state.isGitHub && !isGitHubEmail(this.gitAuthor.email)) {
+          author.github = false;
+          this.warnNotGitHub(state.root, this.gitAuthor);
+        }
       }
     }
     const key = JSON.stringify(author);
@@ -245,10 +258,19 @@ class GithubPanelProvider {
     this.post({ type: 'author', author });
   }
 
+  // Once per repository and sign-in state: commits there would not show a
+  // GitHub account, so the person is asked to sign in.
+  warnNotGitHub(root, own) {
+    if (this.identityWarned.has(root)) return;
+    this.identityWarned.add(root);
+    this.notice('warn', tr('Войди в GitHub, чтобы commits шли от твоего аккаунта GitHub.', 'Sign in to GitHub so that commits come from your GitHub account.'),
+      { action: 'signIn', details: notGitHubDetails(own) });
+  }
+
   // Called before every commit, merge and push. Returns null when git's own
   // identity is used: a project without origin or on another server (its
-  // config is never written), or no GitHub identity could be found but git
-  // already has user.name and user.email.
+  // config is never written), or, in a GitHub repository with nobody signed
+  // in, a git identity whose address is a GitHub one.
   async requireIdentity(cwd, state) {
     if (!state.remote) {
       if (await hasGitIdentity(cwd)) return null;
@@ -259,8 +281,9 @@ class GithubPanelProvider {
     const identity = await this.identities.forRepository(state.root, state.remote);
     if (!identity) {
       await this.removeOwnerGuess(cwd, state);
-      if (await hasGitIdentity(cwd)) return null;
-      throw new PanelError(tr('Нужно войти в GitHub.', 'Sign in to GitHub first.'), { action: 'signIn' });
+      const own = await readGitIdentity(cwd);
+      if (own.name && isGitHubEmail(own.email)) return null;
+      throw new PanelError(tr('Нужно войти в GitHub.', 'Sign in to GitHub first.'), { action: 'signIn', details: notGitHubDetails(own) });
     }
     await writeLocalIdentity(cwd, identity);
     this.identityWritten.set(state.root, identity.email);
@@ -304,6 +327,7 @@ class GithubPanelProvider {
   onGitHubSessionsChanged() {
     this.identities.forgetSession();
     this.identityWritten.clear();
+    this.identityWarned.clear();
     this.gitAuthor = null;
     this.syncWorkspaceIdentity().catch(error => this.log('Identity: ' + error.message));
     this.refresh();

@@ -402,13 +402,15 @@ function updateRepoProblem(current) {
 }
 
 // Whose name the next commit carries: the GitHub account signed in to the
-// editor (marked when it owns the repository) or the name from git config.
+// editor (marked when it owns the repository) or the name from git config,
+// marked when its address is not a GitHub one.
 function showAuthor(author) {
   const line = byId('authorLine');
   line.hidden = !author;
   if (!author) return;
-  const source = { owner: UI.authorOwner, account: UI.authorAccount, git: UI.authorGit }[author.source];
-  line.textContent = UI.author + ': ' + (author.name ? author.name + ' · ' + source : UI.authorNone);
+  const source = author.github === false ? UI.authorNotGitHub : { owner: UI.authorOwner, account: UI.authorAccount, git: UI.authorGit }[author.source];
+  const unset = author.github === false ? UI.authorSignIn : UI.authorNone;
+  line.textContent = UI.author + ': ' + (author.name ? author.name + ' · ' + source : unset);
 }
 
 function applyState(next) {

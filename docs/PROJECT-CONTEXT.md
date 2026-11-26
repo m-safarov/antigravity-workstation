@@ -4,7 +4,7 @@
 сессия (человек или AI) за 5 минут понимает, что это за проект, что уже сделано,
 какие настройки зачем стоят и где лежат ограничения. Подробности — в ссылках.
 
-Последнее обновление: 26 ноября 2026, setup **3.15.3**, Aster Atelier **1.9.0**, Git Branch Panel **1.9.3**,
+Последнее обновление: 26 ноября 2026, setup **3.15.4**, Aster Atelier **1.9.0**, Git Branch Panel **1.9.4**,
 Calm TypeScript **3.5.0**, Workstation Stability **1.4.3**,
 протестированные IDE — **Antigravity IDE 2.9.0, 2.8.0, 2.7.0 и 2.6.0** (плюс универсальная 3-уровневая поддержка любых будущих/других версий).
 
@@ -172,7 +172,11 @@ GitHub): скрипты из `package.json` (корень или папки пе
   `'account'` — collaborator или участник организации); 2) тот, кто входил в
   этом проекте раньше (`workstationGithubPanel.repositoryAuthors`, только при
   том же владельце `origin`); 3) никого нет: `null`, остаётся имя из git
-  config. Публичный профиль владельца больше не запрашивается. Имя пишется
+  config, но в проекте GitHub только с адресом `…@users.noreply.github.com`
+  (`isGitHubEmail`): с почтой Google или другой Commit/Push отказывают с
+  «Нужно войти в GitHub.», а панель один раз показывает предупреждение с
+  кнопкой «Войти в GitHub» и пишет «не аккаунт GitHub» в строке автора
+  (с 1.9.4). Публичный профиль владельца больше не запрашивается. Имя пишется
   только в `git config --local` проекта с GitHub-`origin` как
   `<login> <id+login@users.noreply.github.com>`. Проект без `origin` или на
   другом сервере не изменяется никогда. Имя видно в строке «Автор commits».
@@ -214,6 +218,7 @@ GitHub): скрипты из `package.json` (корень или папки пе
 | 3.13.0 / 1.8.1 | Поддержка **Antigravity IDE 2.8.0** (`2.8.0-6733682917113856`, x64 и ARM64) вместе с 2.7.0 и 2.6.0 при 100% сохранении `config/settings.json` (284 ключа) и стилей; выведены устаревшие дубликаты, которые 2.8.0 делает сам (`workstation-workflow`, `project-coding-rules`, `agents/workstation-verifier.md`, `history-and-verification.md`, `mikestead.dotenv`, setup-owned MCP `sequential-thinking`); оптимизация скорости в Workstation Stability **1.3.31** (`profile.cjs`, `workbench-ui.cjs`, `jelly-patch.cjs`, `repair-chat.cjs`, `react-snippets.cjs`), Calm TypeScript **3.4.1** и Git Branch Panel **1.8.2**; `oxlint` доведён до 0 ошибок и 0 предупреждений (было 48) |
 | 3.14.0 / 1.9.0 | Профессиональный профиль **Next.js + Node.js + React**: добавлены `Prisma.prisma` и `redhat.vscode-yaml`, `tailwindCSS.classFunctions`, `next.config.*` nesting, `.next`/`.turbo`/`coverage` excludes; выведен `anteprimorac.html-end-tag-labels` (серые Tailwind-подписи закрывающих тегов) с автоочисткой настроек `htmlEndTagLabels.*`; обновлён `scripts/bootstrap.ps1` (`m-safarov/antigravity-workstation`, единая фиксация 40-символьного commit SHA на весь запуск, защищённый staging + автоочистка временных архивов, потоковая загрузка с реальным прогрессом и retry/backoff, фирменный баннер `MANCHO SETING ANTIGRAVITI`, классификация версий IDE `tested`/`recognized`/`unknown`); единый источник полноты профиля `lib/profile-inventory.js` (Installer + Doctor) и чистый `--json`; необязательный локальный AI-помощник (`Workstation Stability` **1.4.0**: `Configure AI API Key` в `SecretStorage`, `Test AI Connection`, `lib/ai-recovery.js` строго по allowlist); командный **Git Branch Panel** **1.9.0** (upstream/incoming-outgoing, Pull Requests с выбором `head`/`base`, безопасное удаление веток Local/Remote/Both с проверкой прав GitHub/protection/worktree, diff-подсказка коммита по `Tab`, защита от гонок `stateGeneration`); ускорена проверка native-схемы в `lib/native-compatibility.js` в 38×; офлайн-визуалы Details в **Aster Atelier** **1.9.0** и **Calm TypeScript** **3.5.0** |
 | 3.15.3 / 1.9.0 | Git Branch Panel **1.9.3**: автор commit — вошедший в редакторе аккаунт GitHub (collaborator — от своего имени, владелец — только свои commits), без запроса публичного профиля владельца; догадка ранних версий о владельце удаляется из `--local` config (раздел 4a) |
+| 3.15.4 / 1.9.0 | По просьбе 26.11.2026 «все commits — от своего аккаунта, не от имени аккаунта Google»: Git Branch Panel **1.9.4** без входа принимает из git только адрес GitHub (почта Google → «Нужно войти в GitHub.», предупреждение и «не аккаунт GitHub» в строке автора); в `rules/GEMINI.template.md` раздел **Git**: агент не меняет `git config`, не берёт имя/почту Google и не делает commit без адреса `…@users.noreply.github.com`; README и промпты установки советуют «Войти в GitHub» и адрес noreply |
 
 Все версии проверены GitHub Actions (Setup checks, Native Windows IDE smoke,
 Aster actual Antigravity appearance, Verify Aster VSIX build).

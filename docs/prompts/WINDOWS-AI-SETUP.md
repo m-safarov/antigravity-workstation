@@ -81,9 +81,10 @@ explorer.exe "$t\workstation-launch.cmd"
 9. Команда 1: в resetBackup есть manifest.json со "state": "complete".
 
 ШАГ 8. Имя для GitHub (единственный вопрос)
-git config --global user.name и user.email. Оба заданы — ничего не спрашивай. Нет — спроси имя и почту GitHub (или адрес …@users.noreply.github.com) и выполни:
+git config --global user.name и user.email. Оба заданы — ничего не спрашивай. Нет — спроси имя и адрес GitHub вида 12345+login@users.noreply.github.com со страницы github.com/settings/emails (не почту аккаунта Google: с ней GitHub показывает commit серым именем без профиля) и выполни:
   git config --global user.name "Имя Фамилия"
-  git config --global user.email "почта@пример.com"
+  git config --global user.email "12345+login@users.noreply.github.com"
+Скажи пользователю: главное — в Explorer → GitHub нажать «Войти в GitHub»; тогда все commits идут от его аккаунта GitHub.
 
 ШАГ 9. Отчёт (коротко)
 Версия и папка IDE, режим, результат каждой проверки шага 7, где резервная копия (resetBackup или %USERPROFILE%\.gemini\backups), что исправлено, что осталось пользователю (после Команды 1 — войти в аккаунт; Ctrl+Shift+P → «Aster Atelier: Темы и шрифты»).

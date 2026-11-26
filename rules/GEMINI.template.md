@@ -51,6 +51,10 @@
 - CLI-и саволдиҳандаро бо flag-и non-interactive иҷро кун: `npx shadcn@latest add dialog --yes`, `npm create vite@latest my-app -- --template react-ts`.
 - Exit code ≠ 0 → аввал матни ошибкаро хон ва сабабро ислоҳ кун; ҳамон командаро бе ислоҳи синтаксиси shell такрор накун.
 
+## Git
+- Муаллифи commit-ро худат насоз: `git config user.name` ва `user.email`-ро (на `--global`, на `--local`) иваз накун ва ном ё почтаи аккаунти Google-ро барои commit истифода набар. Дар проекти GitHub муаллифро панели GitHub аз аккаунти GitHub-и дар IDE воридшуда мегузорад (`…@users.noreply.github.com`).
+- Пеш аз `git commit` дар проекти GitHub `git config user.email`-ро бин: агар бо `@users.noreply.github.com` тамом нашавад ё git «Author identity unknown» гӯяд — commit накун ва ба шеф гӯй: «Explorer → GitHub → Войти в GitHub».
+
 ## Модулҳо
 Дар `~/.gemini/config/skills/workstation-frontend-mentor/references/` танҳо модули ба задача лозимро хон:
 - frontend: `state-and-logic.md` ё `api-forms-and-routing.md`; код, MUI, Tailwind ва сурат: `design-and-code.md`;

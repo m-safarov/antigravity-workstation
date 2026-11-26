@@ -20,6 +20,8 @@ const NOREPLY = '583231+octocat@users.noreply.github.com';
 // A collaborator of octocat/demo, signed in to the editor on their own computer.
 const COLLABORATOR = { id: '4242', label: 'monalisa' };
 const COLLABORATOR_NOREPLY = '4242+monalisa@users.noreply.github.com';
+// A Google account address that is not added to any GitHub account.
+const GOOGLE_EMAIL = 'mona.lisa@gmail.com';
 const GH007 = 'remote: error: GH007: Your push would publish a private email address.\nTo https://github.com/octo/demo.git\n ! [remote rejected] feature -> feature (push declined due to email privacy restrictions)\nerror: failed to push some refs to \'https://github.com/octo/demo.git\'';
 
 function memento() {
@@ -49,6 +51,8 @@ function fakeRepository(t, options = {}) {
 
 const ok = stdout => ({ stdout });
 const failed = stderr => ({ code: 1, stderr });
+// The answers of `git config --get user.name` and `user.email` (local, then global).
+const gitIdentity = (name, email) => ({ 'config --get user.name': ok(name + '\n'), 'config --get user.email': ok(email + '\n') });
 
 function answer(repo, args) {
   const command = args.join(' ');
@@ -144,7 +148,7 @@ test('With no GitHub account and no git identity nothing is committed or pushed 
 });
 
 test('Without a signed-in account nobody is guessed: git keeps its own identity, and a person who signed in is remembered per repository', async t => {
-  const repo = fakeRepository(t, { replies: { 'config --get user.': ok('Mona\n') } }), calls = withFakeGit(t, repo), memory = memento();
+  const repo = fakeRepository(t, { replies: gitIdentity('Mona', COLLABORATOR_NOREPLY) }), calls = withFakeGit(t, repo), memory = memento();
   const panel = openPanel(repo, { account: null, memory });
   await panel.send({ command: 'commit', message: 'Plain', files: ['app.ts'] });
   assert.equal(gitCommands(calls).some(command => command.startsWith('config --local user.')), false, 'the owner\'s public profile is never written as the author');
@@ -158,9 +162,9 @@ test('Without a signed-in account nobody is guessed: git keeps its own identity,
   assert.deepEqual(later.messages.filter(message => message.type === 'author').at(-1).author, { name: 'monalisa', source: 'account' }, 'the person stays the author while signed out');
 });
 
-test('Without a signed-in account a personal or an organisation repository commits and pushes with the existing git identity without writing config', async t => {
+test('Without a signed-in account only a GitHub address in git config commits and pushes; a Google address asks to sign in', async t => {
   for (const remote of ['https://github.com/octocat/demo.git', 'https://github.com/acme-team/site.git']) {
-    const repo = fakeRepository(t, { remote, replies: { 'config --get user.': ok('Existing Person\n') } });
+    const repo = fakeRepository(t, { remote, replies: gitIdentity('Mona', COLLABORATOR_NOREPLY) });
     const calls = withFakeGit(t, repo), panel = openPanel(repo, { account: null });
     await panel.send({ command: 'commit', message: 'Plain', files: ['app.ts'] });
     await panel.send({ command: 'push' });
@@ -170,6 +174,45 @@ test('Without a signed-in account a personal or an organisation repository commi
     assert.ok(commands.includes('commit --only -m Plain -- app.ts'));
     assert.ok(commands.includes('push origin feature'));
   }
+  const google = fakeRepository(t, { replies: gitIdentity('Mona', GOOGLE_EMAIL) });
+  const googleCalls = withFakeGit(t, google), panel = openPanel(google, { account: null });
+  await panel.send({ command: 'commit', message: 'Plain', files: ['app.ts'] });
+  await panel.send({ command: 'push' });
+  assert.equal(gitCommands(googleCalls).some(command => /^(add|commit|push|config --local user\.)/.test(command)), false, 'nothing is committed or pushed under a Google address');
+  const refused = errors(panel.messages);
+  assert.deepEqual(refused.map(message => [message.text, message.action]), [['Нужно войти в GitHub.', 'signIn'], ['Нужно войти в GitHub.', 'signIn']]);
+  assert.match(refused[0].details, /Mona <mona\.lisa@gmail\.com>/);
+});
+
+test('A GitHub repository whose git identity is not a GitHub account shows one sign-in warning and marks the author line', async t => {
+  const repo = fakeRepository(t, { replies: gitIdentity('Mona', GOOGLE_EMAIL) });
+  withFakeGit(t, repo);
+  const panel = openPanel(repo, { account: null });
+  await panel.send({ command: 'ready' });
+  await panel.send({ command: 'refresh' });
+  const warnings = panel.messages.filter(message => message.type === 'notice' && message.level === 'warn');
+  assert.equal(warnings.length, 1, 'the warning is shown once');
+  assert.equal(warnings[0].action, 'signIn');
+  assert.match(warnings[0].details, /Mona <mona\.lisa@gmail\.com>/);
+  assert.deepEqual(panel.messages.filter(message => message.type === 'author').at(-1).author, { name: 'Mona', source: 'git', github: false });
+  const unnamed = fakeRepository(t);
+  withFakeGit(t, unnamed);
+  const unnamedPanel = openPanel(unnamed, { account: null });
+  await unnamedPanel.send({ command: 'ready' });
+  assert.equal(unnamedPanel.messages.filter(message => message.type === 'notice' && message.level === 'warn' && message.action === 'signIn').length, 1, 'no git identity at all also asks to sign in');
+  assert.deepEqual(unnamedPanel.messages.filter(message => message.type === 'author').at(-1).author, { name: '', source: 'none', github: false });
+  for (const quiet of [{ replies: gitIdentity('Mona', COLLABORATOR_NOREPLY), account: null }, { replies: gitIdentity('Mona', GOOGLE_EMAIL), account: COLLABORATOR }]) {
+    const other = fakeRepository(t, { replies: quiet.replies });
+    withFakeGit(t, other);
+    const otherPanel = openPanel(other, { account: quiet.account });
+    await otherPanel.send({ command: 'ready' });
+    assert.equal(otherPanel.messages.some(message => message.type === 'notice' && message.level === 'warn'), false, 'a GitHub address or a signed-in account needs no warning');
+  }
+  const local = fakeRepository(t, { remote: null, remoteBranches: [], upstream: '', replies: gitIdentity('Mona', GOOGLE_EMAIL) });
+  withFakeGit(t, local);
+  const localPanel = openPanel(local, { account: null });
+  await localPanel.send({ command: 'ready' });
+  assert.equal(localPanel.messages.some(message => message.type === 'notice' && message.level === 'warn'), false, 'a project without GitHub keeps any git identity');
 });
 
 test('Signing in from the panel uses the editor GitHub session and then allows the commit', async t => {
@@ -404,7 +447,7 @@ async function ownerGuessRemembered(root) {
 
 test('An owner identity that an earlier version guessed in a collaborator\'s clone is removed while nobody is signed in', async t => {
   const guessed = { 'user.name': 'octocat', 'user.email': NOREPLY };
-  const repo = fakeRepository(t, { localConfig: { ...guessed }, replies: { 'config --get user.': ok('Mona\n') } });
+  const repo = fakeRepository(t, { localConfig: { ...guessed }, replies: gitIdentity('Mona', COLLABORATOR_NOREPLY) });
   const calls = withFakeGit(t, repo), memory = await ownerGuessRemembered(repo.root);
   const panel = openPanel(repo, { account: null, memory });
   await panel.send({ command: 'commit', message: 'Collaborator', files: ['app.ts'] });
@@ -417,11 +460,11 @@ test('An owner identity that an earlier version guessed in a collaborator\'s clo
   assert.deepEqual(panel.messages.filter(message => message.type === 'author').at(-1).author, { name: 'Mona', source: 'git' });
 
   // A local identity the person set themselves is never removed.
-  const own = fakeRepository(t, { localConfig: { 'user.name': 'My Name', 'user.email': 'me@example.com' }, replies: { 'config --get user.': ok('My Name\n') } });
+  const own = fakeRepository(t, { localConfig: { 'user.name': 'Mona', 'user.email': COLLABORATOR_NOREPLY }, replies: gitIdentity('Mona', COLLABORATOR_NOREPLY) });
   const ownCalls = withFakeGit(t, own);
   await openPanel(own, { account: null, memory: await ownerGuessRemembered(own.root) }).send({ command: 'commit', message: 'Mine', files: ['app.ts'] });
   assert.equal(gitCommands(ownCalls).some(command => command.startsWith('config --local --unset')), false);
-  assert.deepEqual(own.localConfig, { 'user.name': 'My Name', 'user.email': 'me@example.com' });
+  assert.deepEqual(own.localConfig, { 'user.name': 'Mona', 'user.email': COLLABORATOR_NOREPLY });
   assert.ok(gitCommands(ownCalls).includes('commit --only -m Mine -- app.ts'));
 
   // Signed in, the guess is simply replaced by the person.

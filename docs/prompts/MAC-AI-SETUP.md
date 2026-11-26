@@ -133,10 +133,10 @@ Ghost text (editor.inlineSuggest.enabled) уже выключен скрипто
 9. AI Tab: пользователь подтвердил, что оба переключателя выключены.
 
 ШАГ 12. Имя для GitHub (единственный вопрос)
-Выполни git config --global user.name и git config --global user.email. Если оба заданы — ничего не спрашивай. Если нет — спроси одним сообщением имя и почту, привязанную к аккаунту GitHub (или адрес вида 12345+login@users.noreply.github.com со страницы github.com/settings/emails), и выполни:
+Выполни git config --global user.name и git config --global user.email. Если оба заданы — ничего не спрашивай. Если нет — спроси одним сообщением имя и адрес GitHub вида 12345+login@users.noreply.github.com со страницы github.com/settings/emails (не почту аккаунта Google: с ней GitHub показывает commit серым именем без профиля), и выполни:
   git config --global user.name "Имя Фамилия"
-  git config --global user.email "почта@пример.com"
-Тогда commits из панели GitHub (Explorer → GitHub) будут под его именем и аватаром, а ветки создаются, переключаются и удаляются без обязательного push.
+  git config --global user.email "12345+login@users.noreply.github.com"
+Скажи пользователю: главное — в Explorer → GitHub нажать «Войти в GitHub». Тогда все commits (из панели, терминала и агента) будут от его аккаунта GitHub, с его именем и аватаром, а ветки создаются, переключаются и удаляются без обязательного push.
 
 ШАГ 13. Отчёт пользователю (коротко)
 - Версия IDE, архитектура, путь <App>, режим (Команда 1 или 2).

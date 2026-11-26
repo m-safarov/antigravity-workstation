@@ -186,7 +186,7 @@
   {
     "id": "workstation.git-branch-panel",
     "name": "Git Branch Panel",
-    "version": "1.9.3",
+    "version": "1.9.4",
     "description": "GitHub panel: repository and upstream tracking status, commit selected files with live diff-aware Tab commit suggestions (local analyzer + optional AI), push without force, multi-remote explicit pull, Pull Requests with selectable head/base, safe local/remote/both branch deletion with permission, protection and worktree checks, and npm scripts runner.",
     "category": "Other",
     "source": "local-vsix"
